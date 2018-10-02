@@ -23,3 +23,5 @@ TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,amazon-ebs,er
 TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,error,--> amazon-ebs: Error waiting for AMI. Reason: {\n  Code: "Server.InternalError"%!(PACKER_COMMA)\n  Message: "Server.InternalError"\n}
 TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,say,\n==> Builds finished but no artifacts were created.
 --- FAIL: TestAlbDockerServiceWithAutoScaling (221.35s)
+	test_helpers.go:49: Failed to build AMI: exit status 1
+TestDeployEcsTask 2018/10/02 00:26:40 1538440000,,ui,say,==> amazon-ebs: Modifying attributes on AMI (ami-0f1d33648298fb7ae)...

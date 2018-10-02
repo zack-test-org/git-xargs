@@ -1,0 +1,7 @@
+TestPlutonium
+------------
+TestPlutonium 1985/10/12 00:00:00 Found plutonium
+--- FAIL: TestPlutonium (14d)
+    could not get bomb from Doctor Emmett Brown
+
+

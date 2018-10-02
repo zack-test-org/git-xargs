@@ -40,12 +40,10 @@ func parseTestOutput(file *os.File) (testCaseOutput map[string]string, failedTes
 			// agglomerate output to the respective test case, as this is part
 			// of the error stack trace for a test failure
 			testCaseOutput[parsingFailedTest] += data + "\n"
-		} else if parsingFailedTest != "" && strings.TrimSpace(data) == "" {
-			// Exit fail test parsing mode
-			parsingFailedTest = ""
 		} else if strings.HasPrefix(data, "Test") {
 			vals := strings.Split(data, " ")
 			testCaseOutput[vals[0]] += data + "\n"
+			parsingFailedTest = ""
 		} else if strings.HasPrefix(data, "--- FAIL") {
 			m := re.FindStringSubmatch(data)
 			testCaseOutput[m[1]] += data + "\n"
