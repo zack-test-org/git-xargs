@@ -1,0 +1,7 @@
+TestTimeMachine 1985/10/26 01:18:00 Einstein enters time machine
+TestPlutonium 1985/10/12 00:00:00 Found plutonium
+--- FAIL: TestPlutonium (14d)
+    could not get bomb from Doctor Emmett Brown
+
+TestTimeMachine 1985/10/26 01:20:00 Einstein arrives from the past
+--- PASS: TestTimeMachine (120s)
