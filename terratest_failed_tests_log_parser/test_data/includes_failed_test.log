@@ -1,0 +1,27 @@
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:45 module.alb.aws_alb_listener.http[0]: Destruction complete after 0s
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:45 module.alb.aws_alb_target_group.blackhole: Destroying... (ID: arn:aws:elasticloadbalancing:us-east-2:...qhg-service-blackhole/2aeda40cf65a14cd)
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:45 module.alb.aws_alb_target_group.blackhole: Destruction complete after 0s
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:45 module.fargate_service.aws_security_group_rule.allow_inbound_from_cidr_blocks: Destruction complete after 1s
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:45 module.alb.aws_security_group_rule.http_listeners[0]: Destruction complete after 2s
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:46 module.alb.aws_security_group_rule.allow_all_outbound: Destruction complete after 1s
+TestDeployEcsTask 2018/10/02 00:24:53 1538439893,,ui,say,==> amazon-ebs: Creating unencrypted AMI gruntwork-amazon-ecs-cluster-example-5bb2b9ff-2d64-15fe-5de3-f41b5cc37f11 from instance i-0075310ddd3231953
+TestDeployEcsTask 2018/10/02 00:24:53 1538439893,,ui,message,    amazon-ebs: AMI: ami-0f1d33648298fb7ae
+TestDeployEcsTask 2018/10/02 00:24:53 1538439893,,ui,say,==> amazon-ebs: Waiting for AMI to become ready...
+TestDockerFargateServiceWithNlb 2018/10/02 00:24:54 aws_route53_record.fargate_service: Still creating... (40s elapsed)
+TestDockerFargateServiceWithNlb 2018/10/02 00:24:54 aws_route53_record.nlb_endpoint: Still creating... (40s elapsed)
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:54 module.fargate_service.aws_ecs_service.fargate_with_lb: Still destroying... (ID: arn:aws:ecs:us-east-2:087285199408:service/7f6qhg-service, 10s elapsed)
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:54 aws_route53_record.alb_endpoint: Still destroying... (ID: Z1AF2THYCFXEXU_7f6qhg-service.gruntwork-dev.io._A, 10s elapsed)
+TestDockerFargateServiceWithAlb 2018/10/02 00:24:54 aws_route53_record.fargate_service: Still destroying... (ID: Z3TS4O5UBX026Y_service.7f6qhg-service_A, 10s elapsed)
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:56 1538439896,,ui,say,==> amazon-ebs: Cleaning up any extra volumes...
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:56 1538439896,,ui,say,==> amazon-ebs: No volumes to clean up%!(PACKER_COMMA) skipping
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:56 1538439896,,ui,say,==> amazon-ebs: Deleting temporary security group...
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,say,==> amazon-ebs: Deleting temporary keypair...
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,error,Build 'amazon-ebs' errored: Error waiting for AMI. Reason: {\n  Code: "Server.InternalError"%!(PACKER_COMMA)\n  Message: "Server.InternalError"\n}
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,error-count,1
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,error,\n==> Some builds didn't complete successfully and had errors:
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,amazon-ebs,error,Error waiting for AMI. Reason: {\n  Code: "Server.InternalError"%!(PACKER_COMMA)\n  Message: "Server.InternalError"\n}
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,error,--> amazon-ebs: Error waiting for AMI. Reason: {\n  Code: "Server.InternalError"%!(PACKER_COMMA)\n  Message: "Server.InternalError"\n}
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,say,\n==> Builds finished but no artifacts were created.
+--- FAIL: TestAlbDockerServiceWithAutoScaling (221.35s)
+	test_helpers.go:49: Failed to build AMI: exit status 1
+TestDeployEcsTask 2018/10/02 00:26:40 1538440000,,ui,say,==> amazon-ebs: Modifying attributes on AMI (ami-0f1d33648298fb7ae)...

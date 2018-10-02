@@ -1,0 +1,16 @@
+TestAlbDockerServiceWithAutoScaling
+------------
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:56 1538439896,,ui,say,==> amazon-ebs: Cleaning up any extra volumes...
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:56 1538439896,,ui,say,==> amazon-ebs: No volumes to clean up%!(PACKER_COMMA) skipping
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:56 1538439896,,ui,say,==> amazon-ebs: Deleting temporary security group...
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,say,==> amazon-ebs: Deleting temporary keypair...
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,error,Build 'amazon-ebs' errored: Error waiting for AMI. Reason: {\n  Code: "Server.InternalError"%!(PACKER_COMMA)\n  Message: "Server.InternalError"\n}
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,error-count,1
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,error,\n==> Some builds didn't complete successfully and had errors:
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,amazon-ebs,error,Error waiting for AMI. Reason: {\n  Code: "Server.InternalError"%!(PACKER_COMMA)\n  Message: "Server.InternalError"\n}
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,error,--> amazon-ebs: Error waiting for AMI. Reason: {\n  Code: "Server.InternalError"%!(PACKER_COMMA)\n  Message: "Server.InternalError"\n}
+TestAlbDockerServiceWithAutoScaling 2018/10/02 00:24:57 1538439897,,ui,say,\n==> Builds finished but no artifacts were created.
+--- FAIL: TestAlbDockerServiceWithAutoScaling (221.35s)
+	test_helpers.go:49: Failed to build AMI: exit status 1
+
+
