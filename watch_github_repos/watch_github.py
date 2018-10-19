@@ -1,5 +1,8 @@
-"""Set all repositories of a given GitHub organization name for a given user
+"""
+Set all repositories of a given GitHub organization name for a given user
 to watching.
+
+Modified version of https://gist.github.com/thet/c1ce413bdabc771cba1b
 """
 
 from __future__ import print_function
@@ -44,7 +47,7 @@ def main(org_name, outfile, dry=False):
         print('Subscribing to {} repos'.format(len(repo_list)))
 
     lines = []
-    with open(outfile) as f:
+    with open(outfile, 'rw') as f:
         f.seek(0)
         lines = [it.strip('\n').strip('\r') for it in f]
     with open(outfile, 'a') as f:
@@ -82,7 +85,7 @@ def main(org_name, outfile, dry=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Watch/unwatch GitHub Repositories')  # noqa
     parser.add_argument('org_name',  type=str, help='GitHub organization name')
-    parser.add_argument('--outfile', type=str, default='repos_set.txt', help='Name of the file to write each successful changed repository to. Used for avoiding unnecessart API calls.')  # noqa
+    parser.add_argument('--outfile', type=str, default='repos_set.txt', help='Name of the file to write each successful changed repository to. Used for avoiding unnecessary API calls.')  # noqa
     parser.add_argument('--dry', dest='dry', action='store_true', help='If set, do not actually subscribe and only show logs.')  # noqa
     args = parser.parse_args()
     main(**vars(args))
