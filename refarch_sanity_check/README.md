@@ -17,7 +17,7 @@ The following checks are suggested for future improvement:
 
 - Automate check that all the instance types specified exist in the region.
     - In AWS currently, the only way to automatically check if a type is available is to actually launch the resource.
-      Therefore, this may require using terratest and a terraform config for speed.
+      Therefore, this may require using terratest and a terraform config for maintenance sanity.
 - Check that db instance supports end to end encryption.
 
 
