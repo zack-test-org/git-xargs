@@ -1,0 +1,378 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+import boto3
+import click
+import glob
+import logging
+import os
+import pprint
+import re
+import yaml
+import six
+
+
+# Global objects. Should only include objects that should only be defined once in the script
+
+## logger for the script
+logger = logging.getLogger("refarch-sanity-check")
+LOG_LEVEL_MAP = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warn": logging.WARNING,
+    "error": logging.ERROR,
+}
+
+## boto3 client to access STS API
+sts_client = boto3.client("sts")
+
+
+@click.command()
+@click.option(
+    "--customer-name",
+    required=True,
+    help="Name of customer. Should correspond to a folder name in the stacks/clients directory.")
+@click.option(
+    "--usage-patterns-path",
+    default=os.getcwd(),
+    help="Path to the usage-patterns repository. Defaults to current directory.")
+@click.option(
+    "--loglevel",
+    default="info",
+    type=click.Choice(list(LOG_LEVEL_MAP.keys())))
+def main(customer_name, usage_patterns_path, loglevel):
+    """
+    This is a python script that will parse the boilerplate input YAML file and sanity checks the inputs to help catch
+    potential issues before you proceed with the reference architecture deployment.
+
+    The following checks are implemented:
+
+    - Check that you can access each customer account from the Gruntwork Customer Access account.
+    - Check that all of the Acme specific vars are deleted.
+    - Check that the accounts have route 53 domains for the defined domains.
+    - Check that ACM certificates exist for all the domains.
+    - Check that all the instance types specified exist in the region.
+
+    To use, you must provide AWS credentials for the Gruntwork Customer Access account.
+
+    Examples:
+
+        refarch-sanity-check \
+            --customer-name acme-multi-account
+    """
+    configure_logger(loglevel)
+
+    logger.debug("Collecting YAML files in customer account vars")
+    parsed_yamls = load_yaml_vars(usage_patterns_path, customer_name)
+    file_names = ", ".join(parsed_yamls.keys())
+    logger.debug("Found {}".format(file_names))
+
+    logger.info("Checking if all Acme (test) variables are removed")
+    assert_acme_variables_are_deleted(parsed_yamls)
+    logger.info("Passed check for Acme variables")
+
+    logger.info("Checking if we can assume roles in each specified account")
+    environment_credentials = get_environment_credentials(parsed_yamls)
+    logger.info("Passed assume role check")
+
+    logger.info("Checking if all the necessary domain names exist")
+    assert_route_53_domains_exist(environment_credentials, parsed_yamls)
+    logger.info("Passed domain name check")
+
+    logger.info("Checking if ACM certificates exist for each domain")
+    assert_acm_certificates_exist(environment_credentials, parsed_yamls)
+    logger.info("Passed ACM certificate check")
+
+    logger.info("Collecting all instance types in config")
+    # We can use any credentials for this, so pick one!
+    random_cred = six.next(six.itervalues(environment_credentials))
+    instance_types_to_check = get_configured_instance_types(parsed_yamls)
+    formatted_instance_types = ["\t- {}".format(instance_type) for instance_type in instance_types_to_check] 
+    logger.warning(
+        "The following instance types need to be checked for compatibility in the configured region:\n{}"
+        .format("\n".join(formatted_instance_types))
+    )
+
+
+# Assertions
+
+def assert_acme_variables_are_deleted(parsed_yamls):
+    """
+    Checks that the following variables are not defined:
+    - IsLegacyCustomerOrTest
+    - stage-and-prod-sample-frontend-app.ServiceName
+    - stage-and-prod-sample-backend-app.ServiceName
+    - GitBranch
+    """
+    _CHECK_VARS = [
+        "IsLegacyCustomerOrTest",
+        "stage-and-prod-sample-frontend-app.ServiceName",
+        "stage-and-prod-sample-backend-app.ServiceName",
+        "GitBranch",
+    ]
+    all_keys = all_nested_keys(parsed_yamls)
+    acme_vars_found = [
+        var for var in _CHECK_VARS if var in all_keys
+    ]
+    if acme_vars_found:
+        error_string = "\n".join(
+            "\t{}".format(var)
+            for var in acme_vars_found
+        )
+        raise click.ClickException("Found Acme only vars in config:\n{}".format(error_string))
+
+
+def assert_route_53_domains_exist(environment_credentials, parsed_yamls):
+    """
+    Checks that the proper route 53 DNS entry exists for the specified domain names in the vars file.
+    """
+    domains_to_check = get_configured_domain_names(parsed_yamls)
+    nonexistant_domains = []
+    for account, domain in six.iteritems(domains_to_check):
+        credentials = environment_credentials[account]
+        existing_zone_names = get_hosted_zone_names(credentials)
+        domain_as_zone_name = "{}.".format(domain)
+        if domain_as_zone_name not in existing_zone_names:
+            nonexistant_domains.append((account, domain))
+    if nonexistant_domains:
+        for account, domain in nonexistant_domains:
+            logger.error("Could not find domain in account {} (domain {})".format(account, domain))
+        click.ClickException("Failed domain check")
+
+
+def assert_acm_certificates_exist(environment_credentials, parsed_yamls):
+    """
+    Checks that ACM certificates exist in each account for each domain.
+    """
+    region = get_configured_region(parsed_yamls)
+    domains_to_check = get_configured_domain_names(parsed_yamls)
+    domains_with_no_certs = find_domains_with_no_certs(environment_credentials, region, domains_to_check)
+
+    # If static websites are configured, then check in us-east-1 too since cloudfront can only use us-east-1 for ACM
+    # certs.
+    if is_static_websites_configured(parsed_yamls):
+        # Filter out shared services account
+        static_domains_to_check = {
+            account: domain for account, domain in six.iteritems(domains_to_check)
+            if account != "shared-services"
+        }
+        domains_with_no_certs += find_domains_with_no_certs(environment_credentials, "us-east-1", static_domains_to_check)
+
+    if domains_with_no_certs:
+        for account, domain in domains_with_no_certs:
+            logger.error("Could not find ACM certificate in account {} for domain {}".format(account, domain))
+        raise click.ClickException("Failed certificate check")
+
+
+## Helper functions
+
+def load_yaml_vars(usage_patterns_path, customer_name):
+    """
+    Given the path to the usage-patterns repo and the target customer name, generate a dictionary mapping yaml files in
+    the directory to the parsed yaml data.
+
+    Returns:
+        Parsed YAML dictionaries keyed by the source filename.
+    """
+    vars_source_path = os.path.join(usage_patterns_path, "stacks", "clients", customer_name)
+    yaml_file_names = glob.glob(os.path.join(vars_source_path, "*.yml"))
+    parsed_yamls = {}
+    for fname in yaml_file_names:
+        with open(fname) as f:
+            parsed_yamls[os.path.basename(fname)] = yaml.safe_load(f)
+    return parsed_yamls
+
+
+def get_configured_domain_names(parsed_yamls):
+    """
+    Given the parsed yaml files, extract the domain names configured.
+    """
+    if len(parsed_yamls) == 1:
+        # Single account, so only check the one
+        domains_to_check = parsed_yamls["vars.yml"]["DomainNames"]
+    else:
+        # Multi account, so need to check each domain in each account
+        domains_to_check = parsed_yamls["root-vars.yml"]["DomainNames"]
+    return domains_to_check
+
+
+def find_domains_with_no_certs(environment_credentials, region, domains_to_check):
+    domains_with_no_certs = []
+    for account, domain in six.iteritems(domains_to_check):
+        credentials = environment_credentials[account]
+        acm_domains = get_acm_certificate_domains(credentials, region)
+        domain_as_certificate_domain_name = "*.{}".format(domain)
+        if domain_as_certificate_domain_name not in acm_domains:
+            domains_with_no_certs.append((account, domain))
+    return domains_with_no_certs
+
+
+def is_static_websites_configured(parsed_yamls):
+    """
+    Given the parsed yaml files, determine if static websites are configured.
+    """
+    for key, value in all_nested_items(parsed_yamls):
+        if key == "IncludeStaticAssets":
+            return value
+    return False
+
+
+def get_configured_region(parsed_yamls):
+    """
+    Given the parsed yaml files, extract the region configured.
+    """
+    if len(parsed_yamls) == 1:
+        # Single account
+        return parsed_yamls["vars.yml"]["AwsRegion"]
+    return parsed_yamls["root-vars.yml"]["AwsRegion"]
+
+
+def get_configured_instance_types(parsed_yamls):
+    """
+    Look up all the instance types referenced in the vars.
+    """
+    instance_type_re = r"^(db\.|cache\.)?[a-zA-Z][\d]+[a-zA-Z]?\.\d*[a-zA-Z]+$"
+    instance_types = []
+    for data in all_nested_values(parsed_yamls):
+        if isinstance(data, six.text_type) and re.match(instance_type_re, data):
+            instance_types.append(data)
+    return set(instance_types)
+    
+
+def get_hosted_zone_names(credentials):
+    """
+    Look up all the hosted zones in an account and return the domain names.
+    """
+    route53 = get_client_by_credentials(credentials, "route53")
+    response = route53.list_hosted_zones()
+    # boto3 will raise an exception on bad response, so if we make it this far, can assume the key exists.
+    zones = response["HostedZones"]
+    zone_names = [zone["Name"] for zone in zones]
+    return zone_names
+
+
+def get_acm_certificate_domains(credentials, region):
+    """
+    Look up all the ACM certificates in an account for the given region and return the domain names.
+    """
+    acm = get_client_by_credentials(credentials, "acm", region)
+    response = acm.list_certificates()
+    # boto3 will raise an exception on bad response, so if we make it this far, can assume the key exists.
+    acm_certificates = response["CertificateSummaryList"]
+    certificate_domain_names = [acm_cert["DomainName"] for acm_cert in acm_certificates]
+    return certificate_domain_names
+
+
+def get_client_by_credentials(credentials, aws_app, region=None):
+    """
+    Given a set of credentials specified in a dictionary, return the authenticated sts client.
+    """
+    client = boto3.client(
+        aws_app,
+        region_name=region,
+        aws_access_key_id=credentials["AccessKeyId"],
+        aws_secret_access_key=credentials["SecretAccessKey"],
+        aws_session_token=credentials["SessionToken"],
+    )
+    return client
+
+
+def get_environment_credentials(parsed_yamls):
+    """
+    Given a dictionary of parsed yamls for the reference architecture, return a map of temporary credentials that can be
+    used to access the environments. Each credential can be used to assume the GruntworkAccountAccessRole in each
+    account.
+    """
+    accounts = None
+    for parsed_yaml in parsed_yamls.values():
+        if parsed_yaml is not None and "Accounts" in parsed_yaml:
+            accounts = parsed_yaml["Accounts"]
+            break
+
+    credentials = {}
+    for session_name, customer_account_id in six.iteritems(accounts):
+        credentials[session_name] = obtain_credentials_to_assume_gruntwork_role(
+            customer_account_id,
+            session_name)
+    return credentials
+
+
+def obtain_credentials_to_assume_gruntwork_role(account_id, session_name):
+    """
+    Returns credentials to assume the GruntworkAccountAccessRole in the customer's account provided by `account_id`.
+
+    Returns:
+        Credentials dictionary with the following schema:
+            {
+                "AccessKeyId": "AWS Access Key ID to use to assume the requested role.",
+                "SecretAccessKey": "AWS Secret Access Key to use to assume the requested role.",
+                "SessionToken": "STS Session token to use to assume the requested role.",
+            }
+    """
+    role_arn = "arn:aws:iam::{}:role/GruntworkAccountAccessRole".format(account_id)
+    logger.debug("Requesting creds for role {} in account {} ({})".format(role_arn, account_id, session_name))
+    assume_role_response = sts_client.assume_role(
+        RoleArn=role_arn,
+        RoleSessionName=session_name)
+    # boto3 will raise an exception on bad response, so if we make it this far, can assume the key exists.
+    return assume_role_response["Credentials"]
+
+
+def get_account_info():
+    """
+    Extract the account id and username based on currently configured AWS credentials.
+
+    Returns:
+        Tuple of (AWS Account ID, Username)
+    """
+    caller_identity = sts_client.get_caller_identity()
+    name_re = r".+/([^/]+)$"
+    username = re.match(name_re, caller_identity["Arn"]).group(1)
+    return caller_identity["Account"], username
+
+
+def all_nested_items(dictionary):
+    """
+    A generator returning key, value pairs of all items in the provided dictionary, including nested dictionaries.
+    """
+    for key, value in dictionary.items():
+        if isinstance(value, dict):
+            # Recurse the nested dict
+            for key, value in all_nested_items(value):
+                yield (key, value)
+        else:
+            yield (key, value)
+
+
+def all_nested_keys(dictionary):
+    """
+    A generator returning all the keys in the provided dictionary, including nested dictionaries.
+    """
+    for key, _ in all_nested_items(dictionary):
+        yield key
+
+
+def all_nested_values(dictionary):
+    """
+    A generator returning all the values in the provided dictionary, including nested dictionaries.
+    """
+    for _, value in all_nested_items(dictionary):
+        yield value
+
+
+def configure_logger(loglevel):
+    """
+    Configures the logging settings to log more information than default and set the appropriate log level.
+    """
+    logger.setLevel(LOG_LEVEL_MAP[loglevel])
+    formatter = logging.Formatter(
+        fmt="%(levelname)-8s %(asctime)s    %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
+if __name__ == "__main__":
+    main()
