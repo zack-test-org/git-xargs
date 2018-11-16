@@ -49,6 +49,7 @@ def main(customer_name, usage_patterns_path, loglevel):
 
     - Check that you can access each customer account from the Gruntwork Customer Access account.
     - Check that all of the Acme specific vars are deleted.
+    - Check that the ECR repository name is configured properly.
     - Check that the accounts have route 53 domains for the defined domains.
     - Check that ACM certificates exist for all the domains.
     - Check that all the instance types specified exist in the region.
@@ -70,6 +71,10 @@ def main(customer_name, usage_patterns_path, loglevel):
     logger.info("Checking if all Acme (test) variables are removed")
     assert_acme_variables_are_deleted(parsed_yamls)
     logger.info("Passed check for Acme variables")
+
+    logger.info("Checking if ECR repository is properly configured")
+    assert_ecr_repositories_configured(parsed_yamls)
+    logger.info("Passed check for ECR repository")
 
     logger.info("Checking if we can assume roles in each specified account")
     environment_credentials = get_environment_credentials(parsed_yamls)
@@ -120,6 +125,37 @@ def assert_acme_variables_are_deleted(parsed_yamls):
             for var in acme_vars_found
         )
         raise click.ClickException("Found Acme only vars in config:\n{}".format(error_string))
+
+
+def assert_ecr_repositories_configured(parsed_yamls):
+    """
+    Checks that the ECR repositories for the sample apps are pointing to the right account and region.
+    """
+    if len(parsed_yamls) == 1:
+        # Single account doesn't have this risk
+        return
+
+    root_vars = parsed_yamls["root-vars.yml"]
+    accounts = root_vars["Accounts"]
+    if "shared-services" not in accounts:
+        logger.warning("Skipping ECR repository check because there is no shared-services account configured.")
+        return
+    shared_services_account_id = accounts["shared-services"]
+    region = get_configured_region(parsed_yamls)
+
+    expected_repository_domain_name = "{}.dkr.ecr.{}.amazonaws.com".format(shared_services_account_id, region)
+    IMAGE_NAME_KEYS = ["FrontendDockerImageName", "BackendDockerImageName"]
+    misconfigured_ecr_repositories = []
+    for key in IMAGE_NAME_KEYS:
+        if key in root_vars and not root_vars[key].startswith(expected_repository_domain_name):
+            misconfigured_ecr_repositories.append(key)
+
+    if misconfigured_ecr_repositories:
+        for key in misconfigured_ecr_repositories:
+            logger.error(
+                "ECR repository config {} is not pointing to the right account and region (expected domain {})"
+                .format(key, expected_repository_domain_name))
+        raise click.ClickException("Failed ECR repository check")
 
 
 def assert_route_53_domains_exist(environment_credentials, parsed_yamls):
