@@ -32,3 +32,9 @@ The following checks are suggested for future improvement:
 ```
 $PATH_TO_PROTOTYPES_REPO/refarch_sanity_check/refarch-sanity-check --customer-name acme-multi-account
 ```
+
+## Graduation thoughts
+
+When this script has been tested across a few reference architecture deployments, we should consider graduating the
+script to [`usage-patterns`](https://github.com/gruntwork-io/usage-patterns) directly. At that point, this script should
+be called automatically by boilerplate as part of a `pre` hook when `IsLegacyCustomerOrTest` is not true.
