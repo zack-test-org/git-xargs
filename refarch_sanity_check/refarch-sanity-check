@@ -217,14 +217,6 @@ def is_static_websites_configured(parsed_yamls):
     return False
 
 
-def is_single_account_static_domain_configured(parsed_yamls):
-    # Single account, so only check the one
-    keys = six.iterkeys(parsed_yamls["vars.yml"])
-    stage_static_website_configured = "infrastructure-live-main-stage.stage-and-prod-static-website.WebsiteDomainName" in keys
-    prod_static_website_configured = "infrastructure-live-main-prod.stage-and-prod-static-website.WebsiteDomainName" in keys
-    return stage_static_website_configured or prod_static_website_configured
-
-
 def get_configured_region(parsed_yamls):
     """
     Given the parsed yaml files, extract the region configured.
