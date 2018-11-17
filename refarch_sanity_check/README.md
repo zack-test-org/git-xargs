@@ -10,15 +10,10 @@ The following checks are implemented:
 - Check that the ECR repository name is configured properly.
 - Check that the accounts have route 53 domains for the defined domains.
 - Check that ACM certificates exist for all the domains.
-- Check that all the instance types specified exist in the region. (partial)
-    - The script will output the list of instance types used, and it is the operator's responsibility to check if those
-      instance types are available.
+- Check that all the instance types specified for EC2, RDS, and ElastiCache exist in the region.
 
 The following checks are suggested for future improvement:
 
-- Automate check that all the instance types specified exist in the region.
-    - In AWS currently, the only way to automatically check if a type is available is to actually launch the resource.
-      Therefore, this may require using terratest and a terraform config for maintenance sanity.
 - Check that db instance supports end to end encryption.
 
 
