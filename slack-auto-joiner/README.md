@@ -7,6 +7,8 @@ The main use case for this script is adding new Grunts to all of the shared chan
 Once a Grunt is part of the team, we add all grunts to all shared channels upon creation so there's no real need to run
 this script for users who are already part of the organization.
 
+*Note*: This script requires python 3.6+
+
 ## Script Params
 
 | Param               | Description                                                                                   | Required |
