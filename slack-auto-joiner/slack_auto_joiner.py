@@ -1,4 +1,5 @@
 # importing the requests library
+import re
 import requests
 import logging
 import argparse
@@ -32,7 +33,11 @@ def get_channels(slack_token):
 
         count = 0
         for channel in response['channels']:
-            is_shared = bool(channel['is_shared']) | bool(channel['is_ext_shared']) | bool(channel['is_ext_shared'])
+            is_shared = (bool(channel['is_shared'])
+                         | bool(channel['is_ext_shared'])
+                         | bool(channel['is_ext_shared'])
+                         | bool(re.match("^_[A-Za-z]+", channel['name']))) \
+                        & (not bool(channel['is_archived']))
 
             if is_shared:
                 logger.info(f"--->SHARED Channel Info: {channel['name']} - {channel['id']}")
