@@ -130,8 +130,9 @@ def main():
 
     grunts_to_add = [grunt for grunt in all_grunts if grunt['profile']['display_name'] in grunts_need_adding]
 
-    list(map(lambda grunt: logger.info(f"Going to invite {grunt['profile']['display_name']} (ID: {grunt['id']}) to all "
-                                       f"shared channels."), grunts_to_add))
+    for grunt in grunts_to_add:
+        logger.info(f"Going to invite {grunt['profile']['display_name']} (ID: {grunt['id']}) to all "
+                    f"shared channels.")
 
     all_shared_channels = get_channels(slack_token)
 
