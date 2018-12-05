@@ -128,7 +128,7 @@ def main():
 
     grunts_need_adding = args.users
 
-    grunts_to_add = list(filter(lambda grunt: grunt['profile']['display_name'] in grunts_need_adding, all_grunts))
+    grunts_to_add = [g for g in all_grunts if grunt['profile']['display_name'] in grunts_need_adding]
 
     list(map(lambda grunt: logger.info(f"Going to invite {grunt['profile']['display_name']} (ID: {grunt['id']}) to all "
                                        f"shared channels."), grunts_to_add))
