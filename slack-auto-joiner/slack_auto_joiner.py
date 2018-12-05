@@ -1,14 +1,11 @@
 # importing the requests library
 import requests
 import logging
-from collections import namedtuple
 import argparse
 
 logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-SharedChannel = namedtuple('SharedChannel', ['x', 'y'])
 
 
 def get_channels(slack_token):
