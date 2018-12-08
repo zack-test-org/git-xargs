@@ -184,3 +184,12 @@ def assert_cache_instance_types_available(parsed_yamls):
             global_vars.logger.error(
                 "Cache instance type {} is not available in region {}".format(instance_type, region))
         raise click.ClickException("Failed cache instance type check")
+
+
+def assert_app_names_different(parsed_yamls):
+    """
+    Make sure the sample app names are different.
+    """
+    frontend_app_name, backend_app_name = parser.get_configured_app_names(parsed_yamls)
+    if frontend_app_name == backend_app_name:
+        raise click.ClickException("The FrontendAppName and the BackendAppName values are the same.")

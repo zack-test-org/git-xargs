@@ -113,3 +113,20 @@ def get_configured_cache_engine(parsed_yamls):
         elif key == "IncludeMemcached" and value:
             return "Memcached"
     return None
+
+
+def get_configured_app_names(parsed_yamls):
+    """
+    Look up the app names configured in the vars.
+
+    Returns:
+        A pair where the first value is the frontend app name and the second value is the backend app name.
+    """
+    frontend_app_name = None
+    backend_app_name = None
+    for key, value in utils.all_nested_items(parsed_yamls):
+        if key == "FrontendAppName":
+            frontend_app_name = value
+        if key == "BackendAppName":
+            backend_app_name = value
+    return frontend_app_name, backend_app_name

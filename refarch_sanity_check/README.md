@@ -7,6 +7,7 @@ The following checks are implemented:
 
 - Check that you can access each customer account from the Gruntwork Customer Access account.
 - Check that all of the Acme specific vars are deleted.
+- Check that the sample app names are different
 - Check that the ECR repository name is configured properly.
 - Check that the accounts have route 53 domains for the defined domains.
 - Check that ACM certificates exist for all the domains.
