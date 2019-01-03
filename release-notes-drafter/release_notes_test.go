@@ -36,6 +36,17 @@ func TestAppendModulesAffected(t *testing.T) {
 	assert.Equal(t, RenderReleaseNote(releaseNote), readFileAsString(t, "test_assets/full_with_new_module.md"))
 }
 
+func TestAppendModulesDedups(t *testing.T) {
+	t.Parallel()
+
+	fullNote := readFileAsString(t, "test_assets/full.md")
+	releaseNote, err := parseReleaseNoteBody(fullNote)
+	assert.NoError(t, err)
+
+	releaseNote = appendModulesAffected(releaseNote, "eks-cluster")
+	assert.Equal(t, RenderReleaseNote(releaseNote), readFileAsString(t, "test_assets/full.md"))
+}
+
 func TestAppendDescription(t *testing.T) {
 	t.Parallel()
 

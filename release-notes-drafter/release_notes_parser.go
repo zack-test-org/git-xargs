@@ -90,20 +90,3 @@ func parseList(node *blackfriday.Node) List {
 	}
 	return list
 }
-
-func clearPointers(node *blackfriday.Node) {
-	node.Prev = nil
-	node.Next = nil
-	node.Parent = nil
-}
-
-/*
-(dlv) print mdTree.Type
-github.com/gruntwork-io/prototypes/release-notes-drafter/vendor/gopkg.in/russross/blackfriday.v2.Document
-(dlv) print mdTree.FirstChild.Type
-github.com/gruntwork-io/prototypes/release-notes-drafter/vendor/gopkg.in/russross/blackfriday.v2.Heading
-(dlv) print mdTree.FirstChild.Next.Type
-github.com/gruntwork-io/prototypes/release-notes-drafter/vendor/gopkg.in/russross/blackfriday.v2.Paragraph
-(dlv) print mdTree.FirstChild.FirstChild.Type
-github.com/gruntwork-io/prototypes/release-notes-drafter/vendor/gopkg.in/russross/blackfriday.v2.Text
-*/

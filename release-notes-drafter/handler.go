@@ -94,6 +94,7 @@ func LambdaHandler(request events.APIGatewayProxyRequest) (Response, error) {
 
 func Handler(request *http.Request) (Response, error) {
 	logger := GetProjectLogger()
+	logger.Info("Received new event. Beginning Processing.")
 
 	logger.Info("Validating request")
 	payload, err := github.ValidatePayload(request, []byte(GithubWebhookSecretKey))
