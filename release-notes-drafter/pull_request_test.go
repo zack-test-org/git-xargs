@@ -15,3 +15,13 @@ func TestBasicModulesAffectedFromDiff(t *testing.T) {
 	require.Equal(t, len(modulesAffected), 1)
 	require.Equal(t, modulesAffected[0], "new")
 }
+
+func TestDupeModulesAffectedFromDiff(t *testing.T) {
+	t.Parallel()
+
+	diffString := readFileAsString(t, "test_assets/duplicated_module.diff")
+	modulesAffected, err := extractModulesAffectedFromDiff(diffString)
+	require.NoError(t, err)
+	require.Equal(t, len(modulesAffected), 1)
+	require.Equal(t, modulesAffected[0], "new")
+}

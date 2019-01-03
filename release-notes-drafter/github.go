@@ -13,7 +13,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// getGithubClient returns an authenticated github client
+// getGithubClient returns an authenticated github client.
 func getGithubClient(ctx context.Context) *github.Client {
 	tokenSource := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: GithubApiKey},
@@ -22,6 +22,8 @@ func getGithubClient(ctx context.Context) *github.Client {
 	return github.NewClient(oauth2Client)
 }
 
+// makeRequest will make an authenticated GET request to the provided url string, and return the response body as a
+// string (if there is no error). Use for retrieving text data that has no corresponding API endpoint (e.g diff url).
 func makeRequest(url string) (string, error) {
 	ctx := context.Background()
 	client := getGithubClient(ctx)
@@ -38,7 +40,7 @@ func makeRequest(url string) (string, error) {
 	return buf.String(), nil
 }
 
-// updateReleaseDescription will update the given release with the provided description
+// updateReleaseDescription will update the given release with the provided description.
 func updateReleaseDescription(
 	logger *logrus.Entry,
 	repo *github.Repository,
@@ -59,8 +61,8 @@ func updateReleaseDescription(
 // createReleaseDraftWithClient will create a new empty release for the provided repo in the draft state. The tag
 // defaults to a patch release.
 func createReleaseDraftWithClient(
-	logger *logrus.Entry,
 	ctx context.Context,
+	logger *logrus.Entry,
 	client *github.Client,
 	repo *github.Repository,
 	lastRelease *github.RepositoryRelease,
@@ -100,16 +102,18 @@ func getOrCreateReleaseDraft(logger *logrus.Entry, repo *github.Repository) (*gi
 	}
 	if len(releases) == 0 {
 		logger.Infof("Found no releases for repository %s. Creating.", repo.GetFullName())
-		return createReleaseDraftWithClient(logger, ctx, client, repo, nil)
+		return createReleaseDraftWithClient(ctx, logger, client, repo, nil)
 	}
 	if !releases[0].GetDraft() {
 		logger.Infof("Latest release for repository %s is not in draft state. Creating.", repo.GetFullName())
-		return createReleaseDraftWithClient(logger, ctx, client, repo, releases[0])
+		return createReleaseDraftWithClient(ctx, logger, client, repo, releases[0])
 	}
 	logger.Infof("Latest release for repository %s is in draft state.", repo.GetFullName())
 	return releases[0], nil
 }
 
+// bumpPatchVersion will take the version string from the last release and return the semantic version with the patch
+// version bumped.
 func bumpPatchVersion(lastRelease *github.RepositoryRelease) (string, error) {
 	if lastRelease == nil {
 		return "v0.0.1", nil
@@ -122,6 +126,6 @@ func bumpPatchVersion(lastRelease *github.RepositoryRelease) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	lastVersion.Patch += 1
+	lastVersion.Patch++
 	return fmt.Sprintf("v%s", lastVersion), nil
 }

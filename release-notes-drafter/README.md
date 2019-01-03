@@ -1,7 +1,7 @@
 # Release notes drafter
 
 This provides a Golang based AWS Lambda handler that will react to pull request merge hook events from Github to
-maintain a release notes draft.
+maintain a release notes draft on the repo.
 
 The draft is based on the Gruntwork release notes style guide. Specifically, it maintains the following structure:
 
@@ -37,10 +37,24 @@ Note that this handler requires synchronization to avoid concurrency issues in u
 this purpose.
 
 
-## Env Requirements
+## How to deploy
 
-The release notes draft requires:
+- Build and deploy as a public lambda object with an API gateway (TODO: see if github has static ips we can use for ip
+  whitelisting)
+- Set the runtime environment variables:
+    * `GITHUB_WEBHOOK_SECRET`: Github Webhook secret. This should be generated.
+    * `GITHUB_API_KEY`: Github API key with scope `repo`. This should be for a user with enough permissions to update
+      the release notes on the repo (Read/Write access).
+    * AWS IAM profile with DynamoDB access to a lock table. Used for synchronization.
 
-- `GITHUB_WEBHOOK_SECRET`: Github Webhook secret
-- `GITHUB_API_KEY`: Github API key with scope <TODO>
-- AWS IAM profile with DynamoDB access to a lock table. Used for synchronization.
+- Setup a webhook for each repo that we want the release notes drafter to handle. The webhook should point to the API
+  gateway endpoint and the secret key should be the one set in the runtime environment for the lambda function.
+
+
+## How to test locally
+
+- Set `IS_LOCAL` environment variable
+- Build and run the app
+- This will run a web server on port 8080
+- Start [`ngrok`](https://ngrok.com/) to expose the app
+- Setup github repo with webhook to point to the ngrok endpoint

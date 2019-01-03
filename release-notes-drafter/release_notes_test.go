@@ -11,7 +11,7 @@ import (
 func TestParseEmpty(t *testing.T) {
 	t.Parallel()
 
-	releaseNote, err := parseReleaseNoteBody("")
+	releaseNote, err := parseReleaseNoteBody(GetProjectLogger(), "")
 	assert.NoError(t, err)
 	assert.Equal(t, RenderReleaseNote(releaseNote), readFileAsString(t, "test_assets/empty.md"))
 }
@@ -20,7 +20,7 @@ func TestParseFull(t *testing.T) {
 	t.Parallel()
 
 	fullNote := readFileAsString(t, "test_assets/full.md")
-	releaseNote, err := parseReleaseNoteBody(fullNote)
+	releaseNote, err := parseReleaseNoteBody(GetProjectLogger(), fullNote)
 	assert.NoError(t, err)
 	assert.Equal(t, RenderReleaseNote(releaseNote), fullNote)
 }
@@ -29,7 +29,7 @@ func TestAppendModulesAffected(t *testing.T) {
 	t.Parallel()
 
 	fullNote := readFileAsString(t, "test_assets/full.md")
-	releaseNote, err := parseReleaseNoteBody(fullNote)
+	releaseNote, err := parseReleaseNoteBody(GetProjectLogger(), fullNote)
 	assert.NoError(t, err)
 
 	releaseNote = appendModulesAffected(releaseNote, "new-module")
@@ -40,7 +40,7 @@ func TestAppendModulesDedups(t *testing.T) {
 	t.Parallel()
 
 	fullNote := readFileAsString(t, "test_assets/full.md")
-	releaseNote, err := parseReleaseNoteBody(fullNote)
+	releaseNote, err := parseReleaseNoteBody(GetProjectLogger(), fullNote)
 	assert.NoError(t, err)
 
 	releaseNote = appendModulesAffected(releaseNote, "eks-cluster")
@@ -51,7 +51,7 @@ func TestAppendDescription(t *testing.T) {
 	t.Parallel()
 
 	fullNote := readFileAsString(t, "test_assets/full.md")
-	releaseNote, err := parseReleaseNoteBody(fullNote)
+	releaseNote, err := parseReleaseNoteBody(GetProjectLogger(), fullNote)
 	assert.NoError(t, err)
 
 	releaseNote = appendDescription(releaseNote, "TODO: Pull Request Title")
@@ -62,7 +62,7 @@ func TestAppendRelatedLink(t *testing.T) {
 	t.Parallel()
 
 	fullNote := readFileAsString(t, "test_assets/full.md")
-	releaseNote, err := parseReleaseNoteBody(fullNote)
+	releaseNote, err := parseReleaseNoteBody(GetProjectLogger(), fullNote)
 	assert.NoError(t, err)
 
 	releaseNote = appendRelatedLink(releaseNote, "https://github.com/gruntwork-io/package-k8s")

@@ -3,27 +3,59 @@ package main
 import (
 	"bytes"
 
+	// We are using jsternberg's fork of markdownfmt because of https://github.com/shurcooL/markdownfmt/pull/40
+	// We need blackfriday v2 because of https://github.com/russross/blackfriday#known-issue-with-dep (and superior API)
 	"github.com/jsternberg/markdownfmt/markdown"
+
+	// This is a nonintuitive name, but this package is a powerful markdown parser/renderer that can parse markdown into
+	// a tree of nodes.
 	blackfriday "gopkg.in/russross/blackfriday.v2"
 )
 
-func RenderReleaseNote(releaseNote ReleaseNote) string {
-	rootNode := blackfriday.NewNode(blackfriday.Document)
+// RenderReleaseNote will take the release note object and render it back to a markdown string in the format:
+/*
+Modules affected
+----------------
 
-	for _, node := range RenderSectionAsNodes(releaseNote.ModulesAffected) {
+- `module-one`
+
+- `module-two`
+
+Description
+-----------
+
+Description preamble
+
+- Description of change one.
+
+- Description of change two.
+
+Related links
+-------------
+
+- Link to PR #1
+
+- Link to PR #2
+*/
+// Note that the final rendered string has all the extra whitespaces, which are prescribed by the markdownfmt tool.
+func RenderReleaseNote(releaseNote ReleaseNote) string {
+	// First render each section into blackfriday nodes, and then render the tree as a string.
+	rootNode := blackfriday.NewNode(blackfriday.Document)
+	for _, node := range renderSectionAsNodes(releaseNote.ModulesAffected) {
 		rootNode.AppendChild(node)
 	}
-	for _, node := range RenderSectionAsNodes(releaseNote.Description) {
+	for _, node := range renderSectionAsNodes(releaseNote.Description) {
 		rootNode.AppendChild(node)
 	}
-	for _, node := range RenderSectionAsNodes(releaseNote.RelatedLinks) {
+	for _, node := range renderSectionAsNodes(releaseNote.RelatedLinks) {
 		rootNode.AppendChild(node)
 	}
 
 	return nodeAsString(rootNode)
 }
 
-func RenderSectionAsNodes(section Section) []*blackfriday.Node {
+// renderSectionAsNodes will take a release note section and render it into a blackfriday node in a tree.
+func renderSectionAsNodes(section Section) []*blackfriday.Node {
 	nodes := []*blackfriday.Node{}
 
 	// render heading
@@ -56,6 +88,7 @@ func RenderSectionAsNodes(section Section) []*blackfriday.Node {
 	return nodes
 }
 
+// nodeAsString will use the markdownfmt renderer to render the markdown tree into a string.
 func nodeAsString(node *blackfriday.Node) string {
 	buf := bytes.NewBufferString("")
 	renderer := markdown.NewRenderer(nil)
