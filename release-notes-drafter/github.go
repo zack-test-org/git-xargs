@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -21,14 +22,20 @@ func getGithubClient(ctx context.Context) *github.Client {
 	return github.NewClient(oauth2Client)
 }
 
-func makeRequest(url string) (*github.Response, error) {
+func makeRequest(url string) (string, error) {
 	ctx := context.Background()
 	client := getGithubClient(ctx)
 	request, err := client.NewRequest("GET", url, "")
 	if err != nil {
-		return nil, errors.WithStackTrace(err)
+		return "", errors.WithStackTrace(err)
 	}
-	return client.Do(ctx, request, nil)
+
+	buf := bytes.NewBufferString("")
+	_, err = client.Do(ctx, request, buf)
+	if err != nil {
+		return "", errors.WithStackTrace(err)
+	}
+	return buf.String(), nil
 }
 
 // updateReleaseDescription will update the given release with the provided description

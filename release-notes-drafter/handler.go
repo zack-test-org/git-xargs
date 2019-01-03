@@ -30,37 +30,42 @@ func proxyRequestAsRequest(request events.APIGatewayProxyRequest) http.Request {
 }
 
 func processPullRequestMerged(logger *logrus.Entry, event *github.PullRequestEvent) error {
-	return nil
-}
-
-/*
 	// We assume the passed in event is a pull request merged event
 	logger.Infof("Processing pull request %s/%d merge", event.GetRepo().GetFullName(), event.GetNumber())
 	defer logger.Infof("Processed pull request %s/%d merge", event.GetRepo().GetFullName(), event.GetNumber())
 
+	logger.Infof("Getting or creating release draft for repo %s", event.GetRepo().GetFullName())
 	draftRelease, err := getOrCreateReleaseDraft(logger, event.GetRepo())
 	if err != nil {
 		return err
 	}
+	logger.Infof("Done getting or creating release draft for repo %s", event.GetRepo().GetFullName())
 
-	releaseNote, err := parseReleaseNoteBody(draftRelease.GetBody())
+	draftBody := draftRelease.GetBody()
+	logger.Infof("Parsing release note body for draft release %s", draftBody)
+	releaseNote, err := parseReleaseNoteBody(draftBody)
 	if err != nil {
 		return err
 	}
+	logger.Infof("Done parsing release note body for draft release %s", draftBody)
 
+	logger.Infof("Appending release info")
 	pullRequest := event.GetPullRequest()
 	modulesAffected, err := getModulesAffected(pullRequest)
 	if err != nil {
 		return err
 	}
-	releaseNote = appendModulesAffected(releaseNote, modulesAffected)
+	for _, module := range modulesAffected {
+		releaseNote = appendModulesAffected(releaseNote, module)
+	}
 	description := getDescription(pullRequest)
 	releaseNote = appendDescription(releaseNote, description)
 	link := getLink(pullRequest)
-	releaseNote = appendRelatedLinks(releaseNote, link)
+	releaseNote = appendRelatedLink(releaseNote, link)
+	logger.Infof("Done appending release info")
 
 	return updateReleaseDescription(logger, event.GetRepo(), draftRelease, RenderReleaseNote(releaseNote))
-}*/
+}
 
 func processEvent(logger *logrus.Entry, webhookType string, event interface{}) error {
 	switch event := event.(type) {
@@ -81,27 +86,39 @@ func processEvent(logger *logrus.Entry, webhookType string, event interface{}) e
 	return nil
 }
 
-func Handler(request events.APIGatewayProxyRequest) (Response, error) {
-	logger := GetProjectLogger()
-	logger.Infof("Request data: %v", request.Body)
-
+func LambdaHandler(request events.APIGatewayProxyRequest) (Response, error) {
 	httpRequest := proxyRequestAsRequest(request)
+	return Handler(&httpRequest)
 
-	payload, err := github.ValidatePayload(&httpRequest, []byte(GithubWebhookSecretKey))
+}
+
+func Handler(request *http.Request) (Response, error) {
+	logger := GetProjectLogger()
+
+	logger.Info("Validating request")
+	payload, err := github.ValidatePayload(request, []byte(GithubWebhookSecretKey))
 	if err != nil {
 		logger.Errorf("Error validating event payload: %s", err)
 		return ErrorResponse, errors.WithStackTrace(err)
 	}
-	event, err := github.ParseWebHook(github.WebHookType(&httpRequest), payload)
+	logger.Info("Validated request is webhook from github")
+
+	webhookType := github.WebHookType(request)
+	logger.Infof("Parsing webhook type %s payload", webhookType)
+	event, err := github.ParseWebHook(webhookType, payload)
 	if err != nil {
 		logger.Errorf("Error parsing webhook event payload: %s", err)
 		return ErrorResponse, errors.WithStackTrace(err)
 	}
-	err = processEvent(logger, github.WebHookType(&httpRequest), event)
+	logger.Infof("Successfully parsed webhook type %s payload", webhookType)
+
+	logger.Infof("Processing webhook type %s event", webhookType)
+	err = processEvent(logger, webhookType, event)
 	if err != nil {
 		logger.Errorf("Error while processing webhook event: %s", err)
 		return ErrorResponse, errors.WithStackTrace(err)
 	}
+	logger.Infof("Processed webhook type %s event", webhookType)
 
 	return Response{"ok"}, nil
 }
