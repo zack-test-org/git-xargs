@@ -1,7 +1,13 @@
 # Release notes drafter
 
-This provides a Golang based AWS Lambda handler that will react to pull request merge hook events from Github to
-maintain a release notes draft on the repo.
+This provides a Golang based event handler that will react to pull request merge hook events from Github to maintain a
+release notes draft on the repo.
+
+This can be used as:
+
+- A standalone webserver
+- An AWS lambda function
+- A Github Action
 
 The draft is based on the Gruntwork release notes style guide. Specifically, it maintains the following structure:
 
@@ -39,11 +45,19 @@ this purpose.
 
 ## How to deploy
 
-- Build and deploy as a public lambda object with an API gateway (TODO: see if github has static ips we can use for ip
-  whitelisting)
+### Github Action
+
+TODO
+
+
+### Lambda
+
+<!-- TODO: see if github has static ips we can use for ip whitelisting -->
+
+- Build and deploy as a public lambda object with an API gateway, making sure to run the command with the `lambda` arg.
 - Set the runtime environment variables:
     * `GITHUB_WEBHOOK_SECRET`: Github Webhook secret. This should be generated.
-    * `GITHUB_API_KEY`: Github API key with scope `repo`. This should be for a user with enough permissions to update
+    * `GITHUB_TOKEN`: Github API key with scope `repo`. This should be for a user with enough permissions to update
       the release notes on the repo (Read/Write access).
     * AWS IAM profile with DynamoDB access to a lock table. Used for synchronization.
 
@@ -51,10 +65,13 @@ this purpose.
   gateway endpoint and the secret key should be the one set in the runtime environment for the lambda function.
 
 
-## How to test locally
+### Local
 
-- Set `IS_LOCAL` environment variable
-- Build and run the app
+- Set the runtime environment variables:
+    * `GITHUB_WEBHOOK_SECRET`: Github Webhook secret. This should be generated.
+    * `GITHUB_TOKEN`: Github API key with scope `repo`. This should be for a user with enough permissions to update
+      the release notes on the repo (Read/Write access).
+- Build and run the app with `local` arg.
 - This will run a web server on port 8080
 - Start [`ngrok`](https://ngrok.com/) to expose the app
 - Setup github repo with webhook to point to the ngrok endpoint

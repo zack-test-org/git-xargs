@@ -63,10 +63,11 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:da80f696585825c8a4e8fa31b80189c28adf24b3d554f74a80936ea135d7e968"
+  digest = "1:d4592055e58b09cbf8d1377aef93d7c9afe28a257327977227f75fddab008782"
   name = "github.com/gruntwork-io/gruntwork-cli"
   packages = [
     "collections",
+    "entrypoint",
     "errors",
     "logging",
   ]
@@ -199,11 +200,13 @@
     "github.com/blang/semver",
     "github.com/google/go-github/github",
     "github.com/gruntwork-io/gruntwork-cli/collections",
+    "github.com/gruntwork-io/gruntwork-cli/entrypoint",
     "github.com/gruntwork-io/gruntwork-cli/errors",
     "github.com/gruntwork-io/gruntwork-cli/logging",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
+    "github.com/urfave/cli",
     "github.com/waigani/diffparser",
     "golang.org/x/oauth2",
   ]

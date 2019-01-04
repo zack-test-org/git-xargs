@@ -4,6 +4,15 @@ import (
 	"fmt"
 )
 
+// MissingRequiredParameter is returned when a required parameter is missing.
+type MissingRequiredParameter struct {
+	paramName string
+}
+
+func (err MissingRequiredParameter) Error() string {
+	return fmt.Sprintf("Missing required parameter %s", err.paramName)
+}
+
 // IncorrectParserError is returned when an incorrect parser is invoked for the markdown node.
 type IncorrectParserError struct {
 	nodeInfo string
