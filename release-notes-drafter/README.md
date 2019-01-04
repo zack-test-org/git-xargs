@@ -58,7 +58,14 @@ this purpose.
 
 ### Github Action
 
-TODO
+- Build a copy of the command:
+    - `GOOS=linux go build -a -o release-notes-drafter .`
+
+- Copy the contents of [`sample_github_action`](./sample_github_action) to the repo:
+    - `main.workflow` should go into the repo's `.github` folder.
+    - `Dockerfile` should go into a new folder called `release_notes_drafter`.
+
+- Copy the build binary into the repo, under the folder `release_notes_drafter`
 
 
 ### Lambda
