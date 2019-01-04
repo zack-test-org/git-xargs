@@ -117,6 +117,41 @@ func getOrCreateReleaseDraft(logger *logrus.Entry, repo *github.Repository) (*gi
 	return releases[0], nil
 }
 
+// getPullRequestDiffSummary will retrieve the comparison of the commits in the PR against the base when it was created.
+func getPullRequestDiffSummary(logger *logrus.Entry, pullRequest *github.PullRequest) (*github.CommitsComparison, error) {
+	logger.Infof("Retrieving diff for pull request %s", pullRequest.GetHTMLURL())
+
+	repo := pullRequest.GetBase().GetRepo()
+	prHeadSha := pullRequest.GetHead().GetSHA()
+	prBaseSha := pullRequest.GetBase().GetSHA()
+
+	ctx := context.Background()
+	client := getGithubClient(ctx)
+	logger.Infof("Comparing state from commit %s (PR Base) to commit %s (PR Head)", prBaseSha, prHeadSha)
+	comparison, _, err := client.Repositories.CompareCommits(
+		ctx,
+		repo.GetOwner().GetLogin(),
+		repo.GetName(),
+		prBaseSha,
+		prHeadSha,
+	)
+	if err != nil {
+		logger.Errorf(
+			"Error retrieving comparison of state from commit %s (PR Base) to commit %s (PR Head): %s",
+			prBaseSha,
+			prHeadSha,
+			err,
+		)
+		return nil, errors.WithStackTrace(err)
+	}
+	logger.Infof(
+		"Successfully retrieved comparison of state from commit %s (PR Base) to commit %s (PR Head)",
+		prBaseSha,
+		prHeadSha,
+	)
+	return comparison, nil
+}
+
 // bumpPatchVersion will take the version string from the last release and return the semantic version with the patch
 // version bumped.
 func bumpPatchVersion(lastRelease *github.RepositoryRelease) (string, error) {

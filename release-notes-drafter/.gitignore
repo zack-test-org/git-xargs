@@ -1,3 +1,4 @@
 main
 local
 release-notes-drafter
+*.json

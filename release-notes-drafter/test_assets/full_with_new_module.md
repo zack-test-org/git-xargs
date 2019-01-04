@@ -28,6 +28,7 @@
 Description preamble text.
 
 - A description with `inline code block` and [links](https://github.com/gruntwork-io/package-k8s)
+- A faux description
 <!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->
 
 

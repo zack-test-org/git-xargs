@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gruntwork-io/gruntwork-cli/collections"
 	"github.com/gruntwork-io/gruntwork-cli/errors"
 )
 
@@ -13,6 +14,9 @@ const (
 	DescriptionMarker     = "<!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->"
 	RelatedLinksMarker    = "<!-- RELEASE_NOTES_DRAFTER_MARKER_RELATED_LINKS_NEXT -->"
 )
+
+// We don't want to dedup these markers that are used for significant whitespace in comment sections
+var DedupWhitelist = []string{"--", "-->", "<!--", ""}
 
 // findMarker will search the list of strings representing each line in the release note body for the given marker and
 // return the index of the marker. This will return -1 if it could not find the index.
@@ -36,6 +40,7 @@ func addModulesAffected(releaseNoteBody string, modulesAffected []string) (strin
 	for _, newModuleAffected := range modulesAffected {
 		bodyLines = insertLine(bodyLines, modulesAffectedMarkerIdx, fmt.Sprintf("- `%s`", newModuleAffected))
 	}
+	bodyLines = dedupLines(bodyLines, DedupWhitelist)
 	return strings.Join(bodyLines, "\n"), nil
 }
 
@@ -48,6 +53,7 @@ func addDescription(releaseNoteBody string, description string) (string, error) 
 		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{DescriptionMarker, releaseNoteBody})
 	}
 	bodyLines = insertLine(bodyLines, descriptionMarkerIdx, fmt.Sprintf("- %s", description))
+	bodyLines = dedupLines(bodyLines, DedupWhitelist)
 	return strings.Join(bodyLines, "\n"), nil
 }
 
@@ -60,6 +66,7 @@ func addRelatedLink(releaseNoteBody string, relatedLink string) (string, error) 
 		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{RelatedLinksMarker, releaseNoteBody})
 	}
 	bodyLines = insertLine(bodyLines, relatedLinkMarkerIdx, fmt.Sprintf("- %s", relatedLink))
+	bodyLines = dedupLines(bodyLines, DedupWhitelist)
 	return strings.Join(bodyLines, "\n"), nil
 }
 
@@ -67,6 +74,22 @@ func addRelatedLink(releaseNoteBody string, relatedLink string) (string, error) 
 // https://github.com/golang/go/wiki/SliceTricks#insert
 func insertLine(lines []string, idx int, line string) []string {
 	return append(lines[:idx], append([]string{line}, lines[idx:]...)...)
+}
+
+// dedupLines will dedup lines that are equivalent after trimming spaces. Will always add lines that match the
+// whitelist.
+func dedupLines(lines []string, whitelistLines []string) []string {
+	seen := map[string]bool{}
+	outLines := []string{}
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		_, hasSeen := seen[trimmedLine]
+		if !hasSeen || collections.ListContainsElement(whitelistLines, trimmedLine) {
+			outLines = append(outLines, line)
+			seen[trimmedLine] = true
+		}
+	}
+	return outLines
 }
 
 // ReleaseNoteTemplate represents the template to use for starting a new release notes. This has information for the

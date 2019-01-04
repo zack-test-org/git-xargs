@@ -63,10 +63,9 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:d4592055e58b09cbf8d1377aef93d7c9afe28a257327977227f75fddab008782"
+  digest = "1:7bb5e1ecd481d756ab0f33342c7a7e66982feaa9c6f83230015ee3e520b93973"
   name = "github.com/gruntwork-io/gruntwork-cli"
   packages = [
-    "collections",
     "entrypoint",
     "errors",
     "logging",
@@ -74,14 +73,6 @@
   pruneopts = "UT"
   revision = "6a2163138f3d10377f313428e7e367b0a6c0c1c9"
   version = "v0.4.2"
-
-[[projects]]
-  branch = "master"
-  digest = "1:7d1a655e1f16ccaf1adb026bdeece28499ecb0ead32d32accc6ed6f2c40cacee"
-  name = "github.com/juju/errors"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "089d3ea4e4d597bd98acac068193d341983326a3"
 
 [[projects]]
   digest = "1:0a69a1c0db3591fcefb47f115b224592c8dfa4368b7ba9fae509d5e16cdc95c8"
@@ -125,14 +116,6 @@
   pruneopts = "UT"
   revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
   version = "v1.20.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:7cb56b6eee07ac9723646d206a0fdd8c7bc3ee7f8d411c3e2710117c5052fe76"
-  name = "github.com/waigani/diffparser"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "6c001f4d9249716a1a9afb4ab4a364ad76b65eec"
 
 [[projects]]
   branch = "master"
@@ -199,7 +182,6 @@
     "github.com/aws/aws-lambda-go/lambda",
     "github.com/blang/semver",
     "github.com/google/go-github/github",
-    "github.com/gruntwork-io/gruntwork-cli/collections",
     "github.com/gruntwork-io/gruntwork-cli/entrypoint",
     "github.com/gruntwork-io/gruntwork-cli/errors",
     "github.com/gruntwork-io/gruntwork-cli/logging",
@@ -207,7 +189,6 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/urfave/cli",
-    "github.com/waigani/diffparser",
     "golang.org/x/oauth2",
   ]
   solver-name = "gps-cdcl"

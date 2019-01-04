@@ -5,46 +5,40 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
-	"github.com/gruntwork-io/gruntwork-cli/collections"
-	"github.com/gruntwork-io/gruntwork-cli/errors"
-	"github.com/waigani/diffparser"
 )
 
 // getModulesAffected will process the diff of the pull request and look for updates to modules, extracting them as
 // strings. This assumes modules refer to folders in the repo under the modules directory in the root.
 func getModulesAffected(pullRequest *github.PullRequest) ([]string, error) {
-	bodyString, err := makeRequest(pullRequest.GetDiffURL())
+	logger := GetProjectLogger()
+	comparison, err := getPullRequestDiffSummary(logger, pullRequest)
 	if err != nil {
 		return []string{}, err
 	}
-	return extractModulesAffectedFromDiff(bodyString)
+	return extractModulesAffectedFromDiff(comparison), nil
 }
 
-// extractModulesAffectedFromDiff takes a git diff as a string, parses it and extracts the modules that were affected as
-// strings. A module is affected if:
+// extractModulesAffectedFromDiff takes the pull request diff summary and determine modules affected.. A module is
+// affected if:
 // - A new file was added.
 // - An existing file was changed.
 // - A file was removed.
 // TODO: Specially render new files as "[NEW] module"
-func extractModulesAffectedFromDiff(diffString string) ([]string, error) {
-	diff, err := diffparser.Parse(diffString)
-	if err != nil {
-		return []string{}, errors.WithStackTrace(err)
-	}
-	modulesAffected := map[string]string{}
-	for _, file := range diff.Files {
-		fileNameToUse := file.OrigName
-		if fileNameToUse == "" {
-			fileNameToUse = file.NewName
+func extractModulesAffectedFromDiff(pullRequestDiff *github.CommitsComparison) []string {
+	modulesAffected := []string{}
+	for _, file := range pullRequestDiff.Files {
+		var filePath string
+		if file.GetStatus() == "deleted" {
+			filePath = file.GetPreviousFilename()
+		} else {
+			filePath = file.GetFilename()
 		}
-		maybeModule := getModuleString(fileNameToUse)
-		if maybeModule != "" {
-			// NOTE: The value doesn't matter, so we use empty string. Ideally we will use bool (and thus true), but
-			// collections.Keys only works with map[string]string.
-			modulesAffected[maybeModule] = ""
+		maybeModuleAffected := getModuleString(filePath)
+		if maybeModuleAffected != "" {
+			modulesAffected = append(modulesAffected, maybeModuleAffected)
 		}
 	}
-	return collections.Keys(modulesAffected), nil
+	return modulesAffected
 }
 
 // getModuleString will extract the module name given the path to a file that changed, returning empty string if it is
@@ -54,6 +48,9 @@ func getModuleString(path string) string {
 		return ""
 	}
 	items := strings.Split(path, "/")
+	if len(items) <= 2 {
+		return ""
+	}
 	return items[1]
 }
 

@@ -3,25 +3,26 @@ package main
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestBasicModulesAffectedFromDiff(t *testing.T) {
+func TestGetModuleString(t *testing.T) {
 	t.Parallel()
 
-	diffString := readFileAsString(t, "test_assets/basic.diff")
-	modulesAffected, err := extractModulesAffectedFromDiff(diffString)
-	require.NoError(t, err)
-	require.Equal(t, len(modulesAffected), 1)
-	require.Equal(t, modulesAffected[0], "new")
-}
-
-func TestDupeModulesAffectedFromDiff(t *testing.T) {
-	t.Parallel()
-
-	diffString := readFileAsString(t, "test_assets/duplicated_module.diff")
-	modulesAffected, err := extractModulesAffectedFromDiff(diffString)
-	require.NoError(t, err)
-	require.Equal(t, len(modulesAffected), 1)
-	require.Equal(t, modulesAffected[0], "new")
+	testCases := []struct {
+		in  string
+		out string
+	}{
+		{"this/is/not/a/module/path", ""},
+		{"modules/this/is/a/module/path", "this"},
+		{"modules/README.md", ""},
+	}
+	for _, testCase := range testCases {
+		// Redefine testCase so that it is scoped within this block. This prevents using an outdated version of the
+		// variable, which gets updated outside the block in the for loop.
+		t.Run(testCase.in, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, getModuleString(testCase.in), testCase.out)
+		})
+	}
 }
