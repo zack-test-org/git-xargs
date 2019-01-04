@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -18,20 +19,28 @@ import (
 )
 
 var (
-	// GithubWebhookSecretkey is the secret key used to validate the incoming webhook requests so that we can make sure
-	// it is coming from github. Only used for local or lambda modes.
-	GithubWebhookSecretKey = os.Getenv("GITHUB_WEBHOOK_SECRET")
-	// GithubApiKey is the personal access token to use to read pull request info and update release notes.
-	GithubApiKey = os.Getenv("GITHUB_TOKEN")
-	// GithubEventPath is a path on disk to a json file that contains the webhook data
-	GithubEventPath = os.Getenv("GITHUB_EVENT_PATH")
-	// GithubEventType is the webhook event type. See https://developer.github.com/v3/activity/events/types/.
-	GithubEventType = os.Getenv("GITHUB_EVENT_NAME")
-
+	// Global flags
 	logLevelFlag = cli.StringFlag{
 		Name:  "loglevel",
 		Value: logrus.InfoLevel.String(),
 	}
+	awsRegionFlag = cli.StringFlag{
+		Name:  "aws-region",
+		Value: "us-east-1",
+		Usage: "AWS region to use for secrets and dynamodb lock table. Defaults to us-east-1.",
+	}
+	lockTableFlag = cli.StringFlag{
+		Name:  "lock-table",
+		Value: "release-notes-drafter-locks",
+		Usage: "Name of the dynamodb table holding the synchronization locks.",
+	}
+	lockTimeoutFlag = cli.DurationFlag{
+		Name:  "lock-timeout",
+		Value: 10 * time.Minute,
+		Usage: "Amount of time to wait on acquiring the lock before giving up.",
+	}
+
+	// Subcommand flags
 	jsonPathFlag = cli.StringFlag{
 		Name: "event-json",
 		// The environment variable is set by Github Action
@@ -54,6 +63,11 @@ func initCli(cliContext *cli.Context) error {
 		return errors.WithStackTrace(err)
 	}
 	logging.SetGlobalLogLevel(level)
+
+	awsRegion := cliContext.String(awsRegionFlag.Name)
+	lockTableName := cliContext.String(lockTableFlag.Name)
+	lockTimeout := cliContext.Duration(lockTimeoutFlag.Name)
+	SetContext(GetProjectLogger(), awsRegion, lockTableName, lockTimeout)
 	return nil
 }
 
@@ -68,6 +82,9 @@ func main() {
 	app.Before = initCli
 	app.Flags = []cli.Flag{
 		logLevelFlag,
+		awsRegionFlag,
+		lockTableFlag,
+		lockTimeoutFlag,
 	}
 	app.Commands = []cli.Command{
 		{
@@ -153,8 +170,8 @@ func runAction(cliContext *cli.Context) error {
 	var jsonPath string
 	if cliContext.String(jsonPathFlag.Name) != "" {
 		jsonPath = cliContext.String(jsonPathFlag.Name)
-	} else if GithubEventPath != "" {
-		jsonPath = GithubEventPath
+	} else if os.Getenv("GITHUB_EVENT_PATH") != "" {
+		jsonPath = os.Getenv("GITHUB_EVENT_PATH")
 	} else {
 		logger.Errorf("Github event path is required to execute release-notes-drafter as a CLI action.")
 		return MissingRequiredParameter{jsonPathFlag.Name}
@@ -163,8 +180,8 @@ func runAction(cliContext *cli.Context) error {
 	var eventType string
 	if cliContext.String(eventTypeFlag.Name) != "" {
 		eventType = cliContext.String(eventTypeFlag.Name)
-	} else if GithubEventType != "" {
-		eventType = GithubEventType
+	} else if os.Getenv("GITHUB_EVENT_NAME") != "" {
+		eventType = os.Getenv("GITHUB_EVENT_NAME")
 	} else {
 		logger.Errorf("Github event type is required to execute release-notes-drafter as a CLI action.")
 		return MissingRequiredParameter{eventTypeFlag.Name}

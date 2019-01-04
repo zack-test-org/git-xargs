@@ -42,13 +42,23 @@ func proxyRequestAsRequest(request events.APIGatewayProxyRequest) http.Request {
 //   (2) placeholder description which consists of the PR title; (3) PR link
 // - Update the release note draft with the new description
 // Note: This assumes the passed in event is a pull request merged event
-// TODO: Synchronize with lock on repository to avoid concurrency issues.
 func processPullRequestMerged(logger *logrus.Entry, event *github.PullRequestEvent) error {
 	logger.Infof("Processing pull request %s/%d merge", event.GetRepo().GetFullName(), event.GetNumber())
 
 	// Assert that this is a pull request merge event
 	if event.GetAction() != "closed" || !event.GetPullRequest().GetMerged() {
 		return errors.WithStackTrace(IncorrectHandlerError{event.GetAction()})
+	}
+
+	if ProjectLockTableName != "" {
+		// Synchronize on the repository to ensure that only one instance of the function is exectued per repo.
+		logger.Info("Lock table is configured, so synchronizing event processing on repository.")
+		lockString := event.GetRepo().GetFullName()
+		defer ReleaseLock(lockString)
+		err := BlockingAcquireLock(lockString)
+		if err != nil {
+			return err
+		}
 	}
 
 	logger.Infof("Getting or creating release draft for repo %s", event.GetRepo().GetFullName())

@@ -58,6 +58,10 @@ this purpose.
 
 ### Github Action
 
+- You need an AWS account with a DynamoDB lock table that can be used for synchronization.
+- Define the secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` on the Github Action page, corresponding to an
+  account that only has access to the lock table in DynamoDB.
+
 - Build a copy of the command:
     - `GOOS=linux go build -a -o release-notes-drafter .`
 
@@ -73,12 +77,13 @@ this purpose.
 <!-- TODO: see if github has static ips we can use for ip whitelisting -->
 
 - Build and deploy as a public lambda object with an API gateway, making sure to run the command with the `lambda` arg.
-- Set the runtime environment variables:
+- Make sure the following secrets are defined in AWS secrets manager:
     * `GITHUB_WEBHOOK_SECRET`: Github Webhook secret. This should be generated.
     * `GITHUB_TOKEN`: Github API key with scope `repo`. This should be for a user with enough permissions to update
       the release notes on the repo (Read/Write access).
-    * AWS IAM profile with DynamoDB access to a lock table. Used for synchronization.
-
+- Make sure a DynamoDB lock table exists that can be used for synchronization.
+- Make sure the lambda function has enough permissions to access the secrets and the DynamoDB lock table used for
+  synchronization.
 - Setup a webhook for each repo that we want the release notes drafter to handle. The webhook should point to the API
   gateway endpoint and the secret key should be the one set in the runtime environment for the lambda function.
 
