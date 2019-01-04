@@ -27,6 +27,17 @@ The draft is based on the Gruntwork release notes style guide. Specifically, it 
 <!-- Contains a list of links to the PRs -->
 ```
 
+## Example
+
+The first draft will look something like this:
+
+![draft example image](./_docs/example-draft.png)
+
+Notice how all the comments (e.g the markers) are not shown in the preview. These are still available when you try to
+edit the release note:
+
+![draft example edit image](./_docs/example-draft-edit.png)
+
 
 ## How it works
 
