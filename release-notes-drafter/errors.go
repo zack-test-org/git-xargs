@@ -32,12 +32,12 @@ func (err UnknownHeadingError) Error() string {
 	return fmt.Sprintf("Unknown heading %s while parsing release note body: %s", err.heading, err.body)
 }
 
-// ReleaseNoteParsingError is returned when the parser fails to parse the release note markdown into the ReleaseNote
-// struct.
-type ReleaseNoteParsingError struct {
-	body string
+// MissingMarkerError is returned when a marker for the release notes is missing.
+type MissingMarkerError struct {
+	marker string
+	body   string
 }
 
-func (err ReleaseNoteParsingError) Error() string {
-	return fmt.Sprintf("Error while parsing release note body %s", err.body)
+func (err MissingMarkerError) Error() string {
+	return fmt.Sprintf("Release note is missing marker \"%s\" in body \"%s\"", err.marker, err.body)
 }

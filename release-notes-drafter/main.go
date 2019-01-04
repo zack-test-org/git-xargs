@@ -31,6 +31,7 @@ func main() {
 
 // serveLambda will serve the handler as a lambda function.
 func serveLambda() {
+	logger := GetProjectLogger()
 	logger.Infof("Starting as lambda function")
 	lambda.Start(lambdaHandler)
 }
@@ -48,6 +49,7 @@ func lambdaHandler(request events.APIGatewayProxyRequest) (Response, error) {
 
 // serveLocal will serve the handler as a basic web server.
 func serveLocal() {
+	logger := GetProjectLogger()
 	logger.Infof("Starting as local web server")
 	http.HandleFunc("/", httpHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))

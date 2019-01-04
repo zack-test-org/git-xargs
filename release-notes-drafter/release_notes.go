@@ -1,85 +1,112 @@
 package main
 
 import (
-	// This is a nonintuitive name, but this package is a powerful markdown parser/renderer that can parse markdown into
-	// a tree of nodes.
-	blackfriday "gopkg.in/russross/blackfriday.v2"
+	"fmt"
+	"strings"
+
+	"github.com/gruntwork-io/gruntwork-cli/errors"
 )
 
-// List represents a markdown list, without the ListOpen and ListClose tokens
-// If it is an ordered list, IsOrdered will be true.
-type List struct {
-	IsOrdered bool
-	Items     []*blackfriday.Node
-}
-
-// Section represents a release note section. A section is composed of:
-// - A heading
-// - A preamble, which is text right after the heading before a bullet list of items
-// - A bullet list of items
-type Section struct {
-	Heading  string
-	Preamble []*blackfriday.Node
-	Details  List
-}
-
-// ReleaseNote represents a release note in the Gruntwork format. Any changes to the format should be made here.
-type ReleaseNote struct {
-	ModulesAffected Section
-	Description     Section
-	RelatedLinks    Section
-}
-
-// This is the list of known headings for a release note format
+// Markers that denote where the next information should be inserted in the release notes.
 const (
-	ModulesAffectedHeading = "Modules affected"
-	DescriptionHeading     = "Description"
-	RelatedLinksHeading    = "Related links"
+	ModulesAffectedMarker = "<!-- RELEASE_NOTES_DRAFTER_MARKER_MODULES_AFFECTED_NEXT -->"
+	DescriptionMarker     = "<!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->"
+	RelatedLinksMarker    = "<!-- RELEASE_NOTES_DRAFTER_MARKER_RELATED_LINKS_NEXT -->"
 )
 
-// appendModulesAffected will take a release note and append the provided module affected (as a string) to the release
-// note as a line item wrapped in inline code quotes.
-func appendModulesAffected(releaseNote ReleaseNote, moduleAffected string) ReleaseNote {
-	itemNode := blackfriday.NewNode(blackfriday.Item)
-	paragraphNode := blackfriday.NewNode(blackfriday.Paragraph)
-	textNode := blackfriday.NewNode(blackfriday.Text)
-	codeNode := blackfriday.NewNode(blackfriday.Code)
-	codeNode.Literal = []byte(moduleAffected)
-	paragraphNode.AppendChild(textNode)
-	paragraphNode.AppendChild(codeNode)
-	itemNode.AppendChild(paragraphNode)
-
-	releaseNote.ModulesAffected.Details.Items = append(releaseNote.ModulesAffected.Details.Items, itemNode)
-	return releaseNote
+// findMarker will search the list of strings representing each line in the release note body for the given marker and
+// return the index of the marker. This will return -1 if it could not find the index.
+func findMarker(bodyLines []string, marker string) int {
+	for idx, item := range bodyLines {
+		if strings.TrimSpace(item) == marker {
+			return idx
+		}
+	}
+	return -1
 }
 
-// appendDescription will take a release note and append the provided description (as a string) to the release note as
-// a simple text link item.
-func appendDescription(releaseNote ReleaseNote, description string) ReleaseNote {
-	itemNode := blackfriday.NewNode(blackfriday.Item)
-	paragraphNode := blackfriday.NewNode(blackfriday.Paragraph)
-	textNode := blackfriday.NewNode(blackfriday.Text)
-	textNode.Literal = []byte(description)
-	paragraphNode.AppendChild(textNode)
-	itemNode.AppendChild(paragraphNode)
-
-	releaseNote.Description.Details.Items = append(releaseNote.Description.Details.Items, itemNode)
-	return releaseNote
+// addModulesAffected will search the release note body for the marker where the next modules affected should be
+// inserted, and insert them in as inline code list items.
+func addModulesAffected(releaseNoteBody string, modulesAffected []string) (string, error) {
+	bodyLines := strings.Split(releaseNoteBody, "\n")
+	modulesAffectedMarkerIdx := findMarker(bodyLines, ModulesAffectedMarker)
+	if modulesAffectedMarkerIdx == -1 {
+		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{ModulesAffectedMarker, releaseNoteBody})
+	}
+	for _, newModuleAffected := range modulesAffected {
+		bodyLines = insertLine(bodyLines, modulesAffectedMarkerIdx, fmt.Sprintf("- `%s`", newModuleAffected))
+	}
+	return strings.Join(bodyLines, "\n"), nil
 }
 
-// appendRelatedLink will take a release note and append the provided link URL (as a string) to the release note as a
-// link node.
-func appendRelatedLink(releaseNote ReleaseNote, url string) ReleaseNote {
-	itemNode := blackfriday.NewNode(blackfriday.Item)
-	paragraphNode := blackfriday.NewNode(blackfriday.Paragraph)
-	linkNode := blackfriday.NewNode(blackfriday.Link)
-	linkNode.Destination = []byte(url)
-	linkTextNode := blackfriday.NewNode(blackfriday.Text)
-	linkTextNode.Literal = []byte(url)
-	linkNode.AppendChild(linkTextNode)
-	paragraphNode.AppendChild(linkNode)
-	itemNode.AppendChild(paragraphNode)
-
-	releaseNote.RelatedLinks.Details.Items = append(releaseNote.RelatedLinks.Details.Items, itemNode)
-	return releaseNote
+// addDescription will search the release note body for the marker where the next description should be inserted, and
+// inserts it in verbatim as a list item.
+func addDescription(releaseNoteBody string, description string) (string, error) {
+	bodyLines := strings.Split(releaseNoteBody, "\n")
+	descriptionMarkerIdx := findMarker(bodyLines, DescriptionMarker)
+	if descriptionMarkerIdx == -1 {
+		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{DescriptionMarker, releaseNoteBody})
+	}
+	bodyLines = insertLine(bodyLines, descriptionMarkerIdx, fmt.Sprintf("- %s", description))
+	return strings.Join(bodyLines, "\n"), nil
 }
+
+// addRelatedLink will search the release note body for the marker where the next link should be inserted, and inserts
+// it in verbatim as a list item.
+func addRelatedLink(releaseNoteBody string, relatedLink string) (string, error) {
+	bodyLines := strings.Split(releaseNoteBody, "\n")
+	relatedLinkMarkerIdx := findMarker(bodyLines, RelatedLinksMarker)
+	if relatedLinkMarkerIdx == -1 {
+		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{RelatedLinksMarker, releaseNoteBody})
+	}
+	bodyLines = insertLine(bodyLines, relatedLinkMarkerIdx, fmt.Sprintf("- %s", relatedLink))
+	return strings.Join(bodyLines, "\n"), nil
+}
+
+// insertLine will insert the provided new line to the list of lines at the given index.
+// https://github.com/golang/go/wiki/SliceTricks#insert
+func insertLine(lines []string, idx int, line string) []string {
+	return append(lines[:idx], append([]string{line}, lines[idx:]...)...)
+}
+
+// ReleaseNoteTemplate represents the template to use for starting a new release notes. This has information for the
+// maintainer about how to update it, as well as information
+const ReleaseNoteTemplate = `<!--
+  -- This is autogenerated from the release notes drafter. When updating, be sure to double check some of the changes
+  -- before publishing.
+  -- Note that there are markers for the release notes drafter as comments. DO NOT REMOVE THEM. They will not show up in
+  -- the preview and is harmless to keep, but harmful to remove as it is used to guide the drafter on where the next
+  -- information should be inserted.
+  -->
+
+## Modules affected
+
+<!-- The list of modules that have been touched since the last release.
+  --
+  -- The autogenerator will choose to do a patch release. However, check if the changes in the following modules are
+  -- backwards compatible, and update the release number if it is backwards incompatible.
+  --
+  -- The following kinds of changes would constitute a backwards incompatible change:
+  -- * In Terraform code: add a new variable without a default, rename or remove an existing variable, remove or rename
+  --   an output, remove or rename a resource.
+  -- * In Bash and Go code: add a new parameter without a default, rename or remove an existing parameter, fundamentally
+  --   change what the code does.
+  -->
+
+<!-- RELEASE_NOTES_DRAFTER_MARKER_MODULES_AFFECTED_NEXT -->
+
+
+## Description
+
+<!-- A description of the changes made in this release. Be sure to update any TODOs. --> 
+
+<!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->
+
+
+## Related links
+
+<!-- Links to each PR or issue that are being addressed in this release. The drafter will autoinclude each merged PR. -->
+
+<!-- RELEASE_NOTES_DRAFTER_MARKER_RELATED_LINKS_NEXT -->
+
+`

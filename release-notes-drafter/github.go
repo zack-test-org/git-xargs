@@ -48,14 +48,18 @@ func updateReleaseDescription(
 	description string,
 ) error {
 	logger.Infof("Updating release %s", release.GetURL())
-	defer logger.Infof("Finished updating release %s", release.GetURL())
 
 	release.Body = github.String(description)
 
 	ctx := context.Background()
 	client := getGithubClient(ctx)
 	_, _, err := client.Repositories.EditRelease(ctx, repo.GetOwner().GetLogin(), repo.GetName(), release.GetID(), release)
-	return LogIfError(logger, fmt.Sprintf("Error while updating release %s", release.GetURL()), err)
+	if err != nil {
+		logger.Errorf("Error while updating release %s: %s", release.GetURL(), err)
+		return errors.WithStackTrace(err)
+	}
+	logger.Infof("Successfully finished updating release %s", release.GetURL())
+	return nil
 }
 
 // createReleaseDraftWithClient will create a new empty release for the provided repo in the draft state. The tag
@@ -68,37 +72,37 @@ func createReleaseDraftWithClient(
 	lastRelease *github.RepositoryRelease,
 ) (*github.RepositoryRelease, error) {
 	logger.Infof("Creating new release in draft state for repo %s", repo.GetFullName())
-	defer logger.Infof("Finished creating new release for repo %s", repo.GetFullName())
 
 	tagName, err := bumpPatchVersion(lastRelease)
-	err = LogIfError(
-		logger,
-		fmt.Sprintf("Error while parsing release version (%s) to semantic version", lastRelease.GetTagName()),
-		err,
-	)
 	if err != nil {
-		return nil, err
+		logger.Errorf(
+			"Error while parsing release version (%s) to semantic version: %s", lastRelease.GetTagName(), err,
+		)
+		return nil, errors.WithStackTrace(err)
 	}
 
 	newRelease := github.RepositoryRelease{TagName: github.String(tagName), Draft: github.Bool(true)}
 	release, _, err := client.Repositories.CreateRelease(ctx, repo.GetOwner().GetLogin(), repo.GetName(), &newRelease)
-	err = LogIfError(logger, fmt.Sprintf("Error creating new draft release for repository %s", repo.GetFullName()), err)
-	return release, err
+	if err != nil {
+		logger.Errorf("Error creating new draft release for repository %s: %s", repo.GetFullName(), err)
+		return nil, errors.WithStackTrace(err)
+	}
+	logger.Infof("Finished creating new release for repo %s", repo.GetFullName())
+	return release, nil
 }
 
 // getOrCreateReleaseDraft will return the latest release if it is in draft state. Otherwise, it will create a new
 // release in draft state.
 func getOrCreateReleaseDraft(logger *logrus.Entry, repo *github.Repository) (*github.RepositoryRelease, error) {
 	logger.Infof("Retrieving release note draft for repository %s", repo.GetFullName())
-	defer logger.Infof("Finished retrieving release note draft for repository %s", repo.GetFullName())
 
 	ctx := context.Background()
 	client := getGithubClient(ctx)
 
 	releases, _, err := client.Repositories.ListReleases(ctx, repo.GetOwner().GetLogin(), repo.GetName(), &github.ListOptions{})
-	err = LogIfError(logger, fmt.Sprintf("Error retrieving draft release for repository %s", repo.GetFullName()), err)
 	if err != nil {
-		return nil, err
+		logger.Errorf("Error retrieving draft release for repository %s: %s", repo.GetFullName(), err)
+		return nil, errors.WithStackTrace(err)
 	}
 	if len(releases) == 0 {
 		logger.Infof("Found no releases for repository %s. Creating.", repo.GetFullName())
@@ -109,6 +113,7 @@ func getOrCreateReleaseDraft(logger *logrus.Entry, repo *github.Repository) (*gi
 		return createReleaseDraftWithClient(ctx, logger, client, repo, releases[0])
 	}
 	logger.Infof("Latest release for repository %s is in draft state.", repo.GetFullName())
+	logger.Infof("Successfully retrieved release note draft for repository %s", repo.GetFullName())
 	return releases[0], nil
 }
 

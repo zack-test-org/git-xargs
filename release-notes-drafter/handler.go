@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/google/go-github/github"
@@ -36,7 +37,7 @@ func proxyRequestAsRequest(request events.APIGatewayProxyRequest) http.Request {
 
 // processPullRequestMerged will process the provided github pull request event as a merge event. This will
 // - Get the latest release note draft if it exists. Otherwise, create a new one with an empty body.
-// - Parse the release note draft body into the ReleaseNote struct so that we can easily append to it.
+// - Extract the release note draft body. If it is empty, insert the template.
 // - Append the information from the merged pull request. This includes: (1) modules affected based on files changed;
 //   (2) placeholder description which consists of the PR title; (3) PR link
 // - Update the release note draft with the new description
@@ -44,7 +45,6 @@ func proxyRequestAsRequest(request events.APIGatewayProxyRequest) http.Request {
 // TODO: Synchronize with lock on repository to avoid concurrency issues.
 func processPullRequestMerged(logger *logrus.Entry, event *github.PullRequestEvent) error {
 	logger.Infof("Processing pull request %s/%d merge", event.GetRepo().GetFullName(), event.GetNumber())
-	defer logger.Infof("Processed pull request %s/%d merge", event.GetRepo().GetFullName(), event.GetNumber())
 
 	// Assert that this is a pull request merge event
 	if event.GetAction() != "closed" || !event.GetPullRequest().GetMerged() {
@@ -59,12 +59,10 @@ func processPullRequestMerged(logger *logrus.Entry, event *github.PullRequestEve
 	logger.Infof("Done getting or creating release draft for repo %s", event.GetRepo().GetFullName())
 
 	draftBody := draftRelease.GetBody()
-	logger.Infof("Parsing release note body for draft release %s", draftBody)
-	releaseNote, err := parseReleaseNoteBody(logger, draftBody)
-	if err != nil {
-		return err
+	if strings.TrimSpace(draftBody) == "" {
+		draftBody = ReleaseNoteTemplate
+		logger.Info("Draft body was empty. Using template.")
 	}
-	logger.Infof("Done parsing release note body for draft release %s", draftBody)
 
 	logger.Infof("Appending release info")
 	pullRequest := event.GetPullRequest()
@@ -72,16 +70,27 @@ func processPullRequestMerged(logger *logrus.Entry, event *github.PullRequestEve
 	if err != nil {
 		return err
 	}
-	for _, module := range modulesAffected {
-		releaseNote = appendModulesAffected(releaseNote, module)
+	draftBody, err = addModulesAffected(draftBody, modulesAffected)
+	if err != nil {
+		return err
 	}
 	description := getDescription(pullRequest)
-	releaseNote = appendDescription(releaseNote, description)
+	draftBody, err = addDescription(draftBody, description)
+	if err != nil {
+		return err
+	}
 	link := getLink(pullRequest)
-	releaseNote = appendRelatedLink(releaseNote, link)
+	draftBody, err = addRelatedLink(draftBody, link)
+	if err != nil {
+		return err
+	}
 	logger.Infof("Done appending release info")
 
-	return updateReleaseDescription(logger, event.GetRepo(), draftRelease, RenderReleaseNote(releaseNote))
+	err = updateReleaseDescription(logger, event.GetRepo(), draftRelease, draftBody)
+	if err == nil {
+		logger.Infof("Successfully processed pull request %s/%d merge", event.GetRepo().GetFullName(), event.GetNumber())
+	}
+	return err
 }
 
 // processEvent will process the provided event. This entails looking up the event type and discarding anything that

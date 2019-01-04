@@ -28,9 +28,9 @@ This depends on the webhook event from github when a pull request merges. For ea
 
 - Scan the PR diff for the list of modules that have been touched in the changeset.
 - Extract a link to the PR.
-- Scan for a release in draft stage on the repo.
-- If there is a draft, read in the current state as a struct. If not, create a new object.
-- Update the draft with the information.
+- Get the latest release for the repo and check if it is in draft stage.
+- If there is a draft, read in the current notes. If not, create a new note based on the template.
+- Update the draft with the information by looking for specific markers.
 - Upsert the draft to github.
 
 Note that this handler requires synchronization to avoid concurrency issues in updating the draft. We use dynamodb for

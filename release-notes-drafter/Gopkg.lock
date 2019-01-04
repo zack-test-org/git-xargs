@@ -63,23 +63,16 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:7b5c9c31897b07f266361b85148d2a1a8e8218fb3678a198ab81b79431231f70"
+  digest = "1:da80f696585825c8a4e8fa31b80189c28adf24b3d554f74a80936ea135d7e968"
   name = "github.com/gruntwork-io/gruntwork-cli"
   packages = [
+    "collections",
     "errors",
     "logging",
   ]
   pruneopts = "UT"
   revision = "6a2163138f3d10377f313428e7e367b0a6c0c1c9"
   version = "v0.4.2"
-
-[[projects]]
-  branch = "master"
-  digest = "1:9caa5da349b4f7e8b0c9bfeb784ba90fe63b5520f763fc5835a4c6aec25e0708"
-  name = "github.com/jsternberg/markdownfmt"
-  packages = ["markdown"]
-  pruneopts = "UT"
-  revision = "c2a5702991e37f837f84104a79fa48fd215d0458"
 
 [[projects]]
   branch = "master"
@@ -98,35 +91,11 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:0356f3312c9bd1cbeda81505b7fd437501d8e778ab66998ef69f00d7f9b3a0d7"
-  name = "github.com/mattn/go-runewidth"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "3ee7d812e62a0804a7d0a324e0249ca2db3476d3"
-  version = "v0.0.4"
-
-[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:059f0b8049ca1133b0f441ef9c998151e0b9a144cee1d7a844cfd7913476df71"
-  name = "github.com/shurcooL/go"
-  packages = ["indentwriter"]
-  pruneopts = "UT"
-  revision = "0143a8f55f045ead806ab5306286c07892767abd"
-
-[[projects]]
-  digest = "1:9421f6e9e28ef86933e824b5caff441366f2b69bb281085b9dca40e1f27a1602"
-  name = "github.com/shurcooL/sanitized_anchor_name"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "7bfe4c7ecddb3666a94b053b422cdd8f5aaa3615"
   version = "v1.0.0"
 
 [[projects]]
@@ -221,14 +190,6 @@
   revision = "e9657d882bb81064595ca3b56cbe2546bbabf7b1"
   version = "v1.4.0"
 
-[[projects]]
-  digest = "1:2ee0f15eb0fb04f918db7c2dcf39745f40d69f798ef171610a730e8a56aaa4fd"
-  name = "gopkg.in/russross/blackfriday.v2"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "d3b5b032dc8e8927d31a5071b56e14c89f045135"
-  version = "v2.0.1"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -237,15 +198,14 @@
     "github.com/aws/aws-lambda-go/lambda",
     "github.com/blang/semver",
     "github.com/google/go-github/github",
+    "github.com/gruntwork-io/gruntwork-cli/collections",
     "github.com/gruntwork-io/gruntwork-cli/errors",
     "github.com/gruntwork-io/gruntwork-cli/logging",
-    "github.com/jsternberg/markdownfmt/markdown",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "github.com/waigani/diffparser",
     "golang.org/x/oauth2",
-    "gopkg.in/russross/blackfriday.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
