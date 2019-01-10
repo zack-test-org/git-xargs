@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -26,12 +27,13 @@ func NewAuthenticatedSession() (*session.Session, error) {
 }
 
 // LookupSecret will lookup the value of the requested secret.
-func LookupSecret(secretId string) (string, error) {
+func LookupSecret(secretName string) (string, error) {
 	sess, err := NewAuthenticatedSession()
 	if err != nil {
 		return "", err
 	}
 	secmgrSvc := secretsmanager.New(sess)
+	secretId := fmt.Sprintf("release-notes-drafter/%s", secretName)
 	resp, err := secmgrSvc.GetSecretValue(&secretsmanager.GetSecretValueInput{SecretId: aws.String(secretId)})
 	if err != nil {
 		return "", errors.WithStackTrace(err)
