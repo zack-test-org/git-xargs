@@ -29,8 +29,13 @@ func GetSecret(logger *logrus.Entry, secretId string) string {
 	if err != nil || maybeSecret == "" {
 		logger.Warnf("Error looking up secret %s in AWS: %s", secretId, err)
 		logger.Warn("Falling back to os environment")
-		return os.Getenv(secretId)
+		maybeSecret := os.Getenv(secretId)
+		if maybeSecret != "" {
+			logger.Infof("Loaded secret %s from OS environment", secretId)
+		}
+		return maybeSecret
 	}
+	logger.Infof("Loaded secret %s from AWS Secrets Manager", secretId)
 	return maybeSecret
 }
 
