@@ -28,6 +28,11 @@ func proxyRequestAsRequest(request events.APIGatewayProxyRequest) http.Request {
 	for key, value := range request.Headers {
 		headers[key] = []string{value}
 	}
+	_, hasKey := headers["Content-Type"]
+	if !hasKey {
+		// Assume application/json if not provided
+		headers["Content-Type"] = []string{"application/json"}
+	}
 	return http.Request{
 		Method: request.HTTPMethod,
 		Header: headers,
