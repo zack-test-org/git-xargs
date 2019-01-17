@@ -126,25 +126,68 @@ func main() {
 func serveLambda(cliContext *cli.Context) error {
 	logger := GetProjectLogger()
 	logger.Infof("Starting as lambda function")
+
+	// Making sure github webhook secret and github API key are defined
+	if GithubApiKey == "" {
+		logger.Error("Github API key is required.")
+		return MissingRequiredSecret{"GITHUB_TOKEN"}
+	}
+	if GithubWebhookSecretKey == "" {
+		logger.Error("Github webhook secret key is required.")
+		return MissingRequiredSecret{"GITHUB_WEBHOOK_SECRET"}
+	}
+
 	lambda.Start(lambdaHandler)
 	return nil
 }
 
 // lambdaHandler does not get a http.Request object, so convert the provided APIGatewayProxyRequest object into the http
 // request object.
-func lambdaHandler(request events.APIGatewayProxyRequest) (Response, error) {
+func lambdaHandler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	logger := GetProjectLogger()
+	logger.Infof("Handling new request")
 	httpRequest := proxyRequestAsRequest(request)
 	response, err := Handler(&httpRequest)
 	if err != nil {
-		GetProjectLogger().Errorf("%s", errors.PrintErrorWithStackTrace(err))
+		logger.Errorf("%s", errors.PrintErrorWithStackTrace(err))
+	} else {
+		logger.Infof("Successfully handled new request")
 	}
-	return response, err
+
+	// Convert Response struct to APIGatewayProxyResponse
+	proxyResponse := events.APIGatewayProxyResponse{
+		Headers: map[string]string{"Content-Type": "application/json"},
+	}
+	responseAsJson, jsonMarshalErr := json.Marshal(response)
+	if jsonMarshalErr != nil {
+		logger.Errorf("Error marshaling response json: %s", jsonMarshalErr)
+		proxyResponse.StatusCode = 500
+		return proxyResponse, err
+	}
+	proxyResponse.Body = string(responseAsJson)
+	if err != nil {
+		proxyResponse.StatusCode = 500
+	} else {
+		proxyResponse.StatusCode = 200
+	}
+	return proxyResponse, err
 }
 
 // serveLocal will serve the handler as a basic web server.
 func serveLocal(cliContext *cli.Context) error {
 	logger := GetProjectLogger()
 	logger.Infof("Starting as local web server")
+
+	// Making sure github webhook secret and github API key are defined
+	if GithubApiKey == "" {
+		logger.Error("Github API key is required.")
+		return MissingRequiredSecret{"GITHUB_TOKEN"}
+	}
+	if GithubWebhookSecretKey == "" {
+		logger.Error("Github webhook secret key is required.")
+		return MissingRequiredSecret{"GITHUB_WEBHOOK_SECRET"}
+	}
+
 	http.HandleFunc("/", httpHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 	return nil
@@ -170,6 +213,12 @@ func httpHandler(writer http.ResponseWriter, request *http.Request) {
 func runAction(cliContext *cli.Context) error {
 	logger := GetProjectLogger()
 	logger.Infof("Running handler as a CLI action.")
+
+	// Making sure github API key is defined
+	if GithubApiKey == "" {
+		logger.Error("Github API key is required.")
+		return MissingRequiredSecret{"GITHUB_TOKEN"}
+	}
 
 	var jsonPath string
 	if cliContext.String(jsonPathFlag.Name) != "" {

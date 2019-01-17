@@ -16,6 +16,15 @@ func (err LockTimeoutExceeded) Error() string {
 	return fmt.Sprintf("Timedout trying to acquire lock %s in table %s (timeout was %s)", err.LockString, err.LockTable, err.Timeout)
 }
 
+// MissingRequiredSecret is returned when a required secret is missing.
+type MissingRequiredSecret struct {
+	SecretName string
+}
+
+func (err MissingRequiredSecret) Error() string {
+	return fmt.Sprintf("Missing required secret %s", err.SecretName)
+}
+
 // MissingRequiredParameter is returned when a required parameter is missing.
 type MissingRequiredParameter struct {
 	ParamName string
