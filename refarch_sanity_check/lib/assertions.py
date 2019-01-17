@@ -169,7 +169,11 @@ def assert_cache_instance_types_available(parsed_yamls):
     global_vars.logger.debug("Done retrieving ElastiCache instance availability information.")
 
     cache_engine = parser.get_configured_cache_engine(parsed_yamls)
-    if cache_engine is None or cache_engine not in available_cache_instance_types_by_engines:
+    if cache_engine is None:
+        global_vars.logger.warn("Did not find any cache specified. Skipping cache instance type check.")
+        return
+
+    if cache_engine not in available_cache_instance_types_by_engines:
         global_vars.logger.error("{} is unrecognized in region {}".format(cache_engine, region))
         raise click.ClickException("Cache engine is misconfigured")
 
