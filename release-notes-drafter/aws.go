@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -26,17 +28,35 @@ func NewAuthenticatedSession() (*session.Session, error) {
 }
 
 // LookupSecret will lookup the value of the requested secret.
-func LookupSecret(secretId string) (string, error) {
+func LookupSecret(secretName string) (string, error) {
 	sess, err := NewAuthenticatedSession()
 	if err != nil {
 		return "", err
 	}
 	secmgrSvc := secretsmanager.New(sess)
+	secretId := fmt.Sprintf("release-notes-drafter/%s", secretName)
 	resp, err := secmgrSvc.GetSecretValue(&secretsmanager.GetSecretValueInput{SecretId: aws.String(secretId)})
 	if err != nil {
 		return "", errors.WithStackTrace(err)
 	}
-	return aws.StringValue(resp.Name), nil
+
+	// Depending on whether the secret is a string or binary, one of these fields will be populated.
+	if resp.SecretString != nil {
+		return aws.StringValue(resp.SecretString), nil
+	}
+	return decodeSecretBinary(resp.SecretBinary)
+}
+
+// decodeSecretBinary will decode the raw base64 encoded binary data from the Secrets Manager API into a string.
+// This is the same code that is included in the Secrets Manager UI in the AWS console.
+func decodeSecretBinary(secretBinary []byte) (string, error) {
+	decodedBinarySecretBytes := make([]byte, base64.StdEncoding.DecodedLen(len(secretBinary)))
+	numbytes, err := base64.StdEncoding.Decode(decodedBinarySecretBytes, secretBinary)
+	if err != nil {
+		return "", errors.WithStackTrace(err)
+	}
+	decodedBinarySecret := string(decodedBinarySecretBytes[:numbytes])
+	return decodedBinarySecret, nil
 }
 
 // NewDynamoDb returns an authenticated client object for accessing DynamoDb

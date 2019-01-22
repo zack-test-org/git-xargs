@@ -26,6 +26,20 @@ var ErrorResponse = Response{Status: "error"}
 func proxyRequestAsRequest(request events.APIGatewayProxyRequest) http.Request {
 	headers := http.Header{}
 	for key, value := range request.Headers {
+		// API Gateway will lowercase some of the headers. Github also sometimes cases the headers wrong.
+		// This routine normalized the headers based on observation.
+		if key == "content-type" {
+			key = "Content-Type"
+		}
+		if key == "x-github-delivery" {
+			key = "X-Github-Delivery"
+		}
+		if key == "x-github-event" || key == "X-GitHub-Event" {
+			key = "X-Github-Event"
+		}
+		if key == "x-hub-signature" {
+			key = "X-Hub-Signature"
+		}
 		headers[key] = []string{value}
 	}
 	return http.Request{
