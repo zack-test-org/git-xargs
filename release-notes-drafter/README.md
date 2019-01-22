@@ -78,14 +78,24 @@ this purpose.
 
 - Build and deploy as a public lambda object with an API gateway, making sure to run the command with the `lambda` arg.
 - Make sure the following secrets are defined in AWS secrets manager:
-    * `GITHUB_WEBHOOK_SECRET`: Github Webhook secret. This should be generated.
-    * `GITHUB_TOKEN`: Github API key with scope `repo`. This should be for a user with enough permissions to update
-      the release notes on the repo (Read/Write access).
+    * `release-notes-drafter/GITHUB_WEBHOOK_SECRET`: Github Webhook secret. This should be generated.
+    * `release-notes-drafter/GITHUB_TOKEN`: Github API key with scope `repo`. This should be for a user with enough
+      permissions to update the release notes on the repo (Read/Write access).
 - Make sure a DynamoDB lock table exists that can be used for synchronization.
 - Make sure the lambda function has enough permissions to access the secrets and the DynamoDB lock table used for
   synchronization.
 - Setup a webhook for each repo that we want the release notes drafter to handle. The webhook should point to the API
   gateway endpoint and the secret key should be the one set in the runtime environment for the lambda function.
+
+###### Webhook config
+
+- Get the webhook secret from AWS secrets manager (for our env, this is in `houston-ci`).
+- Create a new webhook on the repo.
+- Set the webhook url to `https://cavu3bm9yk.execute-api.us-east-1.amazonaws.com/prod/github`
+- Set content type to `application/json`
+- Paste in the webhook secret
+- Enable SSL
+- For the events, select "Let me select individual events." and only check off the "Pull Requests" option.
 
 
 ### Local
