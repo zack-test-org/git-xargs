@@ -10,13 +10,9 @@ import (
 	"github.com/gruntwork-io/prototypes/gw-support/logging"
 )
 
-func getPath(port int, path string) string {
-	return fmt.Sprintf("http://localhost:%d%s", port, path)
-}
-
 func makeRequest(method string, port int, path string) (*http.Response, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest(method, getPath(port, path), nil)
+	req, err := http.NewRequest(method, GetPath(port, path), nil)
 	if err != nil {
 		return nil, errors.WithStackTrace(err)
 	}

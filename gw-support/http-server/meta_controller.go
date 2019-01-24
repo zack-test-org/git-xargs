@@ -1,6 +1,7 @@
 package http_server
 
 import (
+	"net/http"
 	"os"
 	"syscall"
 
@@ -8,10 +9,10 @@ import (
 )
 
 func shutdownController(ginCtx *gin.Context) {
-	shutdownServer <- os.Signal(syscall.SIGINT)
-	ginCtx.JSON(200, gin.H{"status": "shutting down"})
+	ShutdownServer <- os.Signal(syscall.SIGINT)
+	ginCtx.JSON(http.StatusOK, gin.H{"status": "shutting down"})
 }
 
 func statusController(ginCtx *gin.Context) {
-	ginCtx.JSON(200, gin.H{"status": "running"})
+	ginCtx.JSON(http.StatusOK, gin.H{"status": "running"})
 }

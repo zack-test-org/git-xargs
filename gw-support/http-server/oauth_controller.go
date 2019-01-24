@@ -1,0 +1,46 @@
+package http_server
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/patrickmn/go-cache"
+
+	"github.com/gruntwork-io/prototypes/gw-support/google"
+)
+
+// initiateOauthFlowController will initiate the Oauth2 flow with Google, redirecting the user to the Google login
+// screen and consent for authorization.
+func initiateOauthFlowController(ginCtx *gin.Context) {
+	conf, err := google.PrepareOauthConfig(ServerPort)
+	if err != nil {
+		ginCtx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	url := google.GetAuthCodeURL(conf)
+	ginCtx.Redirect(http.StatusFound, url)
+}
+
+// oauthCallbackController will consume the oauth2 callback and cache the token in the server so that it can be used to
+// query the google api.
+func oauthCallbackController(ginCtx *gin.Context) {
+	code := ginCtx.Query("code")
+
+	conf, err := google.PrepareOauthConfig(ServerPort)
+	if err != nil {
+		ginCtx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx := context.Background()
+	tok, err := conf.Exchange(ctx, code)
+	if err != nil {
+		ginCtx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	LocalCache.Set("token", tok, cache.DefaultExpiration)
+
+	// TODO: return some useful page
+	ginCtx.JSON(http.StatusOK, gin.H{"statuc": "ok"})
+}
