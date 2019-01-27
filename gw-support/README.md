@@ -18,3 +18,16 @@ based on the information it finds.
 
 The Oauth flow is managed with a http server that will be run in the background. This server will cache the credentials
 in memory.
+
+
+## Usage
+
+- See who is on support now
+    ```
+    gw-support now
+    ```
+
+- See when you are on support next
+    ```
+    gw-support me next
+    ```

@@ -9,15 +9,47 @@ import (
 	"github.com/gruntwork-io/prototypes/gw-support/keybase"
 )
 
+func asyncGetKeybaseSecret(out chan<- interface{}, encryptedStr string) {
+	secretVal, err := keybase.DecodeSecret(encryptedStr)
+	if err != nil {
+		out <- err
+	} else {
+		out <- secretVal
+	}
+}
+
+func awaitGetKeybaseSecret(in <-chan interface{}) (string, error) {
+	result := <-in
+	switch result := result.(type) {
+	case string:
+		return result, nil
+	case error:
+		return "", result
+	default:
+		// This should never happen
+		panic(result)
+	}
+}
+
 func PrepareOauthConfig(port int) (*oauth2.Config, error) {
-	clientID, err := keybase.DecodeSecret(EncryptedClientID)
+	clientIDChan := make(chan interface{}, 1)
+	go asyncGetKeybaseSecret(clientIDChan, EncryptedClientID)
+
+	clientSecretChan := make(chan interface{}, 1)
+	go asyncGetKeybaseSecret(clientSecretChan, EncryptedClientSecret)
+
+	clientID, err := awaitGetKeybaseSecret(clientIDChan)
 	if err != nil {
 		return nil, errors.WithStackTrace(err)
 	}
-	clientSecret, err := keybase.DecodeSecret(EncryptedClientSecret)
+	clientSecret, err := awaitGetKeybaseSecret(clientSecretChan)
 	if err != nil {
 		return nil, errors.WithStackTrace(err)
 	}
+	return PrepareOauthConfigFromInfo(port, clientID, clientSecret), nil
+}
+
+func PrepareOauthConfigFromInfo(port int, clientID string, clientSecret string) *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -27,7 +59,7 @@ func PrepareOauthConfig(port int) (*oauth2.Config, error) {
 			"https://www.googleapis.com/auth/calendar.readonly",
 		},
 		Endpoint: google.Endpoint,
-	}, nil
+	}
 }
 
 func GetAuthCodeURL(config *oauth2.Config) string {

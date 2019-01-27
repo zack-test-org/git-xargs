@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/patrickmn/go-cache"
 
+	"github.com/gruntwork-io/prototypes/gw-support/csrf"
 	"github.com/gruntwork-io/prototypes/gw-support/logging"
 )
 
@@ -30,13 +31,21 @@ func StartServer(port int) error {
 
 	router := gin.Default()
 
+	// require authorization to retrieve credentials and to shutdown the server
+	token, err := csrf.GetOrCreateCsrfToken()
+	if err != nil {
+		return err
+	}
+	authorized := router.Group("/", gin.BasicAuth(gin.Accounts{
+		fmt.Sprintf("%s", csrf.Username): token, // user:houston password:csrf token
+	}))
+	authorized.GET("shutdown", shutdownController)
+	authorized.GET("status", statusController)
+	authorized.GET("credentials", credentialsController)
+
+	// These endpoints (Oauth2 flow) can be retrieved without authorization
 	router.GET("login", initiateOauthFlowController)
 	router.GET("callback", oauthCallbackController)
-
-	router.GET("status", statusController)
-	router.GET("shutdown", shutdownController)
-
-	// TODO: implement similar system to houston-cli with csrf
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf("127.0.0.1:%d", port),

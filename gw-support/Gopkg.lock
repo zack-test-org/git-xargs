@@ -18,6 +18,14 @@
   version = "v0.1.0"
 
 [[projects]]
+  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  pruneopts = "UT"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:865079840386857c809b72ce300be7580cb50d3d3129ce11bf9aa6ca2bc1934a"
   name = "github.com/fatih/color"
   packages = ["."]
@@ -63,17 +71,34 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:d4a7572478fd01df6f13d65aae72e34905cc1a59c379808db53a6ca9e993c520"
+  digest = "1:236d7e1bdb50d8f68559af37dbcf9d142d56b431c9b2176d41e2a009b664cda8"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+  version = "v1.1.0"
+
+[[projects]]
+  digest = "1:c58a37e04532a6dc167480d6f6c9f911699bd8f8b39a1ff4fab1d675ebb9c04f"
   name = "github.com/gruntwork-io/gruntwork-cli"
   packages = [
     "entrypoint",
     "errors",
+    "files",
     "logging",
     "shell",
   ]
   pruneopts = "UT"
   revision = "6a2163138f3d10377f313428e7e367b0a6c0c1c9"
   version = "v0.4.2"
+
+[[projects]]
+  digest = "1:b7a076649b88d4aeeff0cfbf31fb81986f7dd65b9da954e8acfdd966593558ed"
+  name = "github.com/gruntwork-io/houston-cli"
+  packages = ["browser"]
+  pruneopts = "UT"
+  revision = "65ac2a63ba8514b96752eea7eaa2b4a38f1446cf"
+  version = "v0.0.20"
 
 [[projects]]
   digest = "1:3e551bbb3a7c0ab2a2bf4660e7fcad16db089fdcfbb44b0199e62838038623ea"
@@ -108,6 +133,25 @@
   version = "v0.0.4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:36aebe90a13cf9128280ac834399b8bebf83685283c78df279d61c46bb2a8d83"
+  name = "github.com/mattn/go-zglob"
+  packages = [
+    ".",
+    "fastwalk",
+  ]
+  pruneopts = "UT"
+  revision = "2ea3427bfa539cca900ca2768d8663ecc8a708c1"
+
+[[projects]]
+  digest = "1:78bbb1ba5b7c3f2ed0ea1eab57bdd3859aec7e177811563edc41198a760b06af"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ae18d6b8b3205b561c79e8e5f69bff09736185f4"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:33422d238f147d247752996a26574ac48dcf472976eda7f5134015f06bf16563"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
@@ -132,11 +176,30 @@
   version = "v2.1.0"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "UT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:87c2e02fb01c27060ccc5ba7c5a407cc91147726f8f40b70cceeedbc52b1f3a8"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "UT"
   revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
+
+[[projects]]
+  digest = "1:5da8ce674952566deae4dbc23d07c85caafc6cfa815b0b3e03e41979cedb8750"
+  name = "github.com/stretchr/testify"
+  packages = [
+    "assert",
+    "require",
+  ]
+  pruneopts = "UT"
+  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
   version = "v1.3.0"
 
 [[projects]]
@@ -200,6 +263,19 @@
   revision = "054c452bb702e465e95ce8e7a3d9a6cf0cd1188d"
 
 [[projects]]
+  digest = "1:99af17a78ae5552379e6984a0b54407b34c7403045d62ae28e0326e770be1893"
+  name = "google.golang.org/api"
+  packages = [
+    "calendar/v3",
+    "gensupport",
+    "googleapi",
+    "googleapi/internal/uritemplates",
+  ]
+  pruneopts = "UT"
+  revision = "19e022d8cf43ce81f046bae8cc18c5397cc7732f"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:fa026a5c59bd2df343ec4a3538e6288dcf4e2ec5281d743ae82c120affe6926a"
   name = "google.golang.org/appengine"
   packages = [
@@ -239,15 +315,22 @@
   analyzer-version = 1
   input-imports = [
     "github.com/gin-gonic/gin",
+    "github.com/google/uuid",
     "github.com/gruntwork-io/gruntwork-cli/entrypoint",
     "github.com/gruntwork-io/gruntwork-cli/errors",
+    "github.com/gruntwork-io/gruntwork-cli/files",
     "github.com/gruntwork-io/gruntwork-cli/logging",
     "github.com/gruntwork-io/gruntwork-cli/shell",
+    "github.com/gruntwork-io/houston-cli/browser",
+    "github.com/mitchellh/go-homedir",
     "github.com/patrickmn/go-cache",
     "github.com/sirupsen/logrus",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
     "github.com/urfave/cli",
     "golang.org/x/oauth2",
     "golang.org/x/oauth2/google",
+    "google.golang.org/api/calendar/v3",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

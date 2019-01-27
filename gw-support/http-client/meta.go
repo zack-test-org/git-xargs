@@ -7,6 +7,7 @@ import (
 
 	"github.com/gruntwork-io/gruntwork-cli/errors"
 
+	"github.com/gruntwork-io/prototypes/gw-support/csrf"
 	"github.com/gruntwork-io/prototypes/gw-support/logging"
 )
 
@@ -17,7 +18,13 @@ func makeRequest(method string, port int, path string) (*http.Response, error) {
 		return nil, errors.WithStackTrace(err)
 	}
 
-	// TODO: update request with csrf stuff before making request
+	// update request with csrf before making request
+	username := csrf.Username
+	password, err := csrf.GetOrCreateCsrfToken()
+	if err != nil {
+		return nil, err
+	}
+	req.SetBasicAuth(username, password)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -54,5 +61,5 @@ func StopServer(port int) error {
 		return errors.WithStackTrace(fmt.Errorf("unable to stop gw-support http server: %s", err))
 	}
 	logger.Infof("Successfully shut down server listening on port %d", port)
-	return nil
+	return csrf.DeleteCsrfToken()
 }

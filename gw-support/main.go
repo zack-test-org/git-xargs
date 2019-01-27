@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 	"os/exec"
+	"strconv"
+	"time"
 
 	"github.com/gruntwork-io/gruntwork-cli/entrypoint"
 	"github.com/gruntwork-io/gruntwork-cli/errors"
@@ -10,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"github.com/gruntwork-io/prototypes/gw-support/google"
 	"github.com/gruntwork-io/prototypes/gw-support/http-client"
 	"github.com/gruntwork-io/prototypes/gw-support/http-server"
 	project_logging "github.com/gruntwork-io/prototypes/gw-support/logging"
@@ -44,6 +47,18 @@ func main() {
 		logLevelFlag,
 	}
 	app.Commands = []cli.Command{
+		cli.Command{
+			Name:   "now",
+			Usage:  "Who is on support now?",
+			Flags:  []cli.Flag{portFlag},
+			Action: supportNow,
+		},
+		cli.Command{
+			Name:   "next",
+			Usage:  "When am I on support next?",
+			Flags:  []cli.Flag{portFlag},
+			Action: supportNext,
+		},
 		cli.Command{
 			Name:  "start",
 			Usage: "Start the background HTTP server process to manage credentials.",
@@ -88,6 +103,7 @@ func startServer(cliContext *cli.Context) error {
 
 	port := cliContext.Int(portFlag.Name)
 	foreground := cliContext.Bool(foregroundFlag.Name)
+
 	if http_client.ServerRunning(port) {
 		logger.Warnf("gw-support server is already running on port %d", port)
 		return nil
@@ -106,6 +122,76 @@ func stopServer(cliContext *cli.Context) error {
 	return http_client.StopServer(port)
 }
 
+func supportNow(cliContext *cli.Context) error {
+	logger := project_logging.GetProjectLogger()
+
+	port := cliContext.Int(portFlag.Name)
+
+	if !http_client.ServerRunning(port) {
+		logger.Infof("gw-support server is not running. Starting server in background.")
+		err := callStartServer(port)
+		if err != nil {
+			logger.Errorf("Error starting server: %s", err)
+			return err
+		}
+		time.Sleep(10 * time.Second)
+	}
+
+	token, err := http_client.EnsureCredentials(port)
+	if err != nil {
+		return err
+	}
+	oauthConfig, err := google.PrepareOauthConfig(port)
+	if err != nil {
+		return err
+	}
+	client, err := google.NewCalendarClient(oauthConfig, token)
+	if err != nil {
+		return err
+	}
+	return google.SupportNow(client)
+}
+
+func supportNext(cliContext *cli.Context) error {
+	logger := project_logging.GetProjectLogger()
+
+	port := cliContext.Int(portFlag.Name)
+
+	if !http_client.ServerRunning(port) {
+		logger.Infof("gw-support server is not running. Starting server in background.")
+		err := callStartServer(port)
+		if err != nil {
+			logger.Errorf("Error starting server: %s", err)
+			return err
+		}
+		time.Sleep(10 * time.Second)
+	}
+
+	token, err := http_client.EnsureCredentials(port)
+	if err != nil {
+		return err
+	}
+	oauthConfig, err := google.PrepareOauthConfig(port)
+	if err != nil {
+		return err
+	}
+	client, err := google.NewCalendarClient(oauthConfig, token)
+	if err != nil {
+		return err
+	}
+	return google.SupportNext(client)
+}
+
+func callStartServer(port int) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return errors.WithStackTrace(err)
+	}
+
+	args := []string{os.Args[0], "start", "--port", strconv.Itoa(port), "--foreground"}
+	return runCommandInBackground(args, cwd)
+}
+
 // rerunForeground runs 'gw-support start --foreground' as a background process, detached from the current process.
 // This works like houston-cli.
 func rerunForeground() error {
@@ -115,10 +201,13 @@ func rerunForeground() error {
 	}
 
 	args := append(os.Args, "--foreground")
+	return runCommandInBackground(args, cwd)
+}
 
+func runCommandInBackground(args []string, cmdDir string) error {
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Dir = cwd
-	err = cmd.Start()
+	cmd.Dir = cmdDir
+	err := cmd.Start()
 	if err != nil {
 		return errors.WithStackTrace(err)
 	}
