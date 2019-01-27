@@ -6,7 +6,7 @@ From: https://gruntwork-io.slack.com/archives/C0PJF332B/p1547645541002900
 
 A while back, I had mentioned the idea that we could create “Terraform on Rails.” That is, in the same way that Ruby on
 Rails gives you a streamlined, opinionated, batteries-included way to build web apps with Ruby, we could do the same for
-develop infrastructure with Terraform. I wanted to write down some thoughts I had about that, as well as a new way to
+developing infrastructure with Terraform. I wanted to write down some thoughts I had about that, as well as a new way to
 seriously simplify testing with Terratest.
 
 Let’s imagine that Terragrunt 1.0.0 (or 2.0.0?) is the tool we use to power Terraform on Rails. It doesn’t have to be
