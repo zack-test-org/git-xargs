@@ -185,6 +185,7 @@ def get_environment_credentials(parsed_yamls):
 
     credentials = {}
     for session_name, customer_account_id in six.iteritems(accounts):
+        global_vars.logger.info("Checking access for {} ({})".format(session_name, customer_account_id))
         credentials[session_name] = obtain_credentials_to_assume_gruntwork_role(
             customer_account_id,
             session_name)
