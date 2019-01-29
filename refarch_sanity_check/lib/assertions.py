@@ -89,22 +89,28 @@ def assert_acm_certificates_exist(environment_credentials, parsed_yamls):
     domains_to_check = parser.get_configured_domain_names(parsed_yamls)
     domains_with_no_certs = aws.find_domains_with_no_certs(environment_credentials, region, domains_to_check)
 
-    # If static websites are configured, then check in us-east-1 too since cloudfront can only use us-east-1 for ACM
-    # certs.
-    if parser.is_static_websites_configured(parsed_yamls):
-        # Filter out shared services account
-        static_domains_to_check = {
-            account: domain for account, domain in six.iteritems(domains_to_check)
-            if account != "shared-services"
-        }
-        domains_with_no_certs += aws.find_domains_with_no_certs(
-            environment_credentials, "us-east-1", static_domains_to_check)
-
     if domains_with_no_certs:
         for account, domain in domains_with_no_certs:
             global_vars.logger.error(
                 "Could not find ACM certificate in account {} for domain {}".format(account, domain))
         raise click.ClickException("Failed certificate check")
+
+    # If static websites are configured, then check in us-east-1 too since cloudfront can only use us-east-1 for ACM
+    # certs.
+    if parser.is_static_websites_configured(parsed_yamls):
+        global_vars.logger.info("Requested static site, so checking for certs in us-east-1")
+        # Filter out shared services account
+        static_domains_to_check = {
+            account: domain for account, domain in six.iteritems(domains_to_check)
+            if account != "shared-services"
+        }
+        domains_with_no_static_certs = aws.find_domains_with_no_certs(
+            environment_credentials, "us-east-1", static_domains_to_check)
+        if domains_with_no_static_certs:
+            for account, domain in domains_with_no_static_certs:
+                global_vars.logger.error(
+                    "Could not find us-east-1 ACM certificate in account {} for domain {}".format(account, domain))
+            raise click.ClickException("Failed certificate check")
 
 
 def assert_instance_types_available(parsed_yamls):
