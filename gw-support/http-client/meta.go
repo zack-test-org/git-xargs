@@ -20,7 +20,7 @@ func makeRequest(method string, port int, path string) (*http.Response, error) {
 
 	// update request with csrf before making request
 	username := csrf.Username
-	password, err := csrf.GetOrCreateCsrfToken()
+	password, err := csrf.GetOrCreateCsrfToken("")
 	if err != nil {
 		return nil, err
 	}
@@ -61,5 +61,5 @@ func StopServer(port int) error {
 		return errors.WithStackTrace(fmt.Errorf("unable to stop gw-support http server: %s", err))
 	}
 	logger.Infof("Successfully shut down server listening on port %d", port)
-	return csrf.DeleteCsrfToken()
+	return csrf.DeleteCsrfToken("")
 }

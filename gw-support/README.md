@@ -16,8 +16,26 @@ Given that, the tool obtains Oauth credentials with read only scope to query the
 visible events. Using the credentials, the tool will scan for the support events on the calendar and answer the queries
 based on the information it finds.
 
-The Oauth flow is managed with a http server that will be run in the background. This server will cache the credentials
-in memory.
+### The local server
+
+To manage the Oauth flow, which requires browser interaction, we spawn a local HTTP server on port 56789 in the
+background. This server is used to initiate the Oauth flow by providing the Google login URL, which the CLI will use to
+open a browser tab.
+
+In that new tab, you will be asked to login to Google and authorize the CLI read only access to the calendar events.
+Once you authorize, the oauth flow will complete, posting the authorized token to the local server. This token is then
+used by the CLI to access the Google calendar events.
+
+By doing so, the CLI is able to run use your token to check the events on your calendar to find when you are on support
+next.
+
+
+### Local server CSRF
+
+To prevent retrieving the token from a random browser page, the local http server protects the credentials page using
+basic auth managed by a file stored on the local hard disk. This token is generated when the server starts up and is
+accessible by the client, but is not accessible to the browser, thus preventing unauthorized access to the credentials
+from a random web page access.
 
 
 ## Usage
@@ -29,5 +47,5 @@ in memory.
 
 - See when you are on support next
     ```
-    gw-support me next
+    gw-support next
     ```

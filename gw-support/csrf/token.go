@@ -12,20 +12,23 @@ import (
 )
 
 const (
-	Username      = "gwsupport"
-	csrfTokenFile = "csrf-token.txt"
+	Username                 = "gwsupport"
+	csrfTokenFile            = "csrf-token.txt"
+	DefaultGWSupportPathName = ".gw-support"
 )
 
 // This is intentionally a var so it can be modified in tests
-var gwSupportPathRelativeHome = ".gw-support"
 
-func ensureGWSupportDir() (string, error) {
+func ensureGWSupportDir(gwSupportPathName string) (string, error) {
 	home, err := homedir.Dir()
 	if err != nil {
 		return "", errors.WithStackTrace(err)
 	}
 
-	homePath := filepath.Join(home, gwSupportPathRelativeHome)
+	if gwSupportPathName == "" {
+		gwSupportPathName = DefaultGWSupportPathName
+	}
+	homePath := filepath.Join(home, gwSupportPathName)
 
 	if !files.FileExists(homePath) {
 		if err := os.MkdirAll(homePath, 0700); err != nil {
@@ -37,8 +40,8 @@ func ensureGWSupportDir() (string, error) {
 	return homePath, nil
 }
 
-func getCsrfTokenPath() (string, error) {
-	homePath, err := ensureGWSupportDir()
+func getCsrfTokenPath(gwSupportPathName string) (string, error) {
+	homePath, err := ensureGWSupportDir(gwSupportPathName)
 	if err != nil {
 		return "", err
 	}
@@ -46,8 +49,8 @@ func getCsrfTokenPath() (string, error) {
 	return csrfTokenPath, nil
 }
 
-func CreateCsrfToken() (string, error) {
-	csrfTokenPath, err := getCsrfTokenPath()
+func CreateCsrfToken(gwSupportPathName string) (string, error) {
+	csrfTokenPath, err := getCsrfTokenPath(gwSupportPathName)
 	if err != nil {
 		return "", err
 	}
@@ -61,8 +64,8 @@ func CreateCsrfToken() (string, error) {
 	return tokenStr, nil
 }
 
-func DeleteCsrfToken() error {
-	csrfTokenPath, err := getCsrfTokenPath()
+func DeleteCsrfToken(gwSupportPathName string) error {
+	csrfTokenPath, err := getCsrfTokenPath(gwSupportPathName)
 	if err != nil {
 		return err
 	}
@@ -75,14 +78,14 @@ func DeleteCsrfToken() error {
 	return nil
 }
 
-func GetOrCreateCsrfToken() (string, error) {
-	csrfTokenPath, err := getCsrfTokenPath()
+func GetOrCreateCsrfToken(gwSupportPathName string) (string, error) {
+	csrfTokenPath, err := getCsrfTokenPath(gwSupportPathName)
 	if err != nil {
 		return "", err
 	}
 
 	if !files.FileExists(csrfTokenPath) {
-		return CreateCsrfToken()
+		return CreateCsrfToken(gwSupportPathName)
 	}
 
 	token, err := ioutil.ReadFile(csrfTokenPath)

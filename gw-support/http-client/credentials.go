@@ -17,8 +17,8 @@ const (
 	SleepBetweenRetries = 5 * time.Second
 )
 
-// Ensure credentials will go through the oauth flow if the credentials do not exist.
-// This will error out if it encounters a fatal error.
+// EnsureCredentials will initiate the oauth flow if the Google credentials do not exist on the local server. See the
+// root README for more information on the local server design. This will error out if it encounters a fatal error.
 func EnsureCredentials(port int) (map[string]string, error) {
 	logger := logging.GetProjectLogger()
 

@@ -32,7 +32,7 @@ func StartServer(port int) error {
 	router := gin.Default()
 
 	// require authorization to retrieve credentials and to shutdown the server
-	token, err := csrf.GetOrCreateCsrfToken()
+	token, err := csrf.GetOrCreateCsrfToken("")
 	if err != nil {
 		return err
 	}

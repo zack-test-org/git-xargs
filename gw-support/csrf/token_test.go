@@ -13,13 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The tests in this file manipulate global variables, so cannot be run in parallel or they will conflict. However,
-// these tests are tiny so speed shouldn't be an issue.
-
 func TestEnsureGWSupportDirCreatesDirIfNotExists(t *testing.T) {
-	// Override home path for testing purposes
-	gwSupportPathRelativeHome = fmt.Sprintf(".gw-support-test-%s", t.Name())
-	expectedGWSupportPath := expectedDir(t)
+	t.Parallel()
+
+	gwSupportPathRelativeHome := fmt.Sprintf(".gw-support-test-%s", t.Name())
+	expectedGWSupportPath := expectedDir(t, gwSupportPathRelativeHome)
 
 	// If dir exists, remove it
 	if files.FileExists(expectedGWSupportPath) {
@@ -27,7 +25,7 @@ func TestEnsureGWSupportDirCreatesDirIfNotExists(t *testing.T) {
 	}
 	defer os.RemoveAll(expectedGWSupportPath)
 
-	path, err := ensureGWSupportDir()
+	path, err := ensureGWSupportDir(gwSupportPathRelativeHome)
 	require.NoError(t, err)
 	assert.Equal(t, path, expectedGWSupportPath)
 	assert.True(t, files.FileExists(path))
@@ -35,9 +33,10 @@ func TestEnsureGWSupportDirCreatesDirIfNotExists(t *testing.T) {
 }
 
 func TestEnsureGWSupportDirWorksIfDirExists(t *testing.T) {
-	// Override home path for testing purposes
-	gwSupportPathRelativeHome = fmt.Sprintf(".gw-support-test-%s", t.Name())
-	expectedGWSupportPath := expectedDir(t)
+	t.Parallel()
+
+	gwSupportPathRelativeHome := fmt.Sprintf(".gw-support-test-%s", t.Name())
+	expectedGWSupportPath := expectedDir(t, gwSupportPathRelativeHome)
 
 	// If dir does not exist, make it
 	if !files.FileExists(expectedGWSupportPath) {
@@ -46,7 +45,7 @@ func TestEnsureGWSupportDirWorksIfDirExists(t *testing.T) {
 	}
 	defer os.RemoveAll(expectedGWSupportPath)
 
-	path, err := ensureGWSupportDir()
+	path, err := ensureGWSupportDir(gwSupportPathRelativeHome)
 	require.NoError(t, err)
 	assert.Equal(t, path, expectedGWSupportPath)
 	assert.True(t, files.FileExists(path))
@@ -54,9 +53,10 @@ func TestEnsureGWSupportDirWorksIfDirExists(t *testing.T) {
 }
 
 func TestCreateCsrfTokenCreatesATokenWhenFileDoesNotExist(t *testing.T) {
-	// Override home path for testing purposes
-	gwSupportPathRelativeHome = fmt.Sprintf(".gw-support-test-%s", t.Name())
-	expectedGWSupportPath := expectedDir(t)
+	t.Parallel()
+
+	gwSupportPathRelativeHome := fmt.Sprintf(".gw-support-test-%s", t.Name())
+	expectedGWSupportPath := expectedDir(t, gwSupportPathRelativeHome)
 	csrfPath := filepath.Join(expectedGWSupportPath, csrfTokenFile)
 
 	// If csrf path exists, remove it
@@ -65,7 +65,7 @@ func TestCreateCsrfTokenCreatesATokenWhenFileDoesNotExist(t *testing.T) {
 	}
 	defer os.RemoveAll(expectedGWSupportPath)
 
-	tokenStr, err := CreateCsrfToken()
+	tokenStr, err := CreateCsrfToken(gwSupportPathRelativeHome)
 	require.NoError(t, err)
 	data, err := ioutil.ReadFile(csrfPath)
 	require.NoError(t, err)
@@ -73,9 +73,10 @@ func TestCreateCsrfTokenCreatesATokenWhenFileDoesNotExist(t *testing.T) {
 }
 
 func TestCreateCsrfTokenCreatesANewTokenWhenFileExist(t *testing.T) {
-	// Override home path for testing purposes
-	gwSupportPathRelativeHome = fmt.Sprintf(".gw-support-test-%s", t.Name())
-	expectedGWSupportPath := expectedDir(t)
+	t.Parallel()
+
+	gwSupportPathRelativeHome := fmt.Sprintf(".gw-support-test-%s", t.Name())
+	expectedGWSupportPath := expectedDir(t, gwSupportPathRelativeHome)
 	csrfPath := filepath.Join(expectedGWSupportPath, csrfTokenFile)
 
 	// If csrf path does not exist, create it
@@ -87,7 +88,7 @@ func TestCreateCsrfTokenCreatesANewTokenWhenFileExist(t *testing.T) {
 	}
 	defer os.RemoveAll(expectedGWSupportPath)
 
-	tokenStr, err := CreateCsrfToken()
+	tokenStr, err := CreateCsrfToken(gwSupportPathRelativeHome)
 	require.NoError(t, err)
 	data, err := ioutil.ReadFile(csrfPath)
 	require.NoError(t, err)
@@ -95,9 +96,10 @@ func TestCreateCsrfTokenCreatesANewTokenWhenFileExist(t *testing.T) {
 }
 
 func TestDeleteCsrfTokenDeletesFile(t *testing.T) {
-	// Override home path for testing purposes
-	gwSupportPathRelativeHome = fmt.Sprintf(".gw-support-test-%s", t.Name())
-	expectedGWSupportPath := expectedDir(t)
+	t.Parallel()
+
+	gwSupportPathRelativeHome := fmt.Sprintf(".gw-support-test-%s", t.Name())
+	expectedGWSupportPath := expectedDir(t, gwSupportPathRelativeHome)
 	csrfPath := filepath.Join(expectedGWSupportPath, csrfTokenFile)
 
 	// If csrf path does not exist, create it
@@ -109,14 +111,15 @@ func TestDeleteCsrfTokenDeletesFile(t *testing.T) {
 	}
 	defer os.RemoveAll(expectedGWSupportPath)
 
-	require.NoError(t, DeleteCsrfToken())
+	require.NoError(t, DeleteCsrfToken(gwSupportPathRelativeHome))
 	assert.False(t, files.FileExists(csrfPath))
 }
 
 func TestDeleteCsrfTokenSucceedsIfDirDoesNotExist(t *testing.T) {
-	// Override home path for testing purposes
-	gwSupportPathRelativeHome = fmt.Sprintf(".gw-support-test-%s", t.Name())
-	expectedGWSupportPath := expectedDir(t)
+	t.Parallel()
+
+	gwSupportPathRelativeHome := fmt.Sprintf(".gw-support-test-%s", t.Name())
+	expectedGWSupportPath := expectedDir(t, gwSupportPathRelativeHome)
 	csrfPath := filepath.Join(expectedGWSupportPath, csrfTokenFile)
 
 	// If csrf path exists, remove it
@@ -125,14 +128,15 @@ func TestDeleteCsrfTokenSucceedsIfDirDoesNotExist(t *testing.T) {
 	}
 	defer os.RemoveAll(expectedGWSupportPath)
 
-	require.NoError(t, DeleteCsrfToken())
+	require.NoError(t, DeleteCsrfToken(gwSupportPathRelativeHome))
 	assert.False(t, files.FileExists(csrfPath))
 }
 
 func TestGetOrCreateCsrfTokenCreatesTokenIfNotExist(t *testing.T) {
-	// Override home path for testing purposes
-	gwSupportPathRelativeHome = fmt.Sprintf(".gw-support-test-%s", t.Name())
-	expectedGWSupportPath := expectedDir(t)
+	t.Parallel()
+
+	gwSupportPathRelativeHome := fmt.Sprintf(".gw-support-test-%s", t.Name())
+	expectedGWSupportPath := expectedDir(t, gwSupportPathRelativeHome)
 	csrfPath := filepath.Join(expectedGWSupportPath, csrfTokenFile)
 
 	// If csrf path exists, remove it
@@ -141,7 +145,7 @@ func TestGetOrCreateCsrfTokenCreatesTokenIfNotExist(t *testing.T) {
 	}
 	defer os.RemoveAll(expectedGWSupportPath)
 
-	tokenStr, err := GetOrCreateCsrfToken()
+	tokenStr, err := GetOrCreateCsrfToken(gwSupportPathRelativeHome)
 	require.NoError(t, err)
 	data, err := ioutil.ReadFile(csrfPath)
 	require.NoError(t, err)
@@ -149,9 +153,10 @@ func TestGetOrCreateCsrfTokenCreatesTokenIfNotExist(t *testing.T) {
 }
 
 func TestGetOrCreateCsrfTokenReturnsTokenIfExist(t *testing.T) {
-	// Override home path for testing purposes
-	gwSupportPathRelativeHome = fmt.Sprintf(".gw-support-test-%s", t.Name())
-	expectedGWSupportPath := expectedDir(t)
+	t.Parallel()
+
+	gwSupportPathRelativeHome := fmt.Sprintf(".gw-support-test-%s", t.Name())
+	expectedGWSupportPath := expectedDir(t, gwSupportPathRelativeHome)
 	csrfPath := filepath.Join(expectedGWSupportPath, csrfTokenFile)
 
 	// If csrf path does not exist, create it
@@ -163,7 +168,7 @@ func TestGetOrCreateCsrfTokenReturnsTokenIfExist(t *testing.T) {
 	}
 	defer os.RemoveAll(expectedGWSupportPath)
 
-	tokenStr, err := GetOrCreateCsrfToken()
+	tokenStr, err := GetOrCreateCsrfToken(gwSupportPathRelativeHome)
 	require.NoError(t, err)
 	assert.Equal(t, tokenStr, "foo")
 	data, err := ioutil.ReadFile(csrfPath)
@@ -171,7 +176,7 @@ func TestGetOrCreateCsrfTokenReturnsTokenIfExist(t *testing.T) {
 	assert.Equal(t, string(data), tokenStr)
 }
 
-func expectedDir(t *testing.T) string {
+func expectedDir(t *testing.T, gwSupportPathRelativeHome string) string {
 	home, err := homedir.Dir()
 	require.NoError(t, err)
 	return filepath.Join(home, gwSupportPathRelativeHome)

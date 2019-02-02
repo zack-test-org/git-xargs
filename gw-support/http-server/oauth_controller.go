@@ -56,6 +56,5 @@ func oauthCallbackController(ginCtx *gin.Context) {
 	}
 	LocalCache.Set("token", tok, cache.DefaultExpiration)
 
-	// TODO: return some useful page
-	ginCtx.JSON(http.StatusOK, gin.H{"status": "ok"})
+	ginCtx.String(http.StatusOK, "The CLI has successfully receieved the authorization token. You can close this tab now.")
 }
