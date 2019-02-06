@@ -271,3 +271,21 @@ def get_rds_engine_code(engine_description, engine_edition):
     else:
         global_vars.logger.warn("Unknown engine {} from pricing API".format(engine_description))
         return None
+
+
+def get_rds_instances_without_end_to_end_encryption():
+    """
+    These are the instance types that do NOT support E2E encryption.
+
+    See: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html#Overview.Encryption.Availability
+    """
+    return [
+        "db.m1.small",
+        "db.m1.medium",
+        "db.m1.large",
+        "db.m1.xlarge",
+        "db.m2.xlarge",
+        "db.m2.2xlarge",
+        "db.m2.4xlarge",
+        "db.t2.micro",
+    ]
