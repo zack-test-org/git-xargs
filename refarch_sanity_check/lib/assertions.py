@@ -163,9 +163,30 @@ def assert_rds_instance_types_available(parsed_yamls):
         raise click.ClickException("Failed RDS instance type check")
 
 
+def assert_rds_instance_types_for_end_to_end_encryption(parsed_yamls):
+    """
+    Checks to make sure RDS instance types are compatible with end to end encryption if it is turned on.
+    """
+    if not parser.is_end_to_end_encryption(parsed_yamls):
+        global_vars.logger.info(
+            "End to end encryption is not configured. Skipping RDS instance type compatibility check."
+        )
+        return
+
+    instance_types_to_check = parser.get_configured_rds_instance_types(parsed_yamls)
+    for instance_type in instance_types_to_check:
+        if instance_type in aws.get_rds_instances_without_end_to_end_encryption():
+            global_vars.logger.error(
+                "RDS instance type {} does not support end to end encryption".format(instance_type)
+            )
+            raise click.ClickException(
+                "Found RDS instance type that does not support end to end encryption"
+            )
+
+
 def assert_cache_instance_types_available(parsed_yamls):
     """
-    Checks to make sure RDS instance types configured are available in the selected region.
+    Checks to make sure ElastiCache instance types configured are available in the selected region.
     """
     instance_types_to_check = parser.get_configured_cache_instance_types(parsed_yamls)
 

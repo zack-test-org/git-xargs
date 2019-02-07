@@ -79,6 +79,8 @@ def main(customer_name, usage_patterns_path, loglevel):
 
     global_vars.logger.info("Checking if all RDS instance types in config is available in region")
     assertions.assert_rds_instance_types_available(parsed_yamls)
+    global_vars.logger.info("Checking if RDS instance types in config is compatible with end to end encryption")
+    assertions.assert_rds_instance_types_for_end_to_end_encryption(parsed_yamls)
     global_vars.logger.info("Passed RDS instance type checks")
 
     global_vars.logger.info("Checking if all ElasitCache instance types in config is available in region")

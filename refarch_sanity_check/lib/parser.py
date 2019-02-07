@@ -130,3 +130,16 @@ def get_configured_app_names(parsed_yamls):
         if key == "BackendAppName":
             backend_app_name = value
     return frontend_app_name, backend_app_name
+
+
+def is_end_to_end_encryption(parsed_yamls):
+    """
+    Look up whether or not end to end encryption is turned on.
+
+    Returns:
+        True if end to end encryption is configured.
+    """
+    for key, value in utils.all_nested_items(parsed_yamls):
+        if key == "UsingEndToEndEncryption":
+            return value
+    return False
