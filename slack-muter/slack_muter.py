@@ -99,7 +99,7 @@ def get_current_muted_channel_ids(slack_token):
     return channels
 
 
-def getListAs(property_name, list):
+def get_list_as(property_name, list):
     """Given a list of dictionaries, return a list of just the given property name of each item in the list"""
 
     simple_list = []
@@ -181,7 +181,7 @@ def main():
 
     if args.mute:
         shared_channels = get_shared_channels(slack_token)
-        shared_channel_ids = getListAs('id', shared_channels)
+        shared_channel_ids = get_list_as('id', shared_channels)
         channel_ids_to_mute = shared_channel_ids + my_muted_channel_ids
 
         print(f'Found {len(my_muted_channel_ids)} currently muted channel(s)')
@@ -194,7 +194,7 @@ def main():
 
     if args.unmute:
         shared_channels = get_shared_channels(slack_token)
-        shared_channel_ids = getListAs('id', shared_channels)
+        shared_channel_ids = get_list_as('id', shared_channels)
 
         my_muted_nonshared_channel_ids = [id for id in my_muted_channel_ids if id not in shared_channel_ids]
 
