@@ -1,4 +1,3 @@
-# importing the requests library
 import re
 import requests
 import logging
@@ -10,8 +9,9 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-# Get the current Slack user
-def get_current_user_id(slack_token):
+def get_current_user_name(slack_token):
+    """Get the current Slack user"""
+
     url = "https://slack.com/api/auth.test"
 
     params = {
@@ -21,13 +21,15 @@ def get_current_user_id(slack_token):
     response = requests.post(url=url, params=params).json()
 
     if response['ok']:
-        return response['user_id']
+        return response['user']
 
     raise Exception(f'No user was found. Response from Slack: {response}')
 
 
-# Get a list of all channels in the Slack account. Makes multiple calls to Slack API to account for paginated results
 def get_all_channels(slack_token):
+    """Get a list of all channels in the Slack account
+    Makes multiple calls to Slack API to account for paginated results"""
+
     url = "https://slack.com/api/conversations.list"
 
     first_pass = True
@@ -57,8 +59,9 @@ def get_all_channels(slack_token):
     return channels
 
 
-# Get a list of all shared channels in the Slack account.
 def get_shared_channels(slack_token):
+    """Get a list of all shared channels in the Slack account"""
+
     all_channels = get_all_channels(slack_token)
     shared_channels = []
 
@@ -75,6 +78,8 @@ def get_shared_channels(slack_token):
 
 
 def get_current_muted_channel_ids(slack_token):
+    """Get a list of channel IDs that are currently muted"""
+
     url = "https://slack.com/api/users.prefs.set"
 
     params = {
@@ -94,8 +99,9 @@ def get_current_muted_channel_ids(slack_token):
     return channels
 
 
-# Given a list of dictionaries, return a list of just the given property name of each item in the list
 def getListAs(property_name, list):
+    """Given a list of dictionaries, return a list of just the given property name of each item in the list"""
+
     simple_list = []
     for item in list:
         simple_list.append(item[property_name])
@@ -103,9 +109,11 @@ def getListAs(property_name, list):
     return simple_list
 
 
-# Mute each channel in the list of channels. Note that Slack does not allow muting an individual channel, only setting
-# the list of muted channels in the user's preferences.
 def mute_channels(slack_token, channel_ids):
+    """Mute each channel in the list of channels.
+    Note that Slack does not allow muting an individual channel, only setting the list of all muted channels in the
+    user's preferences."""
+
     url = "https://slack.com/api/users.prefs.set"
 
     channels_str = ','.join(channel_ids)
@@ -121,8 +129,9 @@ def mute_channels(slack_token, channel_ids):
         raise Exception(f'Channel could not be muted. Response from Slack: {response}')
 
 
-# Given a list of channel IDs, return a list of channel names
 def get_channel_names(slack_token, channel_ids):
+    """Given a list of channel IDs, return a list of channel names"""
+
     all_channels = get_all_channels(slack_token)
 
     channel_names = []
@@ -136,6 +145,8 @@ def get_channel_names(slack_token, channel_ids):
 
 
 def parse_args():
+    """Parse command line args"""
+
     parser = argparse.ArgumentParser(
         description='This script can add specified users to all of Gruntworks shared slack channels.')
 
@@ -156,7 +167,9 @@ def main():
     args = parse_args()
     slack_token = args.slack_token
 
-    my_user_id = get_current_user_id(slack_token)
+    my_user_name = get_current_user_name(slack_token)
+    print(f'Fetching channels for Slack user {my_user_name}...\n')
+
     my_muted_channel_ids = get_current_muted_channel_ids(slack_token)
 
     if args.list:

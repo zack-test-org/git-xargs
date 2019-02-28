@@ -23,9 +23,9 @@ muted and be sure to set them again if necessary.
 
 ## Script Params
 
-| Param               | Description                                                                                   | Required |
-|---------------------|-----------------------------------------------------------------------------------------------|----------|
-| `--slack-token`     | The Slack API token to use                                                                    | yes      |
-| `-l` or `--list`    | List all currently muted channels                                                 | xor      |
-| `-m` or `--mute`    | Mute all shared channels                                                 | xor      |
-| `u` or `--unmute`   | Unmute all shared channels                                               | xor      |
+| Param               | Description                          | Required |
+|---------------------|--------------------------------------|----------|
+| `--slack-token`     | The Slack API token to use           | yes      |
+| `-l` or `--list`    | List all currently muted channels    | xor      |
+| `-m` or `--mute`    | Mute all shared channels             | xor      |
+| `u` or `--unmute`   | Unmute all shared channels           | xor      |
