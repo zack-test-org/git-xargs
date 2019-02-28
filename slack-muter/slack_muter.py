@@ -171,21 +171,27 @@ def main():
         shared_channel_ids = getListAs('id', shared_channels)
         channel_ids_to_mute = shared_channel_ids + my_muted_channel_ids
 
-        print(len(shared_channels))
+        print(f'Found {len(my_muted_channel_ids)} currently muted channel(s)')
+        print(f'Found {len(shared_channels)} shared channel(s)')
+        print(f'Muting all {len(channel_ids_to_mute)} channel(s)...')
 
-        print(f'Muting {len(channel_ids_to_mute)} channels...')
         mute_channels(slack_token, channel_ids_to_mute)
+
         print('Success!')
 
-    # if args.unmute:
-    #     shared_channels = get_shared_channels(slack_token)
-    #     my_muted_unshared_channels = [channel for channel in my_muted_channels if channel not in shared_channels]
-    #
-    #     mute_channels(slack_token, [], shared_channels)
+    if args.unmute:
+        shared_channels = get_shared_channels(slack_token)
+        shared_channel_ids = getListAs('id', shared_channels)
 
+        my_muted_nonshared_channel_ids = [id for id in my_muted_channel_ids if id not in shared_channel_ids]
 
+        print(f'Found {len(my_muted_channel_ids)} currently muted channel(s)')
+        print(f'Found {len(shared_channels)} shared channel(s)')
+        print(f'Unmuting all shared channels so that only {len(my_muted_nonshared_channel_ids)} channel(s) will now be muted...')
 
+        mute_channels(slack_token, my_muted_nonshared_channel_ids)
 
+        print('Success!')
 
 
 
