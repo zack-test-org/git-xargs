@@ -2,12 +2,12 @@
 
 ## Motivation
 
-In a remote team, the amount of emails and Slack messages can be overwhelming. Arguably the best solution is to limit your notifications
-to only those you intend to respond to. When I'm on support, I intend to respond to all customer shared channel requests,
-but when I'm not I only intend to respond to `#support-discussion` messages. 
+In a remote team, the amount of emails and Slack messages can be overwhelming. Arguably the best solution is to limit 
+your notifications to only those you intend to respond to. When I'm on support, I intend to respond to all customer 
+shared channel requests, but when I'm not I only intend to respond to `#support-discussion` messages. 
 
-That means I want to mute all shared channels while on support, but unmute them when I'm not on support. Doing this manually
-is a pain, so this script automates it.
+That means I want to mute all shared channels while on support, but unmute them when I'm not on support. Doing this 
+manually is a pain, so this script automates it.
 
 ## How It Works
 
