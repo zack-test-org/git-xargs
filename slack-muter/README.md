@@ -19,7 +19,7 @@ This script will take a slack API token and automatically mute or unmute your us
 | Param               | Description                                                                                   | Required |
 |---------------------|-----------------------------------------------------------------------------------------------|----------|
 | `--slack-token`     | The Slack API token to use                                                                    | yes      |
-| `--mute`            | If present, all shared channels will be muted                                                 | xor      |
-| `--unmute`          | If present, all shared channels will be unmuted                                               | xor      |
+| `-m` or `--mute`    | If present, all shared channels will be muted                                                 | xor      |
+| `u` or `--unmute`   | If present, all shared channels will be unmuted                                               | xor      |
 | `-d` or `--dry-run` | The presence of this flag will not actually mute the channels but will print the log messages | no       |
 

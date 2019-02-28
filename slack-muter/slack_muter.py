@@ -3,53 +3,79 @@ import re
 import requests
 import logging
 import argparse
+import json
 
 logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_shared_channels(slack_token):
-    conversations_url = "https://slack.com/api/conversations.list"
+# Get the current Slack user
+def get_current_user_id(slack_token):
+    url = "https://slack.com/api/auth.test"
+
+    params = {
+        'token': slack_token,
+    }
+
+    response = requests.post(url=url, params=params).json()
+
+    if response['ok']:
+        return response['user_id']
+
+    raise Exception(f'No user was found. Response from Slack: {response}')
+
+
+# Get a list of all channels in the Slack account. Makes multiple calls to Slack API to account for paginated results
+def get_all_channels(slack_token):
+    url = "https://slack.com/api/conversations.list"
 
     first_pass = True
     next_cursor = ""
 
-    resultarray = []
+    channels = []
 
     while next_cursor != "" or first_pass:
         first_pass = False
 
-        params = {'token': slack_token}
+        params = {
+            'token': slack_token
+        }
 
         if next_cursor != "":
             params.update({'cursor': next_cursor})
 
-        response = requests.get(url=conversations_url, params=params).json()
+        response = requests.get(url=url, params=params).json()
 
-        # Grab the next page toke if present in response.
+        # Grab the next page token if present in response.
         response_metadata = response['response_metadata']
         next_cursor = response_metadata['next_cursor']
 
-        count = 0
         for channel in response['channels']:
-            is_shared = (bool(channel['is_shared'])
-                         | bool(channel['is_ext_shared'])
-                         | bool(re.match("^_[A-Za-z]+", channel['name']))) \
-                        & (not bool(channel['is_archived']))
+            channels.append(channel)
 
-            if is_shared:
-                logger.info(f"--->SHARED Channel Info: {channel['name']} - {channel['id']}")
-                resultarray.append(channel)
+    return channels
 
-            count += 1
 
-    logger.info(f"There are: {len(resultarray)} shared channels")
+# Get a list of all shared channels in the Slack account.
+def get_shared_channels(slack_token):
+    all_channels = get_all_channels(slack_token)
+    shared_channels = []
 
-    return resultarray
+    for channel in all_channels:
+        is_shared = (bool(channel['is_shared'])
+                     | bool(channel['is_ext_shared'])
+                     | bool(re.match("^_[A-Za-z]+", channel['name']))) \
+                     & (not bool(channel['is_archived']))
 
-def get_current_user_id(slack_token):
-    url = "https://slack.com/api/users.identity"
+        if is_shared:
+            shared_channels.append(channel)
+
+    return shared_channels
+
+
+def get_current_muted_channel_ids(slack_token):
+    url = "https://slack.com/api/users.prefs.set"
 
     params = {
         'token': slack_token,
@@ -57,71 +83,56 @@ def get_current_user_id(slack_token):
 
     response = requests.get(url=url, params=params).json()
 
-    if response['ok']:
-        return response['user']['name']
+    if not response['ok']:
+        raise Exception(f'Could not get muted channels. Response from Slack: {response}')
 
-    raise Exception('No user was found.')
+    # We get a string of comma-separated channels back from Slack
+    channels_str = response['prefs']['muted_channels']
 
+    channels = channels_str.split(',')
 
-#def mute_channel(slack_token, user, channel, dry_run):
-
-
-def invite_user_to_channel(slack_token, user, channel, dry_run):
-    if is_user_in_channel(slack_token, user, channel):
-        logger.info(f"User {user['profile']['display_name']} is already in channel {channel['name']}.")
-    else:
-        url = "https://slack.com/api/conversations.invite"
-        user_id = user['id']
-        display_name = user['profile']['display_name']
-        data = {'token': slack_token,
-                'users': user_id,
-                'channel': channel['id']}
-
-        if not dry_run:
-            logger.info(f"Inviting {display_name} ({user_id}) to {channel['name']} with ID: {channel['id']}")
-            r = requests.post(url=url, data=data)
-            logger.info(r.text)
-        else:
-            logger.info(f"Would have invited: {display_name} ({user_id}) to {channel['name']} with ID: {channel['id']}")
+    return channels
 
 
-def is_user_in_channel(slack_token, user, channel):
-    url = "https://slack.com/api/conversations.members"
+# Given a list of dictionaries, return a list of just the given property name of each item in the list
+def getListAs(property_name, list):
+    simple_list = []
+    for item in list:
+        simple_list.append(item[property_name])
+
+    return simple_list
+
+
+# Mute each channel in the list of channels. Note that Slack does not allow muting an individual channel, only setting
+# the list of muted channels in the user's preferences.
+def mute_channels(slack_token, channel_ids):
+    url = "https://slack.com/api/users.prefs.set"
+
+    channels_str = ','.join(channel_ids)
 
     params = {
         'token': slack_token,
-        'channel': channel['id']
+        'prefs': json.dumps({'muted_channels': channels_str})
     }
 
-    response = requests.get(url=url, params=params).json()
+    response = requests.post(url=url, params=params).json()
 
-    if response['ok']:
-        users_in_channel = response['members']
-        return user['id'] in users_in_channel
-
-    return False
+    if not response['ok']:
+        raise Exception(f'Channel could not be muted. Response from Slack: {response}')
 
 
-def get_all_current_grunt_users(slack_token):
-    url = "https://slack.com/api/users.list"
-    # gruntwork_team_id="T0PJEPZ2L"
+# Given a list of channel IDs, return a list of channel names
+def get_channel_names(slack_token, channel_ids):
+    all_channels = get_all_channels(slack_token)
 
-    params = {'token': slack_token}
-    raw_response = requests.get(url=url, params=params)
+    channel_names = []
+    for channel in all_channels:
+        if channel['id'] in channel_ids:
+            channel_names.append(channel['name'])
 
-    response = raw_response.json()
-    all_users = []
-    if response['ok']:
-        for member in response['members']:
-            if not bool(member['deleted']) and not bool(member['is_bot']) and not bool(member['is_restricted']):
-                # logger.info(f"Member: {member['name']}")
-                all_users.append(member)
+    channel_names.sort()
 
-    return all_users
-
-
-"""Parse the arguments passed to this script
-"""
+    return channel_names
 
 
 def parse_args():
@@ -129,37 +140,53 @@ def parse_args():
         description='This script can add specified users to all of Gruntworks shared slack channels.')
 
     parser.add_argument('--slack-token', required=True, help='The Slack API token to use')
-    parser.add_argument('-u', '--users', required=True, nargs='+', help='A space separated list of users display names')
-    parser.add_argument('-d', '--dry-run', required=False, dest='dry_run', action='store_true', default=False,
-                        help='The presence of this flag will not actually invite the users but will print the log '
-                             'messages.')
+    parser.add_argument('-l', '--list', action='store_true', help='List all currently muted channels')
+    parser.add_argument('-m', '--mute', action='store_true', help='Mute all shared channels')
+    parser.add_argument('-u', '--unmute', action='store_true', help='Unmute all shared channels')
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if not (args.mute or args.unmute or args.list):
+        parser.error('Exactly one of --list, --mute, or --unmute must be supplied.')
+
+    return args
 
 
 def main():
     args = parse_args()
-
     slack_token = args.slack_token
 
-    user_id = get_current_user_id(slack_token)
-    logger.info(f"User ID = {user_id}")
+    my_user_id = get_current_user_id(slack_token)
+    my_muted_channel_ids = get_current_muted_channel_ids(slack_token)
 
-    # all_grunts = get_all_current_grunt_users(slack_token)
+    if args.list:
+        channel_names = get_channel_names(slack_token, my_muted_channel_ids)
+
+        print(f'You have {len(channel_names)} currently muted channels:')
+        for name in channel_names:
+            print(name)
+
+    if args.mute:
+        shared_channels = get_shared_channels(slack_token)
+        shared_channel_ids = getListAs('id', shared_channels)
+        channel_ids_to_mute = shared_channel_ids + my_muted_channel_ids
+
+        print(len(shared_channels))
+
+        print(f'Muting {len(channel_ids_to_mute)} channels...')
+        mute_channels(slack_token, channel_ids_to_mute)
+        print('Success!')
+
+    # if args.unmute:
+    #     shared_channels = get_shared_channels(slack_token)
+    #     my_muted_unshared_channels = [channel for channel in my_muted_channels if channel not in shared_channels]
     #
-    # grunts_need_adding = args.users
-    #
-    # grunts_to_add = [grunt for grunt in all_grunts if grunt['profile']['display_name'] in grunts_need_adding]
-    #
-    # for grunt in grunts_to_add:
-    #     logger.info(f"Going to invite {grunt['profile']['display_name']} (ID: {grunt['id']}) to all "
-    #                 f"shared channels.")
-    #
-    # all_shared_channels = get_shared_channels(slack_token)
-    #
-    # for cur_channel in all_shared_channels:
-    #     for grunt in grunts_to_add:
-    #         invite_user_to_channel(slack_token, grunt, cur_channel, args.dry_run)
+    #     mute_channels(slack_token, [], shared_channels)
+
+
+
+
+
 
 
 if __name__ == "__main__":
