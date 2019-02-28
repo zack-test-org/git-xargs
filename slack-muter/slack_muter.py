@@ -28,7 +28,9 @@ def get_current_user_name(slack_token):
 
 def get_all_channels(slack_token):
     """Get a list of all channels in the Slack account
-    Makes multiple calls to Slack API to account for paginated results"""
+
+    This function makes multiple calls to Slack API to account for paginated results.
+    """
 
     url = "https://slack.com/api/conversations.list"
 
@@ -102,17 +104,15 @@ def get_current_muted_channel_ids(slack_token):
 def get_list_as(property_name, list):
     """Given a list of dictionaries, return a list of just the given property name of each item in the list"""
 
-    simple_list = []
-    for item in list:
-        simple_list.append(item[property_name])
-
-    return simple_list
+    return [item[property_name] for item in list]
 
 
 def mute_channels(slack_token, channel_ids):
-    """Mute each channel in the list of channels.
+    """Mute each channel in the list of channels
+
     Note that Slack does not allow muting an individual channel, only setting the list of all muted channels in the
-    user's preferences."""
+    user's preferences.
+    """
 
     url = "https://slack.com/api/users.prefs.set"
 
@@ -134,10 +134,11 @@ def get_channel_names(slack_token, channel_ids):
 
     all_channels = get_all_channels(slack_token)
 
-    channel_names = []
-    for channel in all_channels:
-        if channel['id'] in channel_ids:
-            channel_names.append(channel['name'])
+    channel_names = [
+        channel['name']
+        for channel in all_channels
+        if channel['id'] in channel_ids
+    ]
 
     channel_names.sort()
 
