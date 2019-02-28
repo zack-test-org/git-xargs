@@ -17,11 +17,13 @@ that are currently muted. As a result, naively muting only the shared channels w
 your non-shared, previously muted channels. For that reason, this script will check which channels you have currently 
 muted and be sure to set them again if necessary. 
 
-## Requirements
+## Usage
 
-*Note*: This script requires python 3.6+
-
-## Script Params
+```
+python slack_muter.py --slack-token XXX --list
+python slack_muter.py --slack-token XXX --mute
+python slack_muter.py --slack-token XXX --unmute
+```
 
 | Param               | Description                          | Required |
 |---------------------|--------------------------------------|----------|
@@ -29,3 +31,14 @@ muted and be sure to set them again if necessary.
 | `-l` or `--list`    | List all currently muted channels    | xor      |
 | `-m` or `--mute`    | Mute all shared channels             | xor      |
 | `u` or `--unmute`   | Unmute all shared channels           | xor      |
+
+## Requirements
+
+*Note*: This script requires python 3.6+. The `python` binary on your local machine may be named `python3`.
+
+## TODO
+
+- Running `python slack_muter.py --slack-token XXX --mute` is effectively idempotent, but has a small bug where it keeps
+  redundantly adding the same list of channels to mute. This means that running this command repeatedly adds an additional
+  copy of each channel in Slack's settings. You can work around this by just running `python slack_muter.py --unmute`
+  before running `--mute` a second time. 
