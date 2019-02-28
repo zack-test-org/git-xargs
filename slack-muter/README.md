@@ -1,16 +1,22 @@
 # Slack Muter
 
-## Why?
+## Motivation
 
-In a remote team, the amount of emails and Slack messages can be overwhelming. The only solution is to limit your notifications
+In a remote team, the amount of emails and Slack messages can be overwhelming. Arguably the best solution is to limit your notifications
 to only those you intend to respond to. When I'm on support, I intend to respond to all customer shared channel requests,
 but when I'm not I only intend to respond to `#support-discussion` messages. 
 
-But manually muting or unmuting all the shared channels is a pain. Hence this script. :)
+That means I want to mute all shared channels while on support, but unmute them when I'm not on support. Doing this manually
+is a pain, so this script automates it.
 
-## What? 
+## How It Works
 
-This script will take a slack API token and automatically mute or unmute your user account from all shared channels.
+Slack's API does not allow you to individually mute or unmute channels. Rather, you can only set a list of all channels
+that are currently muted. As a result, naively muting only the shared channels would have the effect of _unmuting_ all 
+your currently muted channels. For that reason, this script will check which channels you have currently muted and
+be sure to set them again if necessary. 
+
+## Requirements
 
 *Note*: This script requires python 3.6+
 
@@ -19,7 +25,6 @@ This script will take a slack API token and automatically mute or unmute your us
 | Param               | Description                                                                                   | Required |
 |---------------------|-----------------------------------------------------------------------------------------------|----------|
 | `--slack-token`     | The Slack API token to use                                                                    | yes      |
-| `-m` or `--mute`    | If present, all shared channels will be muted                                                 | xor      |
-| `u` or `--unmute`   | If present, all shared channels will be unmuted                                               | xor      |
-| `-d` or `--dry-run` | The presence of this flag will not actually mute the channels but will print the log messages | no       |
-
+| `-l` or `--list`    | List all currently muted channels                                                 | xor      |
+| `-m` or `--mute`    | Mute all shared channels                                                 | xor      |
+| `u` or `--unmute`   | Unmute all shared channels                                               | xor      |
