@@ -62,7 +62,12 @@ def get_all_channels(slack_token):
 
 
 def get_shared_channels(slack_token):
-    """Get a list of all shared channels in the Slack account"""
+    """Get a list of all shared channels in the Slack account
+
+    We defined a shared channel as a Slack channel that is not archived and:
+    - is shared with another Slack workspace, or
+    - starts with a single "_" (e.g. "_banco-inter")
+    """
 
     all_channels = get_all_channels(slack_token)
     shared_channels = []
@@ -149,7 +154,7 @@ def parse_args():
     """Parse command line args"""
 
     parser = argparse.ArgumentParser(
-        description='This script can add specified users to all of Gruntworks shared slack channels.')
+        description='This script lists all shared Slack channels and mutes / unmutes them.')
 
     parser.add_argument('--slack-token', required=True, help='The Slack API token to use')
     parser.add_argument('-l', '--list', action='store_true', help='List all currently muted channels')
