@@ -30,6 +30,9 @@ def delete_role(role):
     print('Deleting all inline policies on the role')
     for policy in get_all_inline_role_policies(name):
         client.delete_role_policy(RoleName=name, PolicyName=policy)
+    print('Removing instance profile from role')
+    for profile in get_all_associated_instance_profiles_on_role(name):
+        client.remove_role_from_instance_profile(InstanceProfileName=profile['InstanceProfileName'], RoleName=name)
     print('Deleting role')
     client.delete_role(RoleName=name)
 
@@ -54,6 +57,17 @@ def get_all_inline_role_policies(role_name):
         response = client.list_role_policies(Marker=response['Marker'])
         policies.extend(response['PolicyNames'])
     return policies
+
+
+def get_all_associated_instance_profiles_on_role(role_name):
+    """Get all the associated Instance Profiles on the role"""
+    client = boto3.client('iam')
+    response = client.list_instance_profiles_for_role(RoleName=role_name)
+    profiles = response['InstanceProfiles']
+    while 'Marker' in response:
+        response = client.list_instance_profiles_for_role(Marker=response['Marker'])
+        profiles.extend(response['InstanceProfiles'])
+    return profiles
 
 
 def get_all_profiles():
