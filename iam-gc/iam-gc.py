@@ -134,7 +134,7 @@ def want_role(role):
     """Which IAM Roles we want to delete
 
     Args:
-        profile (dict) : Dictionary representation of an IAM Role as returned by boto3.
+        role (dict) : Dictionary representation of an IAM Role as returned by boto3.
 
     Returns:
         Boolean indicating whether or not we want to delete the given IAM Role.
