@@ -24,7 +24,36 @@ def delete_role(role):
     name = role['RoleName']
     create_date = role['CreateDate']
     print('Deleting role {} created on {}'.format(name, create_date.isoformat()))
+    print('Detaching all policies on the role')
+    for policy in get_all_role_policies(name):
+        client.detach_role_policy(RoleName=name, PolicyArn=policy['PolicyArn'])
+    print('Deleting all inline policies on the role')
+    for policy in get_all_inline_role_policies(name):
+        client.delete_role_policy(RoleName=name, PolicyName=policy)
+    print('Deleting role')
     client.delete_role(RoleName=name)
+
+
+def get_all_role_policies(role_name):
+    """Get all the policies attached to the role"""
+    client = boto3.client('iam')
+    response = client.list_attached_role_policies(RoleName=role_name)
+    policies = response['AttachedPolicies']
+    while 'Marker' in response:
+        response = client.list_role_policies(Marker=response['Marker'])
+        policies.extend(response['AttachedPolicies'])
+    return policies
+
+
+def get_all_inline_role_policies(role_name):
+    """Get all the policies declared inline on the role"""
+    client = boto3.client('iam')
+    response = client.list_role_policies(RoleName=role_name)
+    policies = response['PolicyNames']
+    while 'Marker' in response:
+        response = client.list_role_policies(Marker=response['Marker'])
+        policies.extend(response['PolicyNames'])
+    return policies
 
 
 def get_all_profiles():
@@ -44,6 +73,10 @@ def delete_profile(profile):
     name = profile['InstanceProfileName']
     create_date = profile['CreateDate']
     print('Deleting profile {} created on {}'.format(name, create_date.isoformat()))
+    print('Removing roles from instance profile')
+    for role in profile['Roles']:
+        client.remove_role_from_instance_profile(InstanceProfileName=name, RoleName=role['RoleName'])
+    print('Deleting instance profile')
     client.delete_instance_profile(InstanceProfileName=name)
 
 
@@ -138,6 +171,9 @@ def run_profiles(dry=True):
     """
     profiles = [profile for profile in get_all_profiles() if want_profile(profile)]
     print('Found {} profiles'.format(len(profiles)))
+    if len(profiles) == 0:
+        return
+
     print('Last profile created {}'.format(max(profile['CreateDate'] for profile in profiles).isoformat()))
     profiles.sort(key=lambda p: p['CreateDate'], reverse=True)
     print(
