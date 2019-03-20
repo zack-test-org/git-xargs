@@ -19,9 +19,9 @@ def load_yaml_vars(usage_patterns_path, customer_name):
     yaml_file_names = glob.glob(os.path.join(vars_source_path, "*.yml"))
 
     if len(yaml_file_names) == 0:
-        raise click.ClickException("Did not find any yaml files in %s." % (vars_source_path))
+        raise click.ClickException("Did not find any yaml files in {}.".format(vars_source_path))
 
-    global_vars.logger.info("Parsing yaml files from %s" % yaml_file_names)
+    global_vars.logger.info("Parsing yaml files from {}".format(yaml_file_names))
 
     parsed_yamls = {}
     for fname in yaml_file_names:
