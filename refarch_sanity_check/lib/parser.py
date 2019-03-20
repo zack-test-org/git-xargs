@@ -3,9 +3,9 @@ import os
 import re
 import six
 import yaml
+import click
 
-from . import utils
-
+from . import utils, global_vars
 
 def load_yaml_vars(usage_patterns_path, customer_name):
     """
@@ -17,6 +17,12 @@ def load_yaml_vars(usage_patterns_path, customer_name):
     """
     vars_source_path = os.path.join(usage_patterns_path, "stacks", "clients", customer_name)
     yaml_file_names = glob.glob(os.path.join(vars_source_path, "*.yml"))
+
+    if len(yaml_file_names) == 0:
+        raise click.ClickException("Did not find any yaml files in %s." % (vars_source_path))
+
+    global_vars.logger.info("Parsing yaml files from %s" % yaml_file_names)
+
     parsed_yamls = {}
     for fname in yaml_file_names:
         with open(fname) as f:

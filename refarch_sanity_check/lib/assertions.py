@@ -223,4 +223,4 @@ def assert_app_names_different(parsed_yamls):
     """
     frontend_app_name, backend_app_name = parser.get_configured_app_names(parsed_yamls)
     if frontend_app_name == backend_app_name:
-        raise click.ClickException("The FrontendAppName and the BackendAppName values are the same.")
+        raise click.ClickException("The FrontendAppName and the BackendAppName values are the same: %s and %s." % (frontend_app_name, backend_app_name))
