@@ -51,7 +51,6 @@ function test_pr {
   local readonly their_repo_path=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.repo.full_name)
   local readonly contributor=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.user.login)
   local readonly ref=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.ref)
-  local readonly pr_number=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .number)
   local readonly new_branch="pull-request-$pr_number"
 
   git remote add -f "$contributor" "https://github.com/$their_repo_path"
