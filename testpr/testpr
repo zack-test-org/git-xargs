@@ -36,7 +36,7 @@ function assert_not_empty {
   local readonly arg_value="$2"
 
   if [[ -z "$arg_value" ]]; then
-    log_error "The value for '$arg_name' cannot be empty"
+    echo "The value for '$arg_name' cannot be empty"
     print_usage
     exit 1
   fi
