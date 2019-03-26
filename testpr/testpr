@@ -32,37 +32,101 @@ function print_usage {
 }
 
 function assert_not_empty {
-  local readonly arg_name="$1"
-  local readonly arg_value="$2"
+  local -r arg_name="$1"
+  local -r arg_value="$2"
+  local -r message="$3"
 
   if [[ -z "$arg_value" ]]; then
-    echo "The value for '$arg_name' cannot be empty"
+    echo "The value for '$arg_name' cannot be empty. $message"
     print_usage
     exit 1
   fi
 }
 
+function assert_not_empty_or_null {
+  local -r response="$1"
+  local -r description="$2"
+
+  if string_is_empty_or_null "$response"; then
+    echo "Got empty response for $description"
+    exit 1
+  fi
+}
+
+function string_is_empty_or_null {
+  local -r response="$1"
+  [[ -z "$response" || "$response" == "null" ]]
+}
+
+function assert_env_var_not_empty {
+  local -r var_name="$1"
+  local -r var_value="${!var_name}"
+
+  if [[ -z "$var_value" ]]; then
+    echo "ERROR: Required environment variable $var_name not set."
+    exit 1
+  fi
+}
+
 function test_pr {
-  local readonly pr_number="$1"
+  local -r pr_number="$1"
+  local -r github_oauth_token="$2"
 
-  local readonly our_repo_path=$(git config --get remote.origin.url | sed "s/https:\/\/github.com\///")
-  local readonly pr_details=$(curl --fail -H "Authorization: token $GITHUB_OAUTH_TOKEN" "https://api.github.com/repos/$our_repo_path/pulls/$pr_number")
+  echo "Looking up PR #$pr_number using GitHub API"
 
-  local readonly their_repo_path=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.repo.full_name)
-  local readonly contributor=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.user.login)
-  local readonly ref=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.ref)
-  local readonly new_branch="pull-request-$pr_number"
+  local -r git_repo_url=$(git config --get remote.origin.url)
 
-  git remote add -f "$contributor" "https://github.com/$their_repo_path"
-  git checkout "$contributor/$ref"
+  # 'git config' will return either an HTTPS URL (https://github.com/gruntwork-io/foo) or
+  # Git URL (git@github.com:gruntwork-io/foo.git). The sed expressions below strip off the github.com portion at the
+  # front and the .git portion at the end to give us back 'gruntwork-io/foo'. We also capture the original protocol
+  # used (Git or HTTPS), Git suffix (.git or blank), and Git separator (: or /) for use in building our own URLs later
+  local -r our_repo_path=$(echo "$git_repo_url" | sed 's/.*github.com[\/:]//' | sed 's/.git//')
+  local -r git_protocol=$(echo "$git_repo_url" | sed 's/\(.*\)github.com.*/\1/')
+  local -r git_suffix=$([[ "$git_protocol" == "git@" ]] && echo ".git" || echo "")
+  local -r git_separator=$([[ "$git_protocol" == "git@" ]] && echo ":" || echo "/")
+
+  local -r github_api_pr_url="https://api.github.com/repos/$our_repo_path/pulls/$pr_number"
+  local -r pr_details=$(curl --fail --silent --show-error -H "Authorization: token $github_oauth_token" "$github_api_pr_url")
+
+  assert_not_empty_or_null "$pr_details" "PR #$pr_number from the GitHub API (URL: $github_api_pr_url)."
+
+  local -r their_repo_path=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.repo.full_name)
+  local -r contributor=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.user.login)
+  local -r ref=$(echo "$pr_details" | tr '\r\n' ' ' | jq -r .head.ref)
+
+  assert_not_empty_or_null "$their_repo_path" "Full name of the repo."
+  assert_not_empty_or_null "$contributor" "Contributor."
+  assert_not_empty_or_null "$ref" "Ref."
+
+  local -r remote_name="$contributor-$pr_number"
+  local -r pr_git_ref="$remote_name/$ref"
+  local -r new_branch="pull-request-$pr_number"
+  local -r their_repo_url="${git_protocol}github.com${git_separator}${their_repo_path}${git_suffix}"
+
+  echo "Adding $their_repo_url as a Git remote named $remote_name"
+  git remote add -f "$remote_name" "$their_repo_url"
+
+  echo "Checking out $pr_git_ref"
+  git checkout "$pr_git_ref"
+
+  echo "Pushing $pr_git_ref to $new_branch in origin"
   git checkout -b "$new_branch"
   git push --set-upstream origin "$new_branch" --force-with-lease
-  git remote remove "$contributor"
+
+  echo "Removing Git remote named $remote_name"
+  git remote remove "$remote_name"
+
+  echo "Checking out master and deleting local branch $new_branch"
   git checkout master
   git branch -D "$new_branch"
+
   echo
   echo "You should now be able to see their changes at:"
   echo "$DEFAULT_CI_PATH/$our_repo_path/tree/$new_branch"
+
+  echo
+  echo "When the tests are done running, please delete branch $new_branch on this page:"
+  echo "https://github.com/$our_repo_path/branches"
 }
 
 function run {
@@ -91,7 +155,8 @@ function run {
   done
 
   assert_not_empty "--pr" "$pr_number"
-  test_pr "$pr_number"
+  assert_env_var_not_empty "GITHUB_OAUTH_TOKEN"
+  test_pr "$pr_number" "$GITHUB_OAUTH_TOKEN"
 }
 
 run "$@"
