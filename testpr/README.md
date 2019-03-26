@@ -14,6 +14,7 @@ that automatically here yet.
 Usage:
 
 ```
+export GITHUB_OAUTH_TOKEN=<YOUR PERSONAL ACCESS TOKEN>
 cd local_repo_clone
 testpr --pr 42
 ```
