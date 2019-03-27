@@ -1,6 +1,0 @@
-dist
-aws_auth_configmap_generator.*
-.python-version
-.tox
-__pycache__
-*.pyc

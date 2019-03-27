@@ -13,3 +13,4 @@ A repository to hold random prototypes built within Gruntwork.
 ## Graduated projects
 
 - `terratest_failed_tests_log_parser`: Moved to [`terratest`](https://github.com/gruntwork-io/terratest/pull/179)
+- `refarch_sanity_check`: Moved to [`usage-patterns`](https://github.com/gruntwork-io/usage-patterns/pull/238)
