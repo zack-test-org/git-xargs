@@ -1,9 +1,9 @@
-# Slack Exporter
+# Slack Inviter
 
 ## Motivation
 
 We have a [free Slack workspace for the Gruntwork community](https://gruntwork-community.slack.com) that can only be 
-access by invitation. Customers are automatically invited when we run the [Add New User Zapier Zap](
+accessed by invitation. Customers are automatically invited when we run the [Add New User Zapier Zap](
 https://zapier.com/app/editor/47068670/overview), however there may be many existing customers who are already registered
 with Gruntwork and _only_ need to be added to Slack. In such a case, this script offers a way to do that via the CLI.  
 
