@@ -121,7 +121,7 @@ def main():
 
     print('Adding user to channels: ', end='')
     for channel in channels:
-        print('#{} '.format(channel['name']), end='')
+        print(f'#{channel['name']} ', end='')
     print('')
 
     channel_ids = get_as_list_of('id', channels)
