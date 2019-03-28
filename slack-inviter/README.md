@@ -13,7 +13,7 @@ The `slack_inviter.py` script calls the `users.admin.invite` method in the Slack
 be [undocumented](https://stackoverflow.com/a/36114710/2308858). It requires [getting a Legacy Slack Token](
 https://api.slack.com/custom-integrations/legacy-tokens).
 
-We automatically add the user to all public channels in the community Slack workspace.
+The script queries Slack for all public, non-archived channels and adds the user to those channels by default.
 
 ## Usage
 
@@ -25,6 +25,7 @@ python slack_inviter.py --email han.solo@acme.com
 | Param               | Description                          | Required |
 |---------------------|--------------------------------------|----------|
 | `--slack-token`     | The Slack API token to use, but you should use the env var `SLACK_TOKEN` instead | no      |
+| `--email`           | The email of the user to be invited                                              | yes      |
 
 ## Requirements
 
