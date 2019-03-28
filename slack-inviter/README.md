@@ -24,8 +24,7 @@ python slack_inviter.py --email han.solo@acme.com
 
 | Param               | Description                          | Required |
 |---------------------|--------------------------------------|----------|
-| `--slack-token`     | The Slack API token to use, but you should use the env var `SLACK_TOKEN` instead | no      |
-| `--email`           | The email of the user to be invited                                              | yes      |
+| `--email`           | The email of the user to be invited  | yes      |
 
 ## Requirements
 

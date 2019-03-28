@@ -99,23 +99,18 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='This script invites a user to the workspace and adds them to all public Slack channels.')
 
-    parser.add_argument('--slack-token', help='The Slack API token to use, but please use the SLACK_TOKEN env var instead.')
     parser.add_argument('-e', '--email', required=True, help='The email of the user you wish to add')
     args = parser.parse_args()
 
-    if not (args.slack_token or 'SLACK_TOKEN' in os.environ):
-        parser.error('At least one of --slack-token or the env var SLACK_TOKEN must be set.')
+    if not ('SLACK_TOKEN' in os.environ):
+        parser.error('The env var SLACK_TOKEN must be non-empty.')
 
     return args
 
 
 def main():
     args = parse_args()
-
-    if args.slack_token:
-        slack_token = args.slack_token
-    else:
-        slack_token = os.environ['SLACK_TOKEN']
+    slack_token = os.environ['SLACK_TOKEN']
 
     channels = get_all_public_channels(slack_token)
 
@@ -125,7 +120,6 @@ def main():
     print('')
 
     channel_ids = get_as_list_of('id', channels)
-
     invite_user(slack_token, args.email, channel_ids)
 
     print(f'The user has been invited!')
