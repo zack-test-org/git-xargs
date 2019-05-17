@@ -13,13 +13,7 @@ from progress.bar import Bar
 
 def get_all_users():
     """Get all IAM Users in the account, accounting for pagination in the API"""
-    client = boto3.client('iam')
-    response = client.list_users()
-    users = response['Users']
-    while 'Marker' in response:
-        response = client.list_users(Marker=response['Marker'])
-        users.extend(response['Users'])
-    return users
+    return get_all_objects(boto3.client('iam').list_users, 'Users')
 
 
 def delete_user(user):
@@ -46,46 +40,46 @@ def delete_user(user):
 
 def get_all_groups_for_user(username):
     """Get all the groups attached to the user"""
-    client = boto3.client('iam')
-    response = client.list_groups_for_user(UserName=username)
-    groups = response['Groups']
-    while 'Marker' in response:
-        response = client.list_groups_for_user(Marker=response['Marker'])
-        groups.extend(response['Groups'])
-    return groups
+    return get_all_objects(
+        boto3.client('iam').list_groups_for_user,
+        'Groups',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
 
 
-def get_all_user_policies(user_name):
+def get_all_user_policies(username):
     """Get all the policies attached to the user"""
-    client = boto3.client('iam')
-    response = client.list_attached_user_policies(UserName=user_name)
-    policies = response['AttachedPolicies']
-    while 'Marker' in response:
-        response = client.list_user_policies(Marker=response['Marker'])
-        policies.extend(response['AttachedPolicies'])
-    return policies
+    return get_all_objects(
+        boto3.client('iam').list_attached_user_policies,
+        'AttachedPolicies',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
 
 
-def get_all_inline_user_policies(user_name):
+def get_all_inline_user_policies(username):
     """Get all the policies declared inline on the user"""
-    client = boto3.client('iam')
-    response = client.list_user_policies(UserName=user_name)
-    policies = response['PolicyNames']
-    while 'Marker' in response:
-        response = client.list_user_policies(Marker=response['Marker'])
-        policies.extend(response['PolicyNames'])
-    return policies
+    return get_all_objects(
+        boto3.client('iam').list_user_policies,
+        'PolicyNames',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
 
 
-def get_all_access_keys_for_user(user_name):
+def get_all_access_keys_for_user(username):
     """Get all the access keys associated to the user"""
-    client = boto3.client('iam')
-    response = client.list_access_keys(UserName=user_name)
-    keys = response['AccessKeyMetadata']
-    while 'Marker' in response:
-        response = client.list_access_keys(Marker=response['Marker'])
-        keys.extend(response['AccessKeyMetadata'])
-    return keys
+    return get_all_objects(
+        boto3.client('iam').list_access_keys,
+        'AccessKeyMetadata',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -94,13 +88,7 @@ def get_all_access_keys_for_user(user_name):
 
 def get_all_groups():
     """Get all IAM Groups in the account, accounting for pagination in the API"""
-    client = boto3.client('iam')
-    response = client.list_groups()
-    groups = response['Groups']
-    while 'Marker' in response:
-        response = client.list_groups(Marker=response['Marker'])
-        groups.extend(response['Groups'])
-    return groups
+    return get_all_objects(boto3.client('iam').list_groups, 'Groups')
 
 
 def delete_group(group):
@@ -121,24 +109,24 @@ def delete_group(group):
 
 def get_all_group_policies(group_name):
     """Get all the policies attached to the group"""
-    client = boto3.client('iam')
-    response = client.list_attached_group_policies(GroupName=group_name)
-    policies = response['AttachedPolicies']
-    while 'Marker' in response:
-        response = client.list_group_policies(Marker=response['Marker'])
-        policies.extend(response['AttachedPolicies'])
-    return policies
+    return get_all_objects(
+        boto3.client('iam').list_attached_group_policies,
+        'AttachedPolicies',
+        extra_kwargs={
+            'GroupName': group_name,
+        },
+    )
 
 
 def get_all_inline_group_policies(group_name):
     """Get all the policies declared inline on the group"""
-    client = boto3.client('iam')
-    response = client.list_group_policies(GroupName=group_name)
-    policies = response['PolicyNames']
-    while 'Marker' in response:
-        response = client.list_group_policies(Marker=response['Marker'])
-        policies.extend(response['PolicyNames'])
-    return policies
+    return get_all_objects(
+        boto3.client('iam').list_group_policies,
+        'PolicyNames',
+        extra_kwargs={
+            'GroupName': group_name,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -147,13 +135,7 @@ def get_all_inline_group_policies(group_name):
 
 def get_all_roles():
     """Get all IAM Roles in the account, accounting for pagination in the API"""
-    client = boto3.client('iam')
-    response = client.list_roles()
-    roles = response['Roles']
-    while 'Marker' in response:
-        response = client.list_roles(Marker=response['Marker'])
-        roles.extend(response['Roles'])
-    return roles
+    return get_all_objects(boto3.client('iam').list_roles, 'Roles')
 
 
 def delete_role(role):
@@ -177,24 +159,24 @@ def delete_role(role):
 
 def get_all_role_policies(role_name):
     """Get all the policies attached to the role"""
-    client = boto3.client('iam')
-    response = client.list_attached_role_policies(RoleName=role_name)
-    policies = response['AttachedPolicies']
-    while 'Marker' in response:
-        response = client.list_role_policies(Marker=response['Marker'])
-        policies.extend(response['AttachedPolicies'])
-    return policies
+    return get_all_objects(
+        boto3.client('iam').list_attached_role_policies,
+        'AttachedPolicies',
+        extra_kwargs={
+            'RoleName': role_name,
+        }
+    )
 
 
 def get_all_inline_role_policies(role_name):
     """Get all the policies declared inline on the role"""
-    client = boto3.client('iam')
-    response = client.list_role_policies(RoleName=role_name)
-    policies = response['PolicyNames']
-    while 'Marker' in response:
-        response = client.list_role_policies(Marker=response['Marker'])
-        policies.extend(response['PolicyNames'])
-    return policies
+    return get_all_objects(
+        boto3.client('iam').list_role_policies,
+        'PolicyNames',
+        extra_kwargs={
+            'RoleName': role_name,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -203,24 +185,18 @@ def get_all_inline_role_policies(role_name):
 
 def get_all_associated_instance_profiles_on_role(role_name):
     """Get all the associated Instance Profiles on the role"""
-    client = boto3.client('iam')
-    response = client.list_instance_profiles_for_role(RoleName=role_name)
-    profiles = response['InstanceProfiles']
-    while 'Marker' in response:
-        response = client.list_instance_profiles_for_role(Marker=response['Marker'])
-        profiles.extend(response['InstanceProfiles'])
-    return profiles
+    return get_all_objects(
+        boto3.client('iam').list_instance_profiles_for_role,
+        'InstanceProfiles',
+        extra_kwargs={
+            'RoleName': role_name,
+        }
+    )
 
 
 def get_all_profiles():
     """Get all IAM Instance Profiles in the account, accounting for pagination in the API"""
-    client = boto3.client('iam')
-    response = client.list_instance_profiles()
-    profiles = response['InstanceProfiles']
-    while 'Marker' in response:
-        response = client.list_instance_profiles(Marker=response['Marker'])
-        profiles.extend(response['InstanceProfiles'])
-    return profiles
+    return get_all_objects(boto3.client('iam').list_instance_profiles, 'InstanceProfiles')
 
 
 def delete_profile(profile):
@@ -239,6 +215,38 @@ def delete_profile(profile):
 # ---------------------------------------------------------------------------------------------------------------------
 # GENERAL HELPER FUNCTIONS
 # ---------------------------------------------------------------------------------------------------------------------
+
+def get_all_objects(getter, response_key, extra_args=None, extra_kwargs=None):
+    """
+    Given a function that conforms to the boto api of a paginated list function, repeatedly call it until there are no
+    more pages to retrieve.
+
+    Args:
+        getter : A function that can be called to retrieve the objects. Should take in a kwarg for the pagination
+                 marker, and return a list for its response.
+        response_key : The key to use to extract the list of objects from the list response.
+        extra_args : The list of function args to pass to the getter.
+        extra_kwargs : The list of function kwargs to pass to the getter.
+
+    Returns:
+        The list of objects from the getter.
+    """
+    # We use None instead of directly setting [] or {} in function params as the defaults, so that we create a new
+    # list/dict each time. Otherwise, the list or dict is globally scoped, so modifications to the initial args will
+    # persist across calls.
+    if extra_args is None:
+        extra_args = []
+    if extra_kwargs is None:
+        extra_kwargs = {}
+
+    response = getter(*extra_args, **extra_kwargs)
+    objs = response[response_key]
+    while 'Marker' in response:
+        extra_kwargs['Marker'] = response['Marker']
+        response = getter(*extra_args, **extra_kwargs)
+        objs.extend(response[response_key])
+    return objs
+
 
 def is_test_role_or_instance_profile(name):
     """Whether or not the given name matches a heuristic list of known test IAM names"""
