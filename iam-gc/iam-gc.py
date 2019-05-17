@@ -7,15 +7,135 @@ from tabulate import tabulate
 from progress.bar import Bar
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS TO PROCESS IAM USERS
+# ---------------------------------------------------------------------------------------------------------------------
+
+def get_all_users():
+    """Get all IAM Users in the account, accounting for pagination in the API"""
+    return get_all_objects(boto3.client('iam').list_users, 'Users')
+
+
+def delete_user(user):
+    """Delete the given IAM User"""
+    client = boto3.client('iam')
+    name = user['UserName']
+    create_date = user['CreateDate']
+    print('Deleting user {} created on {}'.format(name, create_date.isoformat()))
+    print('Detaching group from user')
+    for group in get_all_groups_for_user(name):
+        client.remove_user_from_group(GroupName=group['GroupName'], UserName=name)
+    print('Detaching all policies on the user')
+    for policy in get_all_user_policies(name):
+        client.detach_user_policy(UserName=name, PolicyArn=policy['PolicyArn'])
+    print('Deleting all inline policies on the user')
+    for policy in get_all_inline_user_policies(name):
+        client.delete_user_policy(UserName=name, PolicyName=policy)
+    print('Detaching access keys on the user')
+    for key in get_all_access_keys_for_user(name):
+        client.delete_access_key(UserName=name, AccessKeyId=key['AccessKeyId'])
+    print('Deleting user')
+    client.delete_user(UserName=name)
+
+
+def get_all_groups_for_user(username):
+    """Get all the groups attached to the user"""
+    return get_all_objects(
+        boto3.client('iam').list_groups_for_user,
+        'Groups',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
+
+
+def get_all_user_policies(username):
+    """Get all the policies attached to the user"""
+    return get_all_objects(
+        boto3.client('iam').list_attached_user_policies,
+        'AttachedPolicies',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
+
+
+def get_all_inline_user_policies(username):
+    """Get all the policies declared inline on the user"""
+    return get_all_objects(
+        boto3.client('iam').list_user_policies,
+        'PolicyNames',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
+
+
+def get_all_access_keys_for_user(username):
+    """Get all the access keys associated to the user"""
+    return get_all_objects(
+        boto3.client('iam').list_access_keys,
+        'AccessKeyMetadata',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS TO PROCESS IAM GROUPS
+# ---------------------------------------------------------------------------------------------------------------------
+
+def get_all_groups():
+    """Get all IAM Groups in the account, accounting for pagination in the API"""
+    return get_all_objects(boto3.client('iam').list_groups, 'Groups')
+
+
+def delete_group(group):
+    """Delete the given IAM Group"""
+    client = boto3.client('iam')
+    name = group['GroupName']
+    create_date = group['CreateDate']
+    print('Deleting group {} created on {}'.format(name, create_date.isoformat()))
+    print('Detaching all policies on the group')
+    for policy in get_all_group_policies(name):
+        client.detach_group_policy(GroupName=name, PolicyArn=policy['PolicyArn'])
+    print('Deleting all inline policies on the group')
+    for policy in get_all_inline_group_policies(name):
+        client.delete_group_policy(GroupName=name, PolicyName=policy)
+    print('Deleting group')
+    client.delete_group(GroupName=name)
+
+
+def get_all_group_policies(group_name):
+    """Get all the policies attached to the group"""
+    return get_all_objects(
+        boto3.client('iam').list_attached_group_policies,
+        'AttachedPolicies',
+        extra_kwargs={
+            'GroupName': group_name,
+        },
+    )
+
+
+def get_all_inline_group_policies(group_name):
+    """Get all the policies declared inline on the group"""
+    return get_all_objects(
+        boto3.client('iam').list_group_policies,
+        'PolicyNames',
+        extra_kwargs={
+            'GroupName': group_name,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS TO PROCESS IAM ROLES
+# ---------------------------------------------------------------------------------------------------------------------
+
 def get_all_roles():
     """Get all IAM Roles in the account, accounting for pagination in the API"""
-    client = boto3.client('iam')
-    response = client.list_roles()
-    roles = response['Roles']
-    while 'Marker' in response:
-        response = client.list_roles(Marker=response['Marker'])
-        roles.extend(response['Roles'])
-    return roles
+    return get_all_objects(boto3.client('iam').list_roles, 'Roles')
 
 
 def delete_role(role):
@@ -39,46 +159,44 @@ def delete_role(role):
 
 def get_all_role_policies(role_name):
     """Get all the policies attached to the role"""
-    client = boto3.client('iam')
-    response = client.list_attached_role_policies(RoleName=role_name)
-    policies = response['AttachedPolicies']
-    while 'Marker' in response:
-        response = client.list_role_policies(Marker=response['Marker'])
-        policies.extend(response['AttachedPolicies'])
-    return policies
+    return get_all_objects(
+        boto3.client('iam').list_attached_role_policies,
+        'AttachedPolicies',
+        extra_kwargs={
+            'RoleName': role_name,
+        }
+    )
 
 
 def get_all_inline_role_policies(role_name):
     """Get all the policies declared inline on the role"""
-    client = boto3.client('iam')
-    response = client.list_role_policies(RoleName=role_name)
-    policies = response['PolicyNames']
-    while 'Marker' in response:
-        response = client.list_role_policies(Marker=response['Marker'])
-        policies.extend(response['PolicyNames'])
-    return policies
+    return get_all_objects(
+        boto3.client('iam').list_role_policies,
+        'PolicyNames',
+        extra_kwargs={
+            'RoleName': role_name,
+        }
+    )
 
+
+# ---------------------------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS TO PROCESS IAM INSTANCE PROFILES
+# ---------------------------------------------------------------------------------------------------------------------
 
 def get_all_associated_instance_profiles_on_role(role_name):
     """Get all the associated Instance Profiles on the role"""
-    client = boto3.client('iam')
-    response = client.list_instance_profiles_for_role(RoleName=role_name)
-    profiles = response['InstanceProfiles']
-    while 'Marker' in response:
-        response = client.list_instance_profiles_for_role(Marker=response['Marker'])
-        profiles.extend(response['InstanceProfiles'])
-    return profiles
+    return get_all_objects(
+        boto3.client('iam').list_instance_profiles_for_role,
+        'InstanceProfiles',
+        extra_kwargs={
+            'RoleName': role_name,
+        }
+    )
 
 
 def get_all_profiles():
     """Get all IAM Instance Profiles in the account, accounting for pagination in the API"""
-    client = boto3.client('iam')
-    response = client.list_instance_profiles()
-    profiles = response['InstanceProfiles']
-    while 'Marker' in response:
-        response = client.list_instance_profiles(Marker=response['Marker'])
-        profiles.extend(response['InstanceProfiles'])
-    return profiles
+    return get_all_objects(boto3.client('iam').list_instance_profiles, 'InstanceProfiles')
 
 
 def delete_profile(profile):
@@ -94,6 +212,42 @@ def delete_profile(profile):
     client.delete_instance_profile(InstanceProfileName=name)
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# GENERAL HELPER FUNCTIONS
+# ---------------------------------------------------------------------------------------------------------------------
+
+def get_all_objects(getter, response_key, extra_args=None, extra_kwargs=None):
+    """
+    Given a function that conforms to the boto api of a paginated list function, repeatedly call it until there are no
+    more pages to retrieve.
+
+    Args:
+        getter : A function that can be called to retrieve the objects. Should take in a kwarg for the pagination
+                 marker, and return a list for its response.
+        response_key : The key to use to extract the list of objects from the list response.
+        extra_args : The list of function args to pass to the getter.
+        extra_kwargs : The list of function kwargs to pass to the getter.
+
+    Returns:
+        The list of objects from the getter.
+    """
+    # We use None instead of directly setting [] or {} in function params as the defaults, so that we create a new
+    # list/dict each time. Otherwise, the list or dict is globally scoped, so modifications to the initial args will
+    # persist across calls.
+    if extra_args is None:
+        extra_args = []
+    if extra_kwargs is None:
+        extra_kwargs = {}
+
+    response = getter(*extra_args, **extra_kwargs)
+    objs = response[response_key]
+    while 'Marker' in response:
+        extra_kwargs['Marker'] = response['Marker']
+        response = getter(*extra_args, **extra_kwargs)
+        objs.extend(response[response_key])
+    return objs
+
+
 def is_test_role_or_instance_profile(name):
     """Whether or not the given name matches a heuristic list of known test IAM names"""
     regex_list = [
@@ -106,6 +260,21 @@ def is_test_role_or_instance_profile(name):
         r'^[Tt]est-cluster[a-zA-Z0-9]{6}$',
         r'^[a-zA-Z0-9]{6}-cluster$',
         r'^[a-zA-Z0-9]{6}-ecs-cluster$',
+    ]
+    return any(re.match(regex, name) for regex in regex_list)
+
+
+def is_test_user_or_group(name):
+    """Whether or not the given name matches a heuristic list of known test IAM Usernames and Group names"""
+    regex_list = [
+        r'^cross-account-iam-roles-test-[a-zA-Z0-9]{6}-[a-zA-Z0-9]{6}$',
+        r'^test-user-non-sudo-[a-zA-Z0-9]{6}$',
+        r'^test-user-sudo-[a-zA-Z0-9]{6}$',
+        r'^test-group-non-sudo-[a-zA-Z0-9]{6}$',
+        r'^test-group-sudo-[a-zA-Z0-9]{6}$',
+        r'^TestIamGroupUseExistingIamRoles-[a-zA-Z0-9]{6}$',
+        r'^TestIamPolicyIamUserSelfMgmt-[a-zA-Z0-9]{6}$',
+        r'^tst-openvpn-host-(\d+|[a-zA-Z0-9]{6})-(Admins|Users)$',
     ]
     return any(re.match(regex, name) for regex in regex_list)
 
@@ -142,6 +311,98 @@ def want_role(role):
     name = role['RoleName']
     create_date = role['CreateDate']
     return is_test_role_or_instance_profile(name) and created_before_yesterday(create_date)
+
+
+def want_user(role):
+    """Which IAM Users we want to delete
+
+    Args:
+        role (dict) : Dictionary representation of an IAM Role as returned by boto3.
+
+    Returns:
+        Boolean indicating whether or not we want to delete the given IAM User.
+    """
+    name = role['UserName']
+    create_date = role['CreateDate']
+    return is_test_user_or_group(name) and created_before_yesterday(create_date)
+
+
+def want_group(role):
+    """Which IAM Groups we want to delete
+
+    Args:
+        role (dict) : Dictionary representation of an IAM Role as returned by boto3.
+
+    Returns:
+        Boolean indicating whether or not we want to delete the given IAM User.
+    """
+    name = role['GroupName']
+    create_date = role['CreateDate']
+    return is_test_user_or_group(name) and created_before_yesterday(create_date)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# RUN FUNCTIONS: MAIN ENTRYPOINTS FOR EACH LOGIC
+# ---------------------------------------------------------------------------------------------------------------------
+
+def run_users(dry=True):
+    """Run the garbage collection routine for Users
+
+    This will:
+    - Find all the users in the account
+    - Filter the test users based on some heuristics on the name
+    - List out all the users it found in a table
+    - If in "wet" mode, ask for confirmation from the operator to proceed with the deletion
+    """
+    users = [user for user in get_all_users() if want_user(user)]
+    print('Found {} users'.format(len(users)))
+    print('Last user created {}'.format(max(user['CreateDate'] for user in users).isoformat()))
+    users.sort(key=lambda p: p['CreateDate'], reverse=True)
+    print(
+        tabulate(
+            [(user['UserName'], user['CreateDate'].isoformat()) for user in users],
+            headers=('Name', 'Created'),
+        )
+    )
+    print()
+
+    if dry:
+        return
+
+    input('Will delete {} users. [Ctrl+C] to cancel, or [ENTER] to proceed.'.format(len(users)))
+    bar = Bar('Deleting', max=len(users))
+    for user in bar.iter(users):
+        delete_user(user)
+
+
+def run_groups(dry=True):
+    """Run the garbage collection routine for Users
+
+    This will:
+    - Find all the groups in the account
+    - Filter the test groups based on some heuristics on the name
+    - List out all the groups it found in a table
+    - If in "wet" mode, ask for confirmation from the operator to proceed with the deletion
+    """
+    groups = [group for group in get_all_groups() if want_group(group)]
+    print('Found {} groups'.format(len(groups)))
+    print('Last group created {}'.format(max(group['CreateDate'] for group in groups).isoformat()))
+    groups.sort(key=lambda p: p['CreateDate'], reverse=True)
+    print(
+        tabulate(
+            [(group['GroupName'], group['CreateDate'].isoformat()) for group in groups],
+            headers=('Name', 'Created'),
+        )
+    )
+    print()
+
+    if dry:
+        return
+
+    input('Will delete {} groups. [Ctrl+C] to cancel, or [ENTER] to proceed.'.format(len(groups)))
+    bar = Bar('Deleting', max=len(groups))
+    for group in bar.iter(groups):
+        delete_group(group)
 
 
 def run_roles(dry=True):
@@ -222,6 +483,8 @@ def main():
     args = parse_args()
     dry = not args.run
 
+    run_users(dry)
+    run_groups(dry)
     run_profiles(dry)
     run_roles(dry)
 
