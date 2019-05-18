@@ -34,6 +34,21 @@ def delete_user(user):
     print('Detaching access keys on the user')
     for key in get_all_access_keys_for_user(name):
         client.delete_access_key(UserName=name, AccessKeyId=key['AccessKeyId'])
+    print('Deleting user ssh keys')
+    for key in get_all_ssh_keys_for_user(name):
+        client.delete_ssh_public_key(UserName=name, SSHPublicKeyId=key['SSHPublicKeyId'])
+    print('Deleting user mfa devices')
+    for device in get_all_mfa_devices_for_user(name):
+        client.deactivate_mfa_device(UserName=name, SerialNumber=device['SerialNumber'])
+        client.delete_virtual_mfa_device(SerialNumber=device['SerialNumber'])
+    print('Deleting user login profile')
+    try:
+        # Check to see if the user has a login profile before attempting a delete
+        client.get_login_profile(UserName=name)
+        client.delete_login_profile(UserName=name)
+    except client.exceptions.NoSuchEntityException:
+        print('User has no login profile. Ignoring error.')
+
     print('Deleting user')
     client.delete_user(UserName=name)
 
@@ -76,6 +91,28 @@ def get_all_access_keys_for_user(username):
     return get_all_objects(
         boto3.client('iam').list_access_keys,
         'AccessKeyMetadata',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
+
+
+def get_all_ssh_keys_for_user(username):
+    """Get all the associated ssh keys on the user"""
+    return get_all_objects(
+        boto3.client('iam').list_ssh_public_keys,
+        'SSHPublicKeys',
+        extra_kwargs={
+            'UserName': username,
+        },
+    )
+
+
+def get_all_mfa_devices_for_user(username):
+    """Get all the associated mfa devices on the user"""
+    return get_all_objects(
+        boto3.client('iam').list_mfa_devices,
+        'MFADevices',
         extra_kwargs={
             'UserName': username,
         },
