@@ -13,7 +13,7 @@ this script for users who are already part of the organization.
 
 | Param               | Description                                                                                   | Required |
 |---------------------|-----------------------------------------------------------------------------------------------|----------|
-| `--slack-token`     | The Slack API token to use                                                                    | yes      |
+| `--slack-token`     | The [Slack API token](https://api.slack.com/custom-integrations/legacy-tokens) to use                                                                    | yes      |
 | `u` or `--users`    | A space separated list of users display names                                                 | yes      |
 | `-d` or `--dry-run` | The presence of this flag will not actually invite the users but will print the log messages. | no       |
 
