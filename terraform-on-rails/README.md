@@ -31,6 +31,13 @@ the new way you’d use Terraform/Terragrunt:
     - The goal is to immediately be able to run `terragrunt apply` to deploy that module and to run `terragrunt test` to
       run the tests for that module.
 
+- We could add new `terragrunt release` and `terragrunt promote` commands to help with day to day operations.
+    - `terragrunt release` would create a new Git tag in your `infrastructure-modules` repo.
+    - `terragrunt promote` would know how to update `terragrunt.hcl` files  to promote a new version of some module from dev to stage to prod:
+        - Update the `ref=` parameter in `terragrunt.hcl`
+        - Commit the changes to Git
+        - Run `terragrunt apply`
+
 - I think we could have a more streamlined test structure for Terratest tests too. We could add a wrapper to Terratest
   to significantly simplify testing Terraform modules. Something along the lines of:
     ```
@@ -63,6 +70,4 @@ the new way you’d use Terraform/Terragrunt:
 - `terragrunt new project`: create a totally new project, including `infra-live` and `infra-modules` repos and root
   `terraform.tfvars` files.
 - `terragrunt new module`: create a new module within an existing project.
-- `terragrunt update`: update the version number in a `.tfvars` file or even in a `module` in a `.tf` file. Perhaps you
-  can use this to update multiple modules at once to some new version.
 - `terragrunt price-estimate`: estimate how much a module will cost you to deploy.
