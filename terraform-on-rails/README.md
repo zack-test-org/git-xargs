@@ -31,6 +31,19 @@ the new way you’d use Terraform/Terragrunt:
     - The goal is to immediately be able to run `terragrunt apply` to deploy that module and to run `terragrunt test` to
       run the tests for that module.
 
+- More generally, we could have a `terragrunt new <URL>` or similar command:
+    - `URL` is a URL to a Git repo that contains Terraform code.
+    - More specifically, that repo could contain _templated_ Terraform code. We probably wouldn't use `boilerplate` for this, but it gets the idea across well, so let's assume `boilerplate` for the purposes of this doc.
+    - We would create our module repos (e.g., `module-vpc`, `terraform-aws-eks`, etc) with our usual folder structure:`modules`, `examples`, and `test`.
+    - We could add a new folder to this structure called something like `templates`. This would contain subfolders with templated Terraform code.
+    - E.g., `module-vpc/templates/prod-app-vpc` could contain:
+        - `boilerplate.yml`: defines input variables to ask the user for, such as the name of the VPC and CIDR block to use.
+        - `infrastructure-modules`: would contain `main.tf`, `variables.tf`, etc for a VPC module. These would use Go templating syntax to fill in the boilerplate variables the user asked for.
+        - `infrastructure-live`: would contain `terragrunt.hcl`, also with Go templating syntax.
+    - The `terragrunt new <URL>` command would check out the code at `URL` and run `boilerplate` on it. The user would be prompted to enter input variables and based on those, we'd generate a new module for them.
+    - This would provide a standardized way to create "scaffolding" for Terraform projects. Using this, it would be 10x easier for customers to try out parts of the IaC Library: that is, we could turn all the contents of `usage-patterns` into a service catalog of reusable scaffolds so that customers can create a production-grade ref arch for themselves, piece by piece. We could have various flavors of scaffolding, such as an app VPC, PCI-compliant EKS deployment, frontend service for deployment into EKS, etc. 
+    - These same scaffolds could be reused by Houston self service to offer a UI-driven service catalog. 
+  
 - We could add new `terragrunt release` and `terragrunt promote` commands to help with day to day operations.
     - `terragrunt release` would create a new Git tag in your `infrastructure-modules` repo.
     - `terragrunt promote` would know how to update `terragrunt.hcl` files  to promote a new version of some module from dev to stage to prod:
