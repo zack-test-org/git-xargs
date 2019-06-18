@@ -297,6 +297,8 @@ def is_test_role_or_instance_profile(name):
         r'^[Tt]est-cluster[a-zA-Z0-9]{6}$',
         r'^[a-zA-Z0-9]{6}-cluster$',
         r'^[a-zA-Z0-9]{6}-ecs-cluster$',
+        r'(app|core)-workers-eks-cluster-[a-zA-Z0-9]{6}-worker$',
+        r'eks-cluster-[a-zA-Z0-9]{6}-(cluster|worker)$',
     ]
     return any(re.match(regex, name) for regex in regex_list)
 
