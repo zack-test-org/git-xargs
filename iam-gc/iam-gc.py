@@ -297,6 +297,8 @@ def is_test_role_or_instance_profile(name):
         r'^[Tt]est-cluster[a-zA-Z0-9]{6}$',
         r'^[a-zA-Z0-9]{6}-cluster$',
         r'^[a-zA-Z0-9]{6}-ecs-cluster$',
+        r'(app|core)-workers-eks-cluster-[a-zA-Z0-9]{6}-worker$',
+        r'eks-cluster-[a-zA-Z0-9]{6}-(cluster|worker)$',
     ]
     return any(re.match(regex, name) for regex in regex_list)
 
@@ -393,6 +395,9 @@ def run_users(dry=True):
     """
     users = [user for user in get_all_users() if want_user(user)]
     print('Found {} users'.format(len(users)))
+    if len(users) == 0:
+        return
+
     print('Last user created {}'.format(max(user['CreateDate'] for user in users).isoformat()))
     users.sort(key=lambda p: p['CreateDate'], reverse=True)
     print(
@@ -423,6 +428,9 @@ def run_groups(dry=True):
     """
     groups = [group for group in get_all_groups() if want_group(group)]
     print('Found {} groups'.format(len(groups)))
+    if len(groups) == 0:
+        return
+
     print('Last group created {}'.format(max(group['CreateDate'] for group in groups).isoformat()))
     groups.sort(key=lambda p: p['CreateDate'], reverse=True)
     print(
