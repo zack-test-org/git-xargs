@@ -63,6 +63,11 @@ def invite_user_to_channel(slack_token, user, channel, dry_run):
         if not dry_run:
             logger.info(f"Inviting {display_name} ({user_id}) to {channel['name']} with ID: {channel['id']}")
             r = requests.post(url=url, data=data)
+            # If there was a "cant_invite_self" error, try again using the join method rather than invite
+            response = r.json()
+            if response.get('ok') == False and response.get('error') == 'cant_invite_self':
+                url = "https://slack.com/api/conversations.join"
+                r = requests.post(url=url, data=data)
             logger.info(r.text)
         else:
             logger.info(f"Would have invited: {display_name} ({user_id}) to {channel['name']} with ID: {channel['id']}")
