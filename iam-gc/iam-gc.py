@@ -290,6 +290,10 @@ def is_test_role_or_instance_profile(name):
     regex_list = [
         r'^cloud-nuke-test-.+',
         r'^cloud-nuke-Test.+',
+        r'^influxdb-data-[a-zA-Z0-9]{6}\d+.$',
+        r'^influxdb-meta-[a-zA-Z0-9]{6}\d+.$',
+        r'^influxdb-[a-zA-Z0-9]{6}\d+.$',
+        r'^kapacitor-server-[a-zA-Z0-9]{6}\d+.$',
         r'^vault-test-[a-zA-Z0-9]{6}.+',
         r'^consul-test-[a-zA-Z0-9]{6}.+',
         r'^kibana-[a-zA-Z0-9]{6}.+',
