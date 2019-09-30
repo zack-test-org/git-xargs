@@ -18,15 +18,45 @@ def get_all_s3_buckets():
 
 def delete_bucket(bucket):
     """Delete the given S3 bucket."""
-    client = boto3.client('s3')
     name = bucket['Name']
     create_date = bucket['CreationDate']
     print('Deleting bucket {} created on {}'.format(name, create_date.isoformat()))
-    bucket = client.Bucket(name)
     print('Deleting all objects of bucket {}'.format(name))
-    bucket.objects.all().delete()
+    delete_all_objects(name)
     print('Deleting bucket {}'.format(name))
-    bucket.delete()
+    boto3.client('s3').delete_bucket(Bucket=name)
+
+
+def delete_all_objects(bucket_name):
+    """Delete all the objects, including versions and deletion markers, of an S3 bucket"""
+    s3_client = boto3.client('s3')
+    object_response_paginator = s3_client.get_paginator('list_object_versions')
+
+    delete_marker_list = []
+    version_list = []
+
+    # Get all the versions and delete markers of each object in the bucket, accounting for pagination
+    for object_response_itr in object_response_paginator.paginate(Bucket=bucket_name):
+        if 'DeleteMarkers' in object_response_itr:
+            for delete_marker in object_response_itr['DeleteMarkers']:
+                delete_marker_list.append({'Key': delete_marker['Key'], 'VersionId': delete_marker['VersionId']})
+
+        if 'Versions' in object_response_itr:
+            for version in object_response_itr['Versions']:
+                version_list.append({'Key': version['Key'], 'VersionId': version['VersionId']})
+
+    # In groups of 1000, start to delete each object version
+    for i in range(0, len(delete_marker_list), 1000):
+        print('Deleting {}-{} of {} deletion markers'.format(i, i + 999, len(delete_marker_list)))
+        resp = s3_client.delete_objects(Bucket=bucket_name, Delete={'Objects': delete_marker_list[i:i + 1000]})
+        if resp.get('Errors', []):
+            raise Exception('Error deleting objects in bucket {}: {}'.format(bucket_name, resp['Errors']))
+
+    for i in range(0, len(version_list), 1000):
+        print('Deleting {}-{} of {} versions'.format(i, i + 999, len(version_list)))
+        resp = s3_client.delete_objects(Bucket=bucket_name, Delete={'Objects': version_list[i:i + 1000]})
+        if resp.get('Errors', []):
+            raise Exception('Error deleting objects in bucket {}: {}'.format(bucket_name, resp['Errors']))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
