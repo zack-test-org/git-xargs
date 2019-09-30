@@ -6,10 +6,33 @@ import pytz
 from tabulate import tabulate
 from progress.bar import Bar
 
+# ---------------------------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS TO PROCESS S3 BUCKETS
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def get_all_s3_buckets():
+    """Get all S3 Buckets in the account, accounting for pagination in the API"""
+    return get_all_objects(boto3.client('s3').list_buckets, 'Buckets')
+
+
+def delete_bucket(bucket):
+    """Delete the given S3 bucket."""
+    client = boto3.client('s3')
+    name = bucket['Name']
+    create_date = bucket['CreationDate']
+    print('Deleting bucket {} created on {}'.format(name, create_date.isoformat()))
+    bucket = client.Bucket(name)
+    print('Deleting all objects of bucket {}'.format(name))
+    bucket.objects.all().delete()
+    print('Deleting bucket {}'.format(name))
+    bucket.delete()
+
 
 # ---------------------------------------------------------------------------------------------------------------------
 # HELPER FUNCTIONS TO PROCESS IAM USERS
 # ---------------------------------------------------------------------------------------------------------------------
+
 
 def get_all_users():
     """Get all IAM Users in the account, accounting for pagination in the API"""
@@ -123,6 +146,7 @@ def get_all_mfa_devices_for_user(username):
 # HELPER FUNCTIONS TO PROCESS IAM GROUPS
 # ---------------------------------------------------------------------------------------------------------------------
 
+
 def get_all_groups():
     """Get all IAM Groups in the account, accounting for pagination in the API"""
     return get_all_objects(boto3.client('iam').list_groups, 'Groups')
@@ -170,6 +194,7 @@ def get_all_inline_group_policies(group_name):
 # HELPER FUNCTIONS TO PROCESS IAM ROLES
 # ---------------------------------------------------------------------------------------------------------------------
 
+
 def get_all_roles():
     """Get all IAM Roles in the account, accounting for pagination in the API"""
     return get_all_objects(boto3.client('iam').list_roles, 'Roles')
@@ -197,9 +222,7 @@ def delete_role(role):
 def get_all_role_policies(role_name):
     """Get all the policies attached to the role"""
     return get_all_objects(
-        boto3.client('iam').list_attached_role_policies,
-        'AttachedPolicies',
-        extra_kwargs={
+        boto3.client('iam').list_attached_role_policies, 'AttachedPolicies', extra_kwargs={
             'RoleName': role_name,
         }
     )
@@ -208,9 +231,7 @@ def get_all_role_policies(role_name):
 def get_all_inline_role_policies(role_name):
     """Get all the policies declared inline on the role"""
     return get_all_objects(
-        boto3.client('iam').list_role_policies,
-        'PolicyNames',
-        extra_kwargs={
+        boto3.client('iam').list_role_policies, 'PolicyNames', extra_kwargs={
             'RoleName': role_name,
         }
     )
@@ -220,12 +241,11 @@ def get_all_inline_role_policies(role_name):
 # HELPER FUNCTIONS TO PROCESS IAM INSTANCE PROFILES
 # ---------------------------------------------------------------------------------------------------------------------
 
+
 def get_all_associated_instance_profiles_on_role(role_name):
     """Get all the associated Instance Profiles on the role"""
     return get_all_objects(
-        boto3.client('iam').list_instance_profiles_for_role,
-        'InstanceProfiles',
-        extra_kwargs={
+        boto3.client('iam').list_instance_profiles_for_role, 'InstanceProfiles', extra_kwargs={
             'RoleName': role_name,
         }
     )
@@ -252,6 +272,7 @@ def delete_profile(profile):
 # ---------------------------------------------------------------------------------------------------------------------
 # GENERAL HELPER FUNCTIONS
 # ---------------------------------------------------------------------------------------------------------------------
+
 
 def get_all_objects(getter, response_key, extra_args=None, extra_kwargs=None):
     """
@@ -322,6 +343,17 @@ def is_test_user_or_group(name):
     return any(re.match(regex, name) for regex in regex_list)
 
 
+def is_test_s3_bucket(name):
+    """Whether or not the given name matches a heuristic list of known test S3 bucket names"""
+    regex_list = [
+        r'^cloudfront-example-[a-zA-Z0-9]{6}\.gruntwork\.in.*',
+        r'^gruntwork-terratest-[a-zA-Z0-9]{6}$',
+        r'^gw-cis-aws-config-all-regions-[a-zA-Z0-9]{6}-.*',
+        r'^houston-static-[a-zA-Z0-9]{12}.*',
+    ]
+    return any(re.match(regex, name) for regex in regex_list)
+
+
 def created_before_yesterday(t):
     """Whether or not the given time is before yesterday (24h ago)"""
     unow = dt.datetime.utcnow().replace(tzinfo=pytz.utc)
@@ -384,9 +416,24 @@ def want_group(role):
     return is_test_user_or_group(name) and created_before_yesterday(create_date)
 
 
+def want_bucket(bucket):
+    """Which S3 buckets we want to delete
+
+    Args:
+        bucket (dict) : Dictionary representation of a S3 Bucket as returned by boto3.
+
+    Returns:
+        Boolean indicating whether or not we want to delete the given S3 bucket.
+    """
+    name = bucket['Name']
+    create_date = bucket['CreationDate']
+    return is_test_s3_bucket(name) and created_before_yesterday(create_date)
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # RUN FUNCTIONS: MAIN ENTRYPOINTS FOR EACH LOGIC
 # ---------------------------------------------------------------------------------------------------------------------
+
 
 def run_users(dry=True):
     """Run the garbage collection routine for Users
@@ -517,10 +564,42 @@ def run_profiles(dry=True):
         delete_profile(profile)
 
 
+def run_buckets(dry=True):
+    """Run the garbage collection routine for S3 Buckets.
+
+    This will:
+    - Find all the buckets in the account
+    - Filter the test buckets based on some heuristics on the name
+    - List out all the buckets it found in a table
+    - If in "wet" mode, ask for confirmation from the operator to proceed with the deletion
+    """
+    buckets = [bucket for bucket in get_all_s3_buckets() if want_bucket(bucket)]
+    print('Found {} buckets'.format(len(buckets)))
+    if len(buckets) == 0:
+        return
+
+    print('Last bucket created {}'.format(max(bucket['CreationDate'] for bucket in buckets).isoformat()))
+    buckets.sort(key=lambda p: p['CreationDate'], reverse=True)
+    print(
+        tabulate(
+            [(bucket['Name'], bucket['CreationDate'].isoformat()) for bucket in buckets],
+            headers=('Name', 'Created'),
+        )
+    )
+    print()
+
+    if dry:
+        return
+
+    input('Will delete {} buckets. [Ctrl+C] to cancel, or [ENTER] to proceed.'.format(len(buckets)))
+    bar = Bar('Deleting', max=len(buckets))
+    for bucket in bar.iter(buckets):
+        delete_bucket(bucket)
+
+
 def parse_args():
     """Parse command line args"""
-    parser = argparse.ArgumentParser(
-        description='This script garbage collects test IAM roles and instance profiles.')
+    parser = argparse.ArgumentParser(description='This script garbage collects test IAM resources and S3 Buckets.')
 
     parser.add_argument('-r', '--run', action='store_true', help='Run the deletion routine.')
 
@@ -532,6 +611,7 @@ def main():
     args = parse_args()
     dry = not args.run
 
+    run_buckets(dry)
     run_users(dry)
     run_groups(dry)
     run_profiles(dry)
