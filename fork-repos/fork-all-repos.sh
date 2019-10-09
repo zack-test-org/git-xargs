@@ -4,20 +4,14 @@ set -eo pipefail
 
 # Gruntwork repos in the gruntwork-io org
 readonly GRUNTWORK_REPOS=(
-  "bash-commons"
-  "fetch"
+  # AWS repos
   "gruntkms"
-  "gruntwork"
-  "gruntwork-cli"
-  "gruntwork-installer"
-  "helm-kubernetes-services"
   "infrastructure-live-acme"
   "infrastructure-live-google"
   "infrastructure-live-multi-account-acme"
   "infrastructure-modules-acme"
   "infrastructure-modules-google"
   "infrastructure-modules-multi-account-acme"
-  "kubergrunt"
   "module-asg"
   "module-aws-monitoring"
   "module-cache"
@@ -46,6 +40,8 @@ readonly GRUNTWORK_REPOS=(
   "terraform-aws-couchbase"
   "terraform-aws-eks"
   "terraform-aws-influx"
+
+  # GCP repos
   "terraform-google-gke"
   "terraform-google-influx"
   "terraform-google-load-balancer"
@@ -53,17 +49,31 @@ readonly GRUNTWORK_REPOS=(
   "terraform-google-security"
   "terraform-google-sql"
   "terraform-google-static-assets"
+
+  # Kubernetes repos
+  "helm-kubernetes-services"
+  "kubergrunt"
   "terraform-helm-gke-exts"
   "terraform-kubernetes-helm"
+
+  # Common tools
+  "bash-commons"
+  "fetch"
+  "gruntwork"
+  "gruntwork-cli"
+  "gruntwork-installer"
   "terragrunt"
   "terratest"
 )
 
 # Gruntwork repos in the hashicorp GitHub org
 readonly GRUNTWORK_HASHICORP_REPOS=(
+  # AWS repos
   "terraform-aws-consul"
   "terraform-aws-nomad"
   "terraform-aws-vault"
+
+  # GCP repos
   "terraform-google-consul"
   "terraform-google-nomad"
   "terraform-google-vault"
