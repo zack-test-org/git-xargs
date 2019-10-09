@@ -7,28 +7,23 @@ readonly DST_REMOTE_NAME="internal"
 
 readonly INTERNAL_REF_SUFFIX="internal"
 
-readonly DEFAULT_HTTPS_URL_TO_REPLACE=("https://github.com/gruntwork-io" "https://www.github.com/gruntwork-io")
-readonly DEFAULT_GIT_URL_TO_REPLACE=("git@github.com:gruntwork-io")
-
 function print_usage {
   echo
   echo "Usage: fork-repo.sh [ARGUMENTS]"
   echo
-  echo "This script can be used to fork (i.e., copy) a Gruntwork repo into your own Git repo. The script will (a) clone the source repo into a temp folder, (b) check out each tag of the form vX.Y.Z, (c) replace cross-references to other Gruntwork repos with cross-references to your own Git repos, and (d) push the changes to a branch called v.X.Y.Z-internal in your repo. That way, your internal repo will have the latest code and releases and if you run this script to fork all Gruntwork repos, all cross-references should work too."
+  echo "This script can be used to fork (i.e., copy) a Gruntwork repo into your own Git repo. The script will (a) clone the source repo into a temp folder, (b) check out each tag of the form vX.Y.Z, (c) replace cross-references to other Gruntwork repos with cross-references to your own Git repos, and (d) push the changes to a branch called v.X.Y.Z-internal in your repo. The script will also update cross-references for the master branch and push that to your repo. That way, your internal repo will have the latest code and releases and if you run this script to fork all Gruntwork repos, all cross-references should work too."
   echo
   echo "Required arguments:"
   echo
   echo -e "  --src\t\tThe URL of the Gruntwork repo to fork. This script will git clone this repo."
   echo -e "  --dst\t\tThe URL of your repo. This script will push the forked code here."
-  echo -e "  --base-https\tThe base HTTPS URL for your organization. E.g., https://github.com/your-company. This is used to replace --replace-https URLs in all cross-references. "
-  echo -e "  --base-git\tThe base Git URL for your organization. E.g., git@github.com:your-company or github.com/your-company. This is used to replace --replace-git URLs in all cross-references. "
+  echo -e "  --base-https\tThe base HTTPS URL for your organization. E.g., https://github.com/your-company. This is used to replace https://github.com/gruntwork-io URLs in all cross-references. "
+  echo -e "  --base-git\tThe base Git URL for your organization. E.g., git@github.com:your-company or github.com/your-company. This is used to replace git@github.com:gruntwork-io URLs in all cross-references. "
   echo
   echo "Optional arguments:"
   echo
-  echo -e "  --dry-run\t\tIf this flag is set, perform changes locally, but don't git push them to the --dst repo. This will leave the temp folder on disk so you can inspect what would've been pushed."
-  echo -e "  --replace-https\tThe HTTPS URLs to replace in all cross-references. May be specified more than once. Default: [${DEFAULT_HTTPS_URL_TO_REPLACE[@]}]."
-  echo -e "  --replace-git\t\tThe Git URLs to replace in all cross-references. May be specified more than once. Default: [${DEFAULT_GIT_URL_TO_REPLACE[@]}]."
-  echo -e "  --help\t\tShow this help text and exit."
+  echo -e "  --dry-run\tIf this flag is set, perform all the changes locally, but don't push them to the --dst repo. This will leave the temp folder on disk so you can inspect what would've been pushed."
+  echo -e "  --help\tShow this help text and exit."
   echo
   echo "Example:"
   echo
@@ -120,25 +115,13 @@ function update_cross_links {
   local -r base_https="$1"
   local -r base_git="$2"
 
-  # We have to do some ugly things to pass multiple arrays to a function in bash
-  local -r num_replace_https="$3"
-  local -r num_replace_git="$4"
-  shift 4
-  local -r args=("$@")
-  local -ar replace_https=("${args[@]:0:$num_replace_https}")
-  local -ar replace_git=("${args[@]:$num_replace_https:$num_replace_git}")
-
-  local to_replace
-
   # Replace all Gruntwork Git/SSH URLs
-  for to_replace in "${replace_git[@]}"; do
-    replace_recursively "$to_replace" "$base_git" "*.*"
-  done
+  replace_recursively "git@github.com:gruntwork-io" "$base_git" "*.*"
 
-  # Replace all Gruntwork Git/HTTPS URLs
-  for to_replace in "${replace_https[@]}"; do
-    replace_recursively "$to_replace" "$base_https" "*.*"
-  done
+  # Replace all Gruntwork Git/HTTPS URLs. Note that sed doesn't support optional groups (the '?' in regex), so to
+  # handle URLs with and without www, we have to essentially run the search/replace twice.
+  replace_recursively "https://github.com/gruntwork-io" "$base_https" "*.*"
+  replace_recursively "https://www.github.com/gruntwork-io" "$base_https" "*.*"
 
   # Replace all Terraform/Terragrunt ref parameters with internal refs
   replace_recursively "\(source[[:space:]]*=[[:space:]]*\".*\)?ref=\(.*\)\"" "\1?ref=\2-$INTERNAL_REF_SUFFIX\"" "*.tf" "*.hcl"
@@ -181,16 +164,8 @@ function process_ref {
   local -r dst="$2"
   local -r base_https="$3"
   local -r base_git="$4"
-
-  # We have to do some ugly things to pass multiple arrays to a function in bash
-  local -r num_dst_refs="$5"
-  local -r num_replace_https="$6"
-  local -r num_replace_git="$7"
-  shift 7
-  local -ar args=("$@")
-  local -ar dst_refs=("${args[@]:0:$num_dst_refs}")
-  local -ar replace_https=("${args[@]:$num_dst_refs:$num_replace_https}")
-  local -ar replace_git=("${args[@]:$((num_dst_refs + num_replace_https)):$num_replace_git}")
+  shift 4
+  local -ar dst_refs=("$@")
 
   local -r short_ref=$(basename "$full_ref")
   local internal_ref="$short_ref-$INTERNAL_REF_SUFFIX"
@@ -215,7 +190,7 @@ function process_ref {
   fi
 
   log_info "Updating cross links in '$full_ref' and committing changes to branch '$internal_ref'"
-  update_cross_links "$base_https" "$base_git" "$num_replace_https" "$num_replace_git" "${replace_https[@]}" "${replace_git[@]}"
+  update_cross_links "$base_https" "$base_git"
   commit_changes_if_necessary "$dst" "$internal_ref"
 
   echo -n "$internal_ref"
@@ -251,8 +226,6 @@ function run {
   local base_https
   local base_git
   local dry_run="false"
-  local -a replace_https=()
-  local -a replace_git=()
 
   if [[ "$#" == 0 ]]; then
     print_usage
@@ -279,14 +252,6 @@ function run {
         base_git="$2"
         shift
         ;;
-      --replace-https)
-        replace_https+=("$2")
-        shift
-        ;;
-      --replace-git)
-        replace_git+=("$2")
-        shift
-        ;;
       --dry-run)
         dry_run="true"
         ;;
@@ -303,13 +268,6 @@ function run {
   assert_not_empty "--dst" "$dst"
   assert_not_empty "--base-https" "$base_https"
   assert_not_empty "--base-git" "$base_git"
-
-  if [[ -z "${replace_https[@]}" ]]; then
-    replace_https="${DEFAULT_HTTPS_URL_TO_REPLACE[@]}"
-  fi
-  if [[ -z "${replace_git[@]}" ]]; then
-    replace_git="${DEFAULT_GIT_URL_TO_REPLACE[@]}"
-  fi
 
   local repo_path
   repo_path=$(mktemp -d -t fork-repo)
@@ -331,10 +289,8 @@ function run {
   local src_ref
   local dst_ref
 
-  log_info "Updating all HTTPs cross-links from [${replace_https[@]}] to '$base_https' and all Git cross-links from [${replace_git[@]}] to '$base_git'"
-
   for src_ref in "${src_refs[@]}"; do
-    dst_ref=$(cd "$repo_path" && process_ref "$src_ref" "$dst" "$base_https" "$base_git" "${#dst_refs[@]}" "${#replace_https[@]}" "${#replace_git[@]}" "${dst_refs[@]}" "${replace_https[@]}" "${replace_git[@]}")
+    dst_ref=$(cd "$repo_path" && process_ref "$src_ref" "$dst" "$base_https" "$base_git" "${dst_refs[@]}")
     if [[ ! -z "$dst_ref" ]]; then
       refs_to_push+=("$dst_ref")
     fi
