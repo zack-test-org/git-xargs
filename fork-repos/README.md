@@ -68,7 +68,7 @@ Here's how the two scripts in this folder solve this messy problem:
     1. Commit the changes to branch `vX.Y.Z-internal`.
     1. `git push` the branch `vX.Y.Z-internal` to `<your-company>/foo`.
     
-The result off running these scripts is that every cross-reference to version `vX.Y.Z` in the Gruntwork repos will be
+The result of running these scripts is that every cross-reference to version `vX.Y.Z` in the Gruntwork repos will be
 updated to a cross-reference to version `vX.Y.Z-internal` in your company's repos. Since the script creates a branch of
 exactly this `vX.Y.Z-internal` name in each repo, all the cross-references should work exactly as expected!
      
