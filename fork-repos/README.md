@@ -88,7 +88,7 @@ These scripts are not perfect. They are a best effort to solve a tricky problem.
    some cross-references will be missed, or something will accidentally be updated that shouldn't have been. If you 
    find such an issue, please let us know!
 
-1. **Assets**: These scripts do NOT copy published assets from the Releases page of each repo. For example, some of or
+1. **Assets**: These scripts do NOT copy published assets from the Releases page of each repo. For example, some of our
    modules are written in Go, and as part of the release process, we publish pre-compiled, standalone binaries for each
    OS (e.g., for the `gruntkms` repo, we publish `gruntkms_linux_amd64`, `gruntkms_darwin_amd64`, 
    `gruntkms_windows_amd64.exe`, etc.). These binaries are published as GitHub release assets, so they are not in the
