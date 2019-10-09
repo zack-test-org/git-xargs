@@ -171,14 +171,22 @@ function process_ref {
   local internal_ref="$short_ref-$INTERNAL_REF_SUFFIX"
 
   if [[ "$short_ref" == "master" ]]; then
+    log_info "Checking out master branch"
     internal_ref="master"
     git checkout master 1>&2
-  elif array_contains "refs/heads/$internal_ref" "${dst_refs[@]}"; then
-    log_info "Branch '$internal_ref' already exists '$dst', so will not process it again."
-    return
   else
     log_info "Creating branch '$internal_ref' from '$full_ref'."
     git checkout -B "$internal_ref" "$full_ref" 1>&2
+  fi
+
+  # We ONLY push code once to any given branch. Our cross-linked changes only go into branches in the internal repo,
+  # and trying to maintain mutable branches there will likely lead to a nightmare off merge conflicts, so for now, we
+  # avoid it entirely, and assume that the (immutable) tags are the only thing a customer needs, and once those are
+  # pushed, there's no need to update them again. We also push master, just so the repo has a reasonable default branch,
+  # but we only push it the very first time around, and do not update it after.
+  if array_contains "refs/heads/$internal_ref" "${dst_refs[@]}"; then
+    log_info "Branch '$internal_ref' already exists in '$dst', so will not process it again."
+    return
   fi
 
   log_info "Updating cross links in '$full_ref' and committing changes to branch '$internal_ref'"
