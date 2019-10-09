@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
-set -o pipefail
+set -eo pipefail
 
 readonly SRC_REMOTE_NAME="origin"
 readonly DST_REMOTE_NAME="internal"
@@ -72,6 +71,7 @@ function clone_repo {
   git init 1>&2
   git remote add "$SRC_REMOTE_NAME" "$src_url" 1>&2
   git remote add "$DST_REMOTE_NAME" "$dst_url" 1>&2
+  git fetch "$SRC_REMOTE_NAME" 1>&2
   git pull "$SRC_REMOTE_NAME" master 1>&2
 }
 
@@ -91,21 +91,41 @@ function array_contains {
   return 1
 }
 
+# Recursively go through all files and folders in the current working directory that match the given include patterns
+# and replace the given text with the given replacement. Under the hood, we use grep for finding matching files, so you
+# can use regex in the text to replace and wild cards (e.g., *.tf) in the include patterns, and we use sed for
+# replacement, so you can use regex in the text to replace and capture groups in the replacement.
+function replace_recursively {
+  local -r text_to_replace="$1"
+  local -r replacement="$2"
+  shift 2
+  local -ar include_patterns=("$@")
+
+  local -a grep_opts=("-rl" "--exclude-dir=.git")
+  local include_pattern
+  for include_pattern in "${include_patterns[@]}"; do
+    grep_opts+=("--include=$include_pattern")
+  done
+
+  grep "${grep_opts[@]}" "$text_to_replace" . | xargs sed -i '' -e "s|$text_to_replace|$replacement|g"
+}
+
 # Find all URLs pointing to Gruntwork repos and update them to point to the given URLs. Update all ref parameters to
 # point to internal branches.
 function update_cross_links {
   local -r base_https="$1"
   local -r base_git="$2"
 
-  # Replace Git URLs everywhere
-  find . -type f -print0 | xargs -0 sed -i '' -e "s|git@github.com:gruntwork-io|$base_git|g"
+  # Replace all Gruntwork Git/SSH URLs
+  replace_recursively "git@github.com:gruntwork-io" "$base_git" "*.*"
 
-  # Replace HTTPS URLs everywhere
-  find . -type f -print0 | xargs -0 sed -i '' -e "s|https://github.com/gruntwork-io|$base_https|g"
-  find . -type f -print0 | xargs -0 sed -i '' -e "s|https://www.github.com/gruntwork-io|$base_https|g"
+  # Replace all Gruntwork Git/HTTPS URLs. Note that sed doesn't support optional groups (the '?' in regex), so to
+  # handle URLs with and without www, we have to essentially run the search/replace twice.
+  replace_recursively "https://github.com/gruntwork-io" "$base_https" "*.*"
+  replace_recursively "https://www.github.com/gruntwork-io" "$base_https" "*.*"
 
-  # Replace ref parameters in Terraform/Terragrunt source URLs
-  find . -type f -name '*.tf' -name '*.hcl' -print0 | xargs -0 sed -i '' -e "s|\(source[[:space:]]*=[[:space:]]*\".*\)?ref=\(.*\)\"|\1?ref=\2-$INTERNAL_REF_SUFFIX\"|g"
+  # Replace all Terraform/Terragrunt ref parameters with internal refs
+  replace_recursively "\(source[[:space:]]*=[[:space:]]*\".*\)?ref=\(.*\)\"" "\1?ref=\2-$INTERNAL_REF_SUFFIX\"" "*.tf" "*.hcl"
 
   # TODO: Tags in Packer templates. Ideally, we'd look for gruntwork-install --tag "xxx" and replace the "xxx", but
   # many of our templates call gruntwork-install in Bash scripts, and pass the tag using a variable, so it's not
@@ -116,9 +136,9 @@ function update_cross_links {
 # https://stackoverflow.com/a/3899339/483528
 function changes_present {
   if git diff-index --quiet HEAD; then
-    return 0
-  else
     return 1
+  else
+    return 0
   fi
 }
 
@@ -132,10 +152,7 @@ function commit_changes_if_necessary {
     return
   fi
 
-  log_info "Updated cross-references in the following files:"
-  git diff-index --name-only HEAD 1>&2
-
-  log_info "Committing these changes to branch '$branch_name'"
+  log_info "Committing updated cross-references to branch '$branch_name'"
   git add . 1>&2
   git commit -m "fork-repo.sh: automatically update cross-references to point to $dst." 1>&2
 }
@@ -180,7 +197,7 @@ function push_changes {
   local -ar refs_to_push=("$@")
 
   if [[ "$dry_run" == "true" ]]; then
-    log_info "The --dry-run flag is set, so will not 'git push' changes. You can inspect the changes in the folder: $repo_path"
+    log_info "The --dry-run flag is set, so will not 'git push' changes in: $repo_path"
     log_info "The following branches were updated and would've been pushed if the --dry-run flag had not been set: ${refs_to_push[@]}"
     return
   elif [[ -z "${refs_to_push[@]}" ]]; then
@@ -264,19 +281,10 @@ function run {
   local src_ref
   local dst_ref
 
-  # TODO: remove count!!!
-  local count=0
   for src_ref in "${src_refs[@]}"; do
     dst_ref=$(cd "$repo_path" && process_ref "$src_ref" "$dst" "$base_https" "$base_git" "${dst_refs[@]}")
     if [[ ! -z "$dst_ref" ]]; then
       refs_to_push+=("$dst_ref")
-    fi
-
-    # TODO: remove count!!!
-    count=$((count+1))
-    if [[ "$count" -gt 5 ]]; then
-      log_info "TEMPORARILY STOPPING. REMOVE THIS SHIT BEFORE COMMITTING."
-      break
     fi
   done
 
