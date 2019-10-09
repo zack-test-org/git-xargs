@@ -70,12 +70,6 @@ readonly GRUNTWORK_HASHICORP_REPOS=(
   "terraform-google-vault"
 )
 
-# All Gruntwork repos
-readonly ALL_GRUNTWORK_REPOS=(
-  "${GRUNTWORK_REPOS[@]}"
-  "${GRUNTWORK_HASHICORP_REPOS[@]}"
-)
-
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 function print_usage {
