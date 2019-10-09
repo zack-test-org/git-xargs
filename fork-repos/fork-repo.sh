@@ -22,8 +22,9 @@ function print_usage {
   echo
   echo "Optional arguments:"
   echo
-  echo -e "  --dry-run\tIf this flag is set, perform all the changes locally, but don't push them to the --dst repo. This will leave the temp folder on disk so you can inspect what would've been pushed."
-  echo -e "  --help\tShow this help text and exit."
+  echo -e "  --dry-run\t\tIf this flag is set, perform all the changes locally, but don't push them to the --dst repo. This will leave the temp folder on disk so you can inspect what would've been pushed."
+  echo -e "  --dry-run-local\tSame as --dry-run, but also skip fetching data from the destination repo or checking if branches already exist. This lets you test locally without creating a destination repo."
+  echo -e "  --help\t\tShow this help text and exit."
   echo
   echo "Example:"
   echo
@@ -206,20 +207,21 @@ function push_changes {
   local -r repo_path="$1"
   local -r dst="$2"
   local -r dry_run="$3"
-  shift 3
+  local -r dry_run_local="$4"
+  shift 4
   local -ar refs_to_push=("$@")
 
-  if [[ "$dry_run" == "true" ]]; then
-    log_info "The --dry-run flag is set, so will not 'git push' changes in: $repo_path"
-    log_info "The following ${#refs_to_push[@]} branches were updated and would've been pushed if the --dry-run flag had not been set: ${refs_to_push[@]}"
+  log_info "The following ${#refs_to_push[@]} branches were updated: ${refs_to_push[@]}"
+
+  if [[ "$dry_run" == "true" || "$dry_run_local" == "true" ]]; then
+    log_info "The --dry-run or --dry-run-local flag is set, so will not 'git push' changes and will skip deleting the temp checkout dir so you can inspect the results: $repo_path"
     return
   elif [[ -z "${refs_to_push[@]}" ]]; then
-    log_info "No refs were updated, so nothing to push!"
-    return
+    log_info "No branches were updated, so nothing to push!"
+  else
+    log_info "Pushing changes to '$dst'"
+    git push "$DST_REMOTE_NAME" "${refs_to_push[@]}" 1>&2
   fi
-
-  log_info "Pushing changes to the following branches in '$dst': ${refs_to_push[@]}"
-  git push "$DST_REMOTE_NAME" "${refs_to_push[@]}" 1>&2
 
   log_info "Cleaning up tmp checkout dir $repo_path"
   rm -rf "$repo_path"
@@ -231,6 +233,7 @@ function run {
   local base_https
   local base_git
   local dry_run="false"
+  local dry_run_local="false"
 
   if [[ "$#" == 0 ]]; then
     print_usage
@@ -260,6 +263,9 @@ function run {
       --dry-run)
         dry_run="true"
         ;;
+      --dry-run-local)
+        dry_run_local="true"
+        ;;
       --help)
         print_usage
         exit
@@ -285,7 +291,12 @@ function run {
 
   # Get all branches in the dest repo
   local -a dst_refs
-  dst_refs=($(cd "$repo_path" && git ls-remote --heads "$DST_REMOTE_NAME" | cut -f2))
+  if [[ "$dry_run_local" == "true" ]]; then
+    log_info "The --dry-run-local flag is set, so will not check the destination repo for existing branches, and will process everything from scratch."
+    dst_refs=()
+  else
+    dst_refs=($(cd "$repo_path" && git ls-remote --heads "$DST_REMOTE_NAME" | cut -f2))
+  fi
 
   # Add the master branch to the list of src refs, as we always want to copy the latest code for master
   src_refs=("refs/heads/master" "${src_refs[@]}")
@@ -301,7 +312,7 @@ function run {
     fi
   done
 
-  (cd "$repo_path" && push_changes "$repo_path" "$dst" "$dry_run" "${refs_to_push[@]}")
+  (cd "$repo_path" && push_changes "$repo_path" "$dst" "$dry_run" "$dry_run_local" "${refs_to_push[@]}")
 }
 
 run "$@"
