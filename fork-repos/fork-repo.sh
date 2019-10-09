@@ -250,11 +250,11 @@ function run {
   (cd "$repo_path" && clone_repo "$src" "$dst")
 
   # Get all tags in the src repo
-  local src_refs
+  local -a src_refs
   src_refs=($(cd "$repo_path" && git ls-remote --tags "$SRC_REMOTE_NAME" | cut -f2))
 
   # Get all branches in the dest repo
-  local dst_refs
+  local -a dst_refs
   dst_refs=($(cd "$repo_path" && git ls-remote --heads "$DST_REMOTE_NAME" | cut -f2))
 
   # Add the master branch to the list of src refs, as we always want to copy the latest code for master
