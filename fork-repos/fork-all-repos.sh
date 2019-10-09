@@ -30,7 +30,6 @@ readonly GRUNTWORK_REPOS=(
   "module-vpc"
   "package-beanstalk"
   "package-elk"
-  "package-k8s"
   "package-kafka"
   "package-lambda"
   "package-messaging"
