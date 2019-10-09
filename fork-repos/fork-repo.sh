@@ -33,22 +33,21 @@ function print_usage {
 # Log the given message at the given level. All logs are written to stderr with a timestamp.
 function log {
   local -r level="$1"
-  local -r message="$2"
+  shift
+  local -r message=("$@")
   local -r timestamp=$(date +"%Y-%m-%d %H:%M:%S")
   local -r script_name="$(basename "$0")"
-  >&2 echo -e "${timestamp} [${level}] [$script_name] ${message}"
+  >&2 echo -e "${timestamp} [${level}] [$script_name] ${message[@]}"
 }
 
 # Log the given message at INFO level. All logs are written to stderr with a timestamp.
 function log_info {
-  local -r message="$1"
-  log "INFO" "$message"
+  log "INFO" "$@"
 }
 
 # Log the given message at ERROR level. All logs are written to stderr with a timestamp.
 function log_error {
-  local -r message="$1"
-  log "ERROR" "$message"
+  log "ERROR" "$@"
 }
 
 # If the given value is empty, print usage instructions and exit with an error.
@@ -199,7 +198,7 @@ function push_changes {
 
   if [[ "$dry_run" == "true" ]]; then
     log_info "The --dry-run flag is set, so will not 'git push' changes in: $repo_path"
-    log_info "The following branches were updated and would've been pushed if the --dry-run flag had not been set: ${refs_to_push[@]}"
+    log_info "The following ${#refs_to_push[@]} branches were updated and would've been pushed if the --dry-run flag had not been set: ${refs_to_push[@]}"
     return
   elif [[ -z "${refs_to_push[@]}" ]]; then
     log_info "No refs were updated, so nothing to push!"
