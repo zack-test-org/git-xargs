@@ -173,8 +173,8 @@ function process_ref {
   if [[ "$short_ref" == "master" ]]; then
     internal_ref="master"
     git checkout master 1>&2
-  elif array_contains "$internal_ref" "$dst_refs"; then
-    log_info "Branch '$internal_ref' already exists i '$dst', so will not process it again."
+  elif array_contains "refs/heads/$internal_ref" "${dst_refs[@]}"; then
+    log_info "Branch '$internal_ref' already exists '$dst', so will not process it again."
     return
   else
     log_info "Creating branch '$internal_ref' from '$full_ref'."
