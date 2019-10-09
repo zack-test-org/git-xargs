@@ -17,8 +17,8 @@ function print_usage {
   echo
   echo -e "  --src\t\tThe URL of the Gruntwork repo to fork. This script will git clone this repo."
   echo -e "  --dst\t\tThe URL of your repo. This script will push the forked code here."
-  echo -e "  --base-https\tThe base HTTPS URL for your organization. E.g., https://github.com/your-company. This is used to replace https://github.com/gruntwork-io URLs in all cross-references. "
-  echo -e "  --base-git\tThe base Git URL for your organization. E.g., git@github.com:your-company or github.com/your-company. This is used to replace git@github.com:gruntwork-io URLs in all cross-references. "
+  echo -e "  --base-https\tThe base HTTPS URL for your organization. E.g., https://github.com/your-company. This is used to replace https://github.com/gruntwork-io URLs in all cross-references."
+  echo -e "  --base-git\tThe base Git URL for your organization. E.g., git@github.com:your-company or github.com/your-company. This is used to replace git@github.com:gruntwork-io URLs in all cross-references."
   echo
   echo "Optional arguments:"
   echo
