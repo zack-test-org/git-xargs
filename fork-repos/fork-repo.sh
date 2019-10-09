@@ -115,13 +115,18 @@ function update_cross_links {
   local -r base_https="$1"
   local -r base_git="$2"
 
-  # Replace all Gruntwork Git/SSH URLs
+  # Replace all Gruntwork Git/SSH URLs. Note that we have some repos in the HashiCorp GitHub org, so we have to replace
+  # those too.
   replace_recursively "git@github.com:gruntwork-io" "$base_git" "*.*"
+  replace_recursively "git@github.com:hashicorp" "$base_git" "*.*"
 
-  # Replace all Gruntwork Git/HTTPS URLs. Note that sed doesn't support optional groups (the '?' in regex), so to
-  # handle URLs with and without www, we have to essentially run the search/replace twice.
+  # Replace all Gruntwork Git/HTTPS URLs. Note that we have some repos in the HashiCorp GitHub org, so we have to replace
+  # those too. Also, note that sed doesn't support optional groups (the '?' in regex), so to handle URLs with and
+  # without www, we have to essentially run the search/replace twice.
   replace_recursively "https://github.com/gruntwork-io" "$base_https" "*.*"
   replace_recursively "https://www.github.com/gruntwork-io" "$base_https" "*.*"
+  replace_recursively "https://github.com/hashicorp" "$base_https" "*.*"
+  replace_recursively "https://www.github.com/hashicorp" "$base_https" "*.*"
 
   # Replace all Terraform/Terragrunt ref parameters with internal refs
   replace_recursively "\(source[[:space:]]*=[[:space:]]*\".*\)?ref=\(.*\)\"" "\1?ref=\2-$INTERNAL_REF_SUFFIX\"" "*.tf" "*.hcl"
