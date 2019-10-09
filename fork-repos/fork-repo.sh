@@ -130,11 +130,22 @@ function update_cross_links {
   replace_recursively "https://www.github.com/hashicorp" "$base_https" "*.*"
 
   # Replace all Terraform/Terragrunt ref parameters with internal refs
+  # Example: source = "git@github.com:/gruntwork-io/module-security?ref=v0.3.4
   replace_recursively "\(source[[:space:]]*=[[:space:]]*\".*\)?ref=\(.*\)\"" "\1?ref=\2-$INTERNAL_REF_SUFFIX\"" "*.tf" "*.hcl"
 
-  # TODO: Tags in Packer templates. Ideally, we'd look for gruntwork-install --tag "xxx" and replace the "xxx", but
-  # many of our templates call gruntwork-install in Bash scripts, and pass the tag using a variable, so it's not
-  # obvious how to replace it.
+  # Replace version ("tag") numbers in gruntwork-install calls in Packer templates, bash scripts, and Dockerfiles.
+  # Example: gruntwork-install --module-name 'xxx' --repo 'yyy' --tag 'zzz'
+  replace_recursively "\(gruntwork-install.*--tag.*v[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\)" "\1-$INTERNAL_REF_SUFFIX" "*.json" "*.sh" "Dockerfile"
+
+  # Replace gruntwork-installer version
+  # Example: curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version 'v0.0.21'
+  replace_recursively "\(curl.*bootstrap-gruntwork-installer.sh.*v[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\)" "\1-$INTERNAL_REF_SUFFIX" "*.json" "*.sh" "Dockerfile"
+
+  # Replace version ("tag") numbers in bash scripts we call from Packer templates to install Gruntwork dependencies.
+  # These scripts pass a version number to a function and that function calls gruntwork-install, so here, we look
+  # for functions of this sort, and try to update the version numbers in them.
+  # Example: install_security_packages "v0.4.5"
+  replace_recursively "\(install_.*v[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\)" "\1-$INTERNAL_REF_SUFFIX" "*.sh"
 }
 
 # Returns 0 if there are changes (diffs) in the current repo and 1 if there are no changes.
