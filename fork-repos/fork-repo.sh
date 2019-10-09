@@ -178,10 +178,11 @@ function process_ref {
     log_info "Branch '$internal_ref' already exists i '$dst', so will not process it again."
     return
   else
+    log_info "Creating branch '$internal_ref' from '$full_ref'."
     git checkout -B "$internal_ref" "$full_ref" 1>&2
   fi
 
-  log_info "Updating cross links in branch '$short_ref' and committing changes to branch '$internal_ref' in '$dst'"
+  log_info "Updating cross links in '$full_ref' and committing changes to branch '$internal_ref'"
   update_cross_links "$base_https" "$base_git"
   commit_changes_if_necessary "$dst" "$internal_ref"
 
@@ -277,7 +278,7 @@ function run {
   # Add the master branch to the list of src refs, as we always want to copy the latest code for master
   src_refs=("refs/heads/master" "${src_refs[@]}")
 
-  local refs_to_push=()
+  local -a refs_to_push=()
   local src_ref
   local dst_ref
 
@@ -288,7 +289,7 @@ function run {
     fi
   done
 
-  (cd "$repo_path" && push_changes "$repo_path" "$dst" "$dry_run" "$refs_to_push")
+  (cd "$repo_path" && push_changes "$repo_path" "$dst" "$dry_run" "${refs_to_push[@]}")
 }
 
 run "$@"
