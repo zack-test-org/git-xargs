@@ -43,7 +43,7 @@ Like magic, this utility can automatically figure out if the issue is:
 To build diagnose, install Go (at least `1.13`) and run:
 
 ```bash
-go build
+go build -o /usr/local/bin/diagnose
 ```
 
 This will create a `diagnose` binary in the same folder.
