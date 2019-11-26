@@ -44,17 +44,23 @@ func Diagnose(opts *options.Options) error {
 		return err
 	}
 
-	if err := check.SecurityGroupAllowsInboundFromELB(elb, targets, opts); err != nil {
+	if err := check.InstanceSecurityGroupsAllowInboundFromELB(elb, targets, opts); err != nil {
 		return err
 	}
 
-	// TODO: ELB SG allows outbound to instance
+	if err := check.ElbSecurityGroupsAllowOutboundToInstances(elb, targets, opts); err != nil {
+		return err
+	}
 
 	if err := check.ElbHealthChecksPassing(targets, opts); err != nil {
 		return err
 	}
 
-	// TODO: ELB allows inbound from outside world?
+	// TODO: instance subnet NACLs allow inbound requests from ELB
+	// TODO: instance subnet NACLs allow outbound response from instances
+	// TODO: ELB subnet NACLs allow outbound requests to instances
+	// TODO: ELB subnet NACLs allow inbound responses from instances
+	// TODO: ELB allows inbound from outside world (from your computer's IP)
 
 	output.ShowDiagnosis(fmt.Sprintf("Everything appears to be working. We were not able to find any errors talking to URL %s.", opts.Url), opts)
 

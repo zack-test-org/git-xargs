@@ -10,18 +10,13 @@ import (
 	"regexp"
 )
 
-func FindSecurityGroupIdsForInstances(instanceIds []string) ([]*ec2.SecurityGroup, error) {
+func FindSecurityGroupIdsForInstances(instances []*ec2.Instance) ([]*ec2.SecurityGroup, error) {
 	session, err := NewAuthenticatedSession()
 	if err != nil {
 		return nil, err
 	}
 
 	client := ec2.New(session)
-
-	instances, err := describeAllInstances(instanceIds, client, nil)
-	if err != nil {
-		return nil, err
-	}
 
 	var securityGroupIds []string
 	for _, instance := range instances {
@@ -65,6 +60,17 @@ func FindEnisForElb(elb *elbv2.LoadBalancer) ([]*ec2.NetworkInterface, error) {
 	return output.NetworkInterfaces, nil
 }
 
+func DescribeAllInstances(instanceIds []string) ([]*ec2.Instance, error) {
+	session, err := NewAuthenticatedSession()
+	if err != nil {
+		return nil, err
+	}
+
+	client := ec2.New(session)
+
+	return describeAllInstances(instanceIds, client, nil)
+}
+
 func describeAllInstances(instanceIds []string, client *ec2.EC2, nextToken *string) ([]*ec2.Instance, error) {
 	input := ec2.DescribeInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
@@ -91,6 +97,17 @@ func describeAllInstances(instanceIds []string, client *ec2.EC2, nextToken *stri
 	}
 
 	return append(instances, rest...), nil
+}
+
+func DescribeAllSecurityGroups(securityGroupIds []string) ([]*ec2.SecurityGroup, error) {
+	session, err := NewAuthenticatedSession()
+	if err != nil {
+		return nil, err
+	}
+
+	client := ec2.New(session)
+
+	return describeAllSecurityGroups(securityGroupIds, client, nil)
 }
 
 func describeAllSecurityGroups(securityGroupIds []string, client *ec2.EC2, nextToken *string) ([]*ec2.SecurityGroup, error) {
