@@ -25,6 +25,10 @@ func Diagnose(opts *options.Options) error {
 	if err != nil {
 		return err
 	}
+	if elb == nil {
+		opts.Logger.Errorf("Could not find ELB for RecordSet")
+		return nil
+	}
 
 	opts.Logger.Infof("Found ELB for RecordSet: %v", elb)
 
