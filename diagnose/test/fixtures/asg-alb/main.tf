@@ -1,3 +1,7 @@
+# ---------------------------------------------------------------------------------------------------------------------
+# DEPLOY AN ASG + ELB + ROUTE 53 ENTRY THAT CAN BE USED FOR TESTING
+# ---------------------------------------------------------------------------------------------------------------------
+
 terraform {
   required_version = ">= 0.12, < 0.13"
 }
@@ -9,8 +13,13 @@ provider "aws" {
   version = "~> 2.0"
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# CONFIGURE THE LAUNCH CONFIGURATION AND AUTO SCALING GROUP
+# ---------------------------------------------------------------------------------------------------------------------
+
 resource "aws_launch_configuration" "example" {
-  image_id             = "ami-0c55b159cbfafe1f0"
+  name_prefix          = var.name
+  image_id             = data.aws_ami.ubuntu.image_id
   instance_type        = "t2.micro"
   security_groups      = [aws_security_group.instance.id]
   iam_instance_profile = aws_iam_instance_profile.instance.name
@@ -29,13 +38,42 @@ resource "aws_launch_configuration" "example" {
   }
 }
 
+resource "aws_autoscaling_group" "example" {
+  name                 = aws_launch_configuration.example.name
+  launch_configuration = aws_launch_configuration.example.name
+  vpc_zone_identifier  = data.aws_subnet_ids.default.ids
+
+  target_group_arns = [aws_lb_target_group.asg.arn]
+  health_check_type = "ELB"
+
+  min_size         = var.num_instances
+  max_size         = var.num_instances
+  min_elb_capacity = var.num_instances
+
+  tag {
+    key                 = "Name"
+    value               = var.name
+    propagate_at_launch = true
+  }
+
+  # Forces a redeploy of the ASG each time the launch config is changed
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# CONFIGURE AN IAM ROLE
+# We include SSM permissions in the IAM role so we can execute commands on the EC2 instances via SSM
+# ---------------------------------------------------------------------------------------------------------------------
+
 resource "aws_iam_instance_profile" "instance" {
-  name = var.iam_role_name
+  name = var.name
   role = aws_iam_role.instance.name
 }
 
 resource "aws_iam_role" "instance" {
-  name               = var.iam_role_name
+  name               = var.name
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 }
 
@@ -105,51 +143,12 @@ data "aws_iam_policy_document" "ssm" {
   }
 }
 
-resource "aws_autoscaling_group" "example" {
-  launch_configuration = aws_launch_configuration.example.name
-  vpc_zone_identifier  = data.aws_subnet_ids.default.ids
-
-  target_group_arns = [aws_lb_target_group.asg.arn]
-  health_check_type = "ELB"
-
-  min_size = 2
-  max_size = 10
-
-  tag {
-    key                 = "Name"
-    value               = "terraform-asg-example"
-    propagate_at_launch = true
-  }
-}
-
-resource "aws_security_group" "instance" {
-  name = var.instance_security_group_name
-
-  ingress {
-    from_port   = var.server_port
-    to_port     = var.server_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnet_ids" "default" {
-  vpc_id = data.aws_vpc.default.id
-}
+# ---------------------------------------------------------------------------------------------------------------------
+# CONFIGURE AN ALB TO ROUTE TRAFFIC ACROSS THE INSTANCES
+# ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_lb" "example" {
-  name               = var.alb_name
+  name = var.name
 
   load_balancer_type = "application"
   subnets            = data.aws_subnet_ids.default.ids
@@ -158,7 +157,7 @@ resource "aws_lb" "example" {
 
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.example.arn
-  port              = 80
+  port              = var.alb_port
   protocol          = "HTTP"
 
   # By default, return a simple 404 page
@@ -174,7 +173,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_target_group" "asg" {
-  name = var.alb_name
+  name = var.name
 
   port     = var.server_port
   protocol = "HTTP"
@@ -206,13 +205,35 @@ resource "aws_lb_listener_rule" "asg" {
   }
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# CONFIGURE THE SECURITY GROUPS FOR THE INSTANCES AND ALB
+# ---------------------------------------------------------------------------------------------------------------------
+
+resource "aws_security_group" "instance" {
+  name = var.name
+
+  ingress {
+    from_port   = var.server_port
+    to_port     = var.server_port
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 resource "aws_security_group" "alb" {
-  name = var.alb_security_group_name
+  name = var.name
 
   # Allow inbound HTTP requests
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = var.alb_port
+    to_port     = var.alb_port
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -223,6 +244,22 @@ resource "aws_security_group" "alb" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# CONFIGURE A ROUTE 53 RECORD FOR THE ALB
+# ---------------------------------------------------------------------------------------------------------------------
+
+resource "aws_route53_record" "alias" {
+  name    = var.subdomain_name == null ? var.domain_name : "${var.subdomain_name}.${var.domain_name}"
+  type    = "A"
+  zone_id = data.aws_route53_zone.hosted_zone.zone_id
+
+  alias {
+    name                   = aws_lb.example.dns_name
+    zone_id                = aws_lb.example.zone_id
+    evaluate_target_health = false
   }
 }
 
