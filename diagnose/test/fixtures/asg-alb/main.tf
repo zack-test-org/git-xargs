@@ -17,6 +17,20 @@ provider "aws" {
 # CONFIGURE THE LAUNCH CONFIGURATION AND AUTO SCALING GROUP
 # ---------------------------------------------------------------------------------------------------------------------
 
+locals {
+  working_user_data = <<-EOF
+                      #!/bin/bash
+                      echo "Hello, World" > index.html
+                      nohup busybox httpd -f -p ${var.server_port} &
+                      EOF
+
+  broken_user_data = <<-EOF
+                     #!/bin/bash
+                     echo "This is an example of a broken User Data script that will fail to start a web server."
+                     exit 1
+                     EOF
+}
+
 resource "aws_launch_configuration" "example" {
   name_prefix          = var.name
   image_id             = data.aws_ami.ubuntu.image_id
@@ -24,12 +38,7 @@ resource "aws_launch_configuration" "example" {
   security_groups      = [aws_security_group.instance.id]
   iam_instance_profile = aws_iam_instance_profile.instance.name
   key_name             = var.ssh_key_name
-
-  user_data = <<-EOF
-              #!/bin/bash
-              echo "Hello, World" > index.html
-              nohup busybox httpd -f -p ${var.server_port} &
-              EOF
+  user_data            = var.enable_broken_user_data ? local.broken_user_data : local.working_user_data
 
   # Required when using a launch configuration with an auto scaling group.
   # https://www.terraform.io/docs/providers/aws/r/launch_configuration.html
@@ -204,42 +213,51 @@ resource "aws_lb_listener_rule" "asg" {
 
 resource "aws_security_group" "instance" {
   name = "${var.name}-instance"
+}
 
-  # All inbound HTTP requests only from the ALB
-  ingress {
-    from_port       = var.server_port
-    to_port         = var.server_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
+# Allow inbound HTTP requests from the ALB... unless enable_broken_instance_security_group_settings is true, in
+# which case this rule will not be included, and the ALB won't be able to talk to these instances.
+resource "aws_security_group_rule" "allow_inbound_from_elb" {
+  count                    = var.enable_broken_instance_security_group_settings ? 0 : 1
+  type                     = "ingress"
+  from_port                = var.server_port
+  to_port                  = var.server_port
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.instance.id
+  source_security_group_id = aws_security_group.alb.id
+}
 
-  # Allow all outbound requests
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_security_group_rule" "allow_all_outbound_instance" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  security_group_id = aws_security_group.instance.id
 }
 
 resource "aws_security_group" "alb" {
   name = "${var.name}-alb"
+}
 
-  # Allow all inbound requests on the HTTP port
-  ingress {
-    from_port   = var.alb_port
-    to_port     = var.alb_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_security_group_rule" "allow_http_inbound" {
+  type              = "ingress"
+  from_port         = var.alb_port
+  to_port           = var.alb_port
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb.id
+}
 
-  # Allow all outbound requests
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+# Allow all outbound requests... unless enable_broken_elb_security_group_settings is true, in which case this rule
+# will not be included, and the ALB won't be able to health check the instances.
+resource "aws_security_group_rule" "allow_all_outbound" {
+  count             = var.enable_broken_elb_security_group_settings ? 0 : 1
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb.id
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

@@ -1,3 +1,21 @@
+variable "enable_broken_user_data" {
+  description = "Set this flag to true to launch the EC2 Instances with broken user data that doesn't successfully start a web server in the EC2 Instances. This is useful to test if the diagnose utility can figure out that the problem is with the code on the server itself."
+  type        = bool
+  default     = false
+}
+
+variable "enable_broken_instance_security_group_settings" {
+  description = "Set this flag to true to misconfigure the Security Group for the EC2 Instances so the ELB can't talk to them. This is useful to test if the diagnose utility can figure out that the problem is with the Security Group of the instances."
+  type        = bool
+  default     = false
+}
+
+variable "enable_broken_elb_security_group_settings" {
+  description = "Set this flag to true to misconfigure the Security Group for the ELB so it can't make outbound requests, including health checks. This is useful to test if the diagnose utility can figure out that the problem is with the Security Group of the ELB."
+  type        = bool
+  default     = false
+}
+
 variable "name" {
   description = "The name to use for all the resources created by this module"
   type        = string

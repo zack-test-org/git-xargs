@@ -6,14 +6,14 @@ cause?
 
 To answer the question, all you need to do is authenticate to AWS:
 
-```
+```bash
 export AWS_ACCESS_KEY_ID=xxx
 export AWS_SECRET_ACCESS_KEY=yyy
 ```
 
 And run the `diagnose` utility:
 
-```
+```bash
 diagnose https://foo.example.com
 ```
 
@@ -42,7 +42,7 @@ Like magic, this utility can automatically figure out if the issue is:
 
 To build diagnose, install Go (at least `1.13`) and run:
 
-```
+```bash
 go build
 ```
 
@@ -57,7 +57,7 @@ You can try this utility out with the code under `test/fixtures/asg-alb`. This T
 Group with a simple "Hello, World" web server, an ALB to route traffic across the ASG, and a Route 53 DNS entry 
 pointing at the ALB:
 
-```
+```bash
 cd test/fixtures/asg-alb
 terraform init
 terraform apply
@@ -71,44 +71,42 @@ alb_dns_name = http://jimtest.gruntwork.in
 
 At the end of the `apply`, the example will output a URL you can use for testing:
 
-```
+```bash
 $ curl http://jimtest.gruntwork.in
 Hello, World!
 ```
 
-So far, everything is working just fine... But now, try to break something! For example, a common error is to not add
-an ingress rule that allows the ELB to talk to the EC2 Instances. Try commenting this ingress rule out:
+So far, everything is working just fine... But now, let's try to break something! For example, a common error is to not 
+add an ingress rule that allows the ELB to talk to the EC2 Instances. The `test/fixtures/asg-alb` module has a handy
+`enable_broken_instance_security_group_settings` flag you can set to `true` try this very thing out!
 
-```hcl
-
-resource "aws_security_group" "instance" {
-  name = var.name
-
-  # Example: comment out this ingress rule
-  #
-  # ingress {
-  #   from_port       = var.server_port
-  #   to_port         = var.server_port
-  #   protocol        = "tcp"
-  #   security_groups = [aws_security_group.alb.id]
-  # }
-}
+```bash
+terraform apply -var enable_broken_instance_security_group_settings=true
 ```
 
 Now if you try to test the URL, you'll get no response or a timeout or a 503: 
 
-```
+```bash
 $ curl http://jimtest.gruntwork.in
 (timeout)
 ```
 
-The `diagnose` utility can figure out the problem automatically!
+The `diagnose` utility can figure out the problem automatically! First, authenticate to your AWS account:
+
+```bash
+export AWS_ACCESS_KEY_ID=xxx
+export AWS_SECRET_ACCESS_KEY=yyy
+```
+
+Then run `diagnose`:
+
+```bash
+diagnose http://jimtest.gruntwork.in
+```
+
+After a few seconds, it should correctly diagnose the problem:
 
 ```
-$ diagnose http://jimtest.gruntwork.in
-
-...
-
 ======= DIAGNOSIS =======
 
 None of the Security Groups attached to the EC2 Instances seem to allow inbound requests from the ELB. You should 
@@ -117,8 +115,43 @@ Instances!
 ```
 
 You can experiment with other common errors too, such as omitting the egress rules on the ALB security group (which 
-will prevent health checks from working) or updating the user data script so no web server actually runs on the EC2
-instances, and the `diagnose` utility will tell you exactly what the issue is each time!
+will prevent health checks from working):
+ 
+```bash
+terraform apply -var enable_broken_elb_security_group_settings=true
+``` 
+ 
+Re-run `diagnose`:
+
+```bash
+diagnose http://jimtest.gruntwork.in
+```
+
+And you'll see something like:
+
+```
+======= DIAGNOSIS =======
+
+None of the Security Groups attached to the ELB seem to allow outbound requests to the Instances. You should update 
+those Security Groups on the ELB so it can send requests (including health checks) to your Instances!
+``` 
+ 
+Or try updating the user data script so no web server actually runs on the EC2 instances:
+
+```bash
+terraform apply -var enable_broken_user_data=true
+``` 
+
+After running `diagnose`, you'll see:
+
+```
+======= DIAGNOSIS =======
+
+Testing the instances via localhost failed. This most likely means your web service is not running or not listening on 
+the port (8080) you expect.
+```
+
+Each time, the `diagnose` utility should tell you exactly what the issue is!
 
 
 
@@ -170,6 +203,9 @@ The basic approach used here can be extended to support many, many other use cas
 1. Lambda functions.
 1. RDS connectivity.
 1. ElastiCache connectivity.
+1. VPC checks: e.g., validate NACLs, peering connections, etc.
+1. Visualizations: show the connectivity graph (e.g., Route 53 -> ELB -> Instances) and which checks are passing and 
+   failing visually.
 1. And so on.
 
 
