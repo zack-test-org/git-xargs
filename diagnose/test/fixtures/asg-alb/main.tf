@@ -39,26 +39,19 @@ resource "aws_launch_configuration" "example" {
 }
 
 resource "aws_autoscaling_group" "example" {
-  name                 = aws_launch_configuration.example.name
   launch_configuration = aws_launch_configuration.example.name
   vpc_zone_identifier  = data.aws_subnet_ids.default.ids
 
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
 
-  min_size         = var.num_instances
-  max_size         = var.num_instances
-  min_elb_capacity = var.num_instances
+  min_size = var.num_instances
+  max_size = var.num_instances
 
   tag {
     key                 = "Name"
     value               = var.name
     propagate_at_launch = true
-  }
-
-  # Forces a redeploy of the ASG each time the launch config is changed
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
@@ -210,15 +203,17 @@ resource "aws_lb_listener_rule" "asg" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group" "instance" {
-  name = var.name
+  name = "${var.name}-instance"
 
+  # All inbound HTTP requests only from the ALB
   ingress {
-    from_port   = var.server_port
-    to_port     = var.server_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = var.server_port
+    to_port         = var.server_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
   }
 
+  # Allow all outbound requests
   egress {
     from_port   = 0
     to_port     = 0
@@ -228,9 +223,9 @@ resource "aws_security_group" "instance" {
 }
 
 resource "aws_security_group" "alb" {
-  name = var.name
+  name = "${var.name}-alb"
 
-  # Allow inbound HTTP requests
+  # Allow all inbound requests on the HTTP port
   ingress {
     from_port   = var.alb_port
     to_port     = var.alb_port
