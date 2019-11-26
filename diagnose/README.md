@@ -66,7 +66,7 @@ terraform apply
 
 Outputs:
 
-alb_dns_name = http://jimtest.gruntwork.in
+url = http://jimtest.gruntwork.in
 ``` 
 
 At the end of the `apply`, the example will output a URL you can use for testing:
@@ -84,11 +84,16 @@ add an ingress rule that allows the ELB to talk to the EC2 Instances. The `test/
 terraform apply -var enable_broken_instance_security_group_settings=true
 ```
 
-Now if you try to test the URL, you'll get no response or a timeout or a 503: 
+Now if you try to test the URL, you'll get no response for a while and then a 503 or 504 error from the ELB: 
 
 ```bash
 $ curl http://jimtest.gruntwork.in
-(timeout)
+<html>
+<head><title>504 Gateway Time-out</title></head>
+<body bgcolor="white">
+<center><h1>504 Gateway Time-out</h1></center>
+</body>
+</html>
 ```
 
 The `diagnose` utility can figure out the problem automatically! First, authenticate to your AWS account:
@@ -141,6 +146,9 @@ Or try updating the user data script so no web server actually runs on the EC2 i
 ```bash
 terraform apply -var enable_broken_user_data=true
 ``` 
+
+*(Note: for this change to take effect, you'll have to manually terminate the two EC2 Instances to force the ASG to 
+deploy new ones).*
 
 After running `diagnose`, you'll see:
 
