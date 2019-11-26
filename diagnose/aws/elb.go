@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/gruntwork-io/gruntwork-cli/errors"
+	"strconv"
 	"strings"
 )
 
@@ -34,8 +35,13 @@ func FindTargetsRegisteredInElb(elb *elbv2.LoadBalancer) ([]*elbv2.TargetHealthD
 	return allTargetHealthDescriptions, nil
 }
 
-func GetPortForTargets(targets []*elbv2.TargetHealthDescription) string {
-	return aws.StringValue(targets[0].HealthCheckPort)
+func GetPortForTargets(targets []*elbv2.TargetHealthDescription) (int, error) {
+	portAsString := aws.StringValue(targets[0].HealthCheckPort)
+	port, err := strconv.Atoi(portAsString)
+	if err != nil {
+		return -1, errors.WithStackTrace(err)
+	}
+	return port, nil
 }
 
 func GetInstanceIdsForTargets(targets []*elbv2.TargetHealthDescription) []string {

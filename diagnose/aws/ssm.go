@@ -80,8 +80,6 @@ func waitForCommandToComplete(runningCommand *ssm.Command, client *ssm.SSM, opts
 	for i := 0; i < maxRetries; i++ {
 		outputs, err := getCommandStatusForAllInstances(runningCommand, client)
 
-		fmt.Printf("Got outputs: %v\n", outputs)
-
 		if err == nil && allCommandsCompleted(runningCommand, outputs) {
 			return outputs, nil
 		}

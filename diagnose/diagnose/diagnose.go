@@ -3,7 +3,7 @@ package diagnose
 import (
 	"fmt"
 	"github.com/gruntwork-io/prototypes/diagnose/aws"
-	"github.com/gruntwork-io/prototypes/diagnose/checks"
+	"github.com/gruntwork-io/prototypes/diagnose/check"
 	"github.com/gruntwork-io/prototypes/diagnose/options"
 	"github.com/gruntwork-io/prototypes/diagnose/output"
 )
@@ -40,12 +40,21 @@ func Diagnose(opts *options.Options) error {
 
 	opts.Logger.Infof("Found targets for ELB: %v", targets)
 
-	if err := checks.TestInstancesViaLocalhost(targets, opts); err != nil {
+	if err := check.CanAccessWebServiceViaLocalhost(targets, opts); err != nil {
 		return err
 	}
 
-	// Use lambda to hit targets directly at same path, but on private IP + port (what about SG???)
-	//
+	if err := check.SecurityGroupAllowsInboundFromELB(elb, targets, opts); err != nil {
+		return err
+	}
+
+	// TODO: ELB SG allows outbound to instance
+
+	if err := check.ElbHealthChecksPassing(targets, opts); err != nil {
+		return err
+	}
+
+	// TODO: ELB allows inbound from outside world?
 
 	output.ShowDiagnosis(fmt.Sprintf("Everything appears to be working. We were not able to find any errors talking to URL %s.", opts.Url), opts)
 

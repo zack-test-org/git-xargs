@@ -1,4 +1,4 @@
-package checks
+package check
 
 import (
 	"fmt"
@@ -8,15 +8,18 @@ import (
 	"github.com/gruntwork-io/prototypes/diagnose/output"
 )
 
-func TestInstancesViaLocalhost(targets []*elbv2.TargetHealthDescription, opts *options.Options) error {
-	port := aws.GetPortForTargets(targets)
+func CanAccessWebServiceViaLocalhost(targets []*elbv2.TargetHealthDescription, opts *options.Options) error {
+	port, err := aws.GetPortForTargets(targets)
+	if err != nil {
+		return err
+	}
+
 	instanceIds := aws.GetInstanceIdsForTargets(targets)
 
-	command := fmt.Sprintf("curl --silent --location --fail --show-error localhost:%s", port)
+	command := fmt.Sprintf("curl --silent --location --fail --show-error localhost:%d", port)
 	opts.Logger.Infof("Using SSM to run command on all ELB targets to check local connectivity: %s", command)
 
-	err := aws.RunShellCommandViaSsm(command, instanceIds, opts)
-	if err != nil {
+	if err := aws.RunShellCommandViaSsm(command, instanceIds, opts); err != nil {
 		output.ShowDiagnosis(fmt.Sprintf("Testing the instances via localhost failed. This most likely means your web service is not running or not listening on the port (%d) you expect.", port), opts)
 		// TODO: we could run commands via SSM to check if anything is running or listening on that port!
 		return err
