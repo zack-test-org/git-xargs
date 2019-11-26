@@ -22,6 +22,7 @@ func CanAccessWebServiceViaLocalhost(targets []*elbv2.TargetHealthDescription, o
 	if err := aws.RunShellCommandViaSsm(command, instanceIds, opts); err != nil {
 		output.ShowDiagnosis(fmt.Sprintf("Testing the instances via localhost failed. This most likely means your web service is not running or not listening on the port (%d) you expect.", port), opts)
 		// TODO: we could run commands via SSM to check if anything is running or listening on that port!
+		// TODO: we could fetch syslog, user data log, and other useful log files to help diagnose what's wrong!!
 		return err
 	}
 

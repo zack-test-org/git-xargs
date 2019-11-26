@@ -214,6 +214,8 @@ The basic approach used here can be extended to support many, many other use cas
 1. VPC checks: e.g., validate NACLs, peering connections, etc.
 1. Visualizations: show the connectivity graph (e.g., Route 53 -> ELB -> Instances) and which checks are passing and 
    failing visually.
+1. Fetch log files: when the SSH check fails, grab relevant log files (e.g., syslog), and show them right away to help
+   spot the error!   
 1. And so on.
 
 
