@@ -2,16 +2,10 @@
 
 `diagnose` is a prototype of a CLI tool that can be used to automatically diagnose connectivity issues. For example, 
 let's say you deployed a web service at url `https://foo.example.com`, but it doesn't seem to be responding. What's the 
-cause?
+cause? Is a Security Group misconfigured? Are the ELB health checks failing? Is the process on the EC2 Instance 
+listening on the right port? 
 
-To answer the question, all you need to do is authenticate to AWS:
-
-```bash
-export AWS_ACCESS_KEY_ID=xxx
-export AWS_SECRET_ACCESS_KEY=yyy
-```
-
-And run the `diagnose` utility:
+`diagnose` can automate all of these sorts of checks and give you the answer automatically:
 
 ```bash
 diagnose https://foo.example.com
@@ -33,7 +27,7 @@ Like magic, this utility can automatically figure out if the issue is:
 - Your ELB security group is misconfigured
 - The security group on your EC2 Instances is misconfigured
 - There's no process running on the instances and listening on your specified port
-- (Many other types of checks can also be added in the future, such as NACLs, peering connections, etc)
+- And, of course, many other types of checks can also be added in the future, such as NACLs, peering connections, etc.
 
 
 
