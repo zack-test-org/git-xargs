@@ -155,6 +155,7 @@ def dasherize(name):
     return re.sub(r'\s', '-', name).lower()
 
 
+# Main entrypoint for the code. Reads data from the environment and creates the GitHub team.
 def run():
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
@@ -175,5 +176,7 @@ def run():
         create_github_team(team_name, team_description, team_repos, github_creds)
 
 
+# Execute the main entrypoint if this script is called directly; do nothing if this script is imported from another
+# script.
 if __name__ == '__main__':
     run()
