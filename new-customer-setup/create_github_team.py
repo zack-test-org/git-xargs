@@ -8,77 +8,83 @@ github_pass = os.environ['GITHUB_TOKEN']
 github_creds = (github_user, github_pass)
 
 aws_repos = [
-    {'owner': 'gruntwork-io', 'name': 'bash-commons'},
-    {'owner': 'gruntwork-io', 'name': 'cloud-nuke'},
-    {'owner': 'gruntwork-io', 'name': 'fetch'},
-    {'owner': 'gruntwork-io', 'name': 'gruntkms'},
-    {'owner': 'gruntwork-io', 'name': 'gruntwork'},
-    {'owner': 'gruntwork-io', 'name': 'gruntwork-cli'},
-    {'owner': 'gruntwork-io', 'name': 'gruntwork-installer'},
-    {'owner': 'gruntwork-io', 'name': 'helm-kubernetes-services'},
-    {'owner': 'gruntwork-io', 'name': 'infrastructure-as-code-training'},
-    {'owner': 'gruntwork-io', 'name': 'infrastructure-live-acme'},
-    {'owner': 'gruntwork-io', 'name': 'infrastructure-live-multi-account-acme'},
-    {'owner': 'gruntwork-io', 'name': 'infrastructure-modules-acme'},
-    {'owner': 'gruntwork-io', 'name': 'infrastructure-modules-multi-account-acme'},
-    {'owner': 'gruntwork-io', 'name': 'intro-to-terraform'},
-    {'owner': 'gruntwork-io', 'name': 'kubergrunt'},
-    {'owner': 'gruntwork-io', 'name': 'module-asg'},
-    {'owner': 'gruntwork-io', 'name': 'module-aws-monitoring'},
-    {'owner': 'gruntwork-io', 'name': 'module-cache'},
-    {'owner': 'gruntwork-io', 'name': 'module-ci'},
-    {'owner': 'gruntwork-io', 'name': 'module-data-storage'},
-    {'owner': 'gruntwork-io', 'name': 'module-ecs'},
-    {'owner': 'gruntwork-io', 'name': 'module-load-balancer'},
-    {'owner': 'gruntwork-io', 'name': 'module-security'},
-    {'owner': 'gruntwork-io', 'name': 'module-server'},
-    {'owner': 'gruntwork-io', 'name': 'module-vpc'},
-    {'owner': 'gruntwork-io', 'name': 'package-beanstalk'},
-    {'owner': 'gruntwork-io', 'name': 'package-elk'},
-    {'owner': 'gruntwork-io', 'name': 'package-kafka'},
-    {'owner': 'gruntwork-io', 'name': 'package-lambda'},
-    {'owner': 'gruntwork-io', 'name': 'package-messaging'},
-    {'owner': 'gruntwork-io', 'name': 'package-openvpn'},
-    {'owner': 'gruntwork-io', 'name': 'package-sam'},
-    {'owner': 'gruntwork-io', 'name': 'package-static-assets'},
-    {'owner': 'gruntwork-io', 'name': 'package-terraform-utilities'},
-    {'owner': 'gruntwork-io', 'name': 'package-zookeeper'},
-    {'owner': 'gruntwork-io', 'name': 'package-mongodb'},
-    {'owner': 'gruntwork-io', 'name': 'sample-app-backend-acme'},
-    {'owner': 'gruntwork-io', 'name': 'sample-app-backend-multi-account-acme'},
-    {'owner': 'gruntwork-io', 'name': 'sample-app-backend-packer'},
-    {'owner': 'gruntwork-io', 'name': 'sample-app-frontend-acme'},
-    {'owner': 'gruntwork-io', 'name': 'sample-app-frontend-multi-account-acme'},
-    {'owner': 'gruntwork-io', 'name': 'terraform-aws-couchbase'},
-    {'owner': 'gruntwork-io', 'name': 'terraform-aws-eks'},
-    {'owner': 'gruntwork-io', 'name': 'terraform-kubernetes-helm'},
-    {'owner': 'gruntwork-io', 'name': 'terratest'},
-    {'owner': 'gruntwork-io', 'name': 'terragrunt'},
-    {'owner': 'gruntwork-io', 'name': 'terragrunt-infrastructure-live-example'},
-    {'owner': 'gruntwork-io', 'name': 'terragrunt-infrastructure-modules-example'},
-    {'owner': 'gruntwork-io', 'name': 'toc'},
+    'gruntwork-io/bash-commons',
+    'gruntwork-io/cloud-nuke',
+    'gruntwork-io/fetch',
+    'gruntwork-io/gruntkms',
+    'gruntwork-io/gruntwork',
+    'gruntwork-io/gruntwork-cli',
+    'gruntwork-io/gruntwork-installer',
+    'gruntwork-io/helm-kubernetes-services',
+    'gruntwork-io/infrastructure-as-code-training',
+    'gruntwork-io/infrastructure-live-acme',
+    'gruntwork-io/infrastructure-live-multi-account-acme',
+    'gruntwork-io/infrastructure-modules-acme',
+    'gruntwork-io/infrastructure-modules-multi-account-acme',
+    'gruntwork-io/intro-to-terraform',
+    'gruntwork-io/kubergrunt',
+    'gruntwork-io/module-asg',
+    'gruntwork-io/module-aws-monitoring',
+    'gruntwork-io/module-cache',
+    'gruntwork-io/module-ci',
+    'gruntwork-io/module-data-storage',
+    'gruntwork-io/module-ecs',
+    'gruntwork-io/module-load-balancer',
+    'gruntwork-io/module-security',
+    'gruntwork-io/module-server',
+    'gruntwork-io/module-vpc',
+    'gruntwork-io/package-beanstalk',
+    'gruntwork-io/package-elk',
+    'gruntwork-io/package-kafka',
+    'gruntwork-io/package-lambda',
+    'gruntwork-io/package-messaging',
+    'gruntwork-io/package-openvpn',
+    'gruntwork-io/package-sam',
+    'gruntwork-io/package-static-assets',
+    'gruntwork-io/package-terraform-utilities',
+    'gruntwork-io/package-zookeeper',
+    'gruntwork-io/package-mongodb',
+    'gruntwork-io/sample-app-backend-acme',
+    'gruntwork-io/sample-app-backend-multi-account-acme',
+    'gruntwork-io/sample-app-backend-packer',
+    'gruntwork-io/sample-app-frontend-acme',
+    'gruntwork-io/sample-app-frontend-multi-account-acme',
+    'gruntwork-io/terraform-aws-couchbase',
+    'gruntwork-io/terraform-aws-eks',
+    'gruntwork-io/terraform-kubernetes-helm',
+    'gruntwork-io/terratest',
+    'gruntwork-io/terragrunt',
+    'gruntwork-io/terragrunt-infrastructure-live-example',
+    'gruntwork-io/terragrunt-infrastructure-modules-example',
+    'gruntwork-io/toc',
+    'hashicorp/terraform-aws-consul',
+    'hashicorp/terraform-aws-nomad',
+    'hashicorp/terraform-aws-vault'
 ]
 
 gcp_repos = [
-    {'owner': 'gruntwork-io', 'name': 'bash-commons'},
-    {'owner': 'gruntwork-io', 'name': 'cloud-nuke'},
-    {'owner': 'gruntwork-io', 'name': 'fetch'},
-    {'owner': 'gruntwork-io', 'name': 'gruntwork-cli'},
-    {'owner': 'gruntwork-io', 'name': 'gruntwork-installer'},
-    {'owner': 'gruntwork-io', 'name': 'helm-kubernetes-services'},
-    {'owner': 'gruntwork-io', 'name': 'infrastructure-as-code-training'},
+    'gruntwork-io/bash-commons',
+    'gruntwork-io/cloud-nuke',
+    'gruntwork-io/fetch',
+    'gruntwork-io/gruntwork-cli',
+    'gruntwork-io/gruntwork-installer',
+    'gruntwork-io/helm-kubernetes-services',
+    'gruntwork-io/infrastructure-as-code-training',
     {'owner': 'gruntwork-io', 'name': "infrastructure-live-google"},
     {'owner': 'gruntwork-io', 'name': "infrastructure-modules-google"},
-    {'owner': 'gruntwork-io', 'name': 'intro-to-terraform'},
-    {'owner': 'gruntwork-io', 'name': 'kubergrunt'},
-    {'owner': 'gruntwork-io', 'name': 'module-ci'},
-    {'owner': 'gruntwork-io', 'name': 'module-security'},
-    {'owner': 'gruntwork-io', 'name': 'terraform-kubernetes-helm'},
-    {'owner': 'gruntwork-io', 'name': 'terratest'},
-    {'owner': 'gruntwork-io', 'name': 'terragrunt'},
-    {'owner': 'gruntwork-io', 'name': 'terragrunt-infrastructure-live-example'},
-    {'owner': 'gruntwork-io', 'name': 'terragrunt-infrastructure-modules-example'},
-    {'owner': 'gruntwork-io', 'name': 'toc'},
+    'gruntwork-io/intro-to-terraform',
+    'gruntwork-io/kubergrunt',
+    'gruntwork-io/module-ci',
+    'gruntwork-io/module-security',
+    'gruntwork-io/terraform-kubernetes-helm',
+    'gruntwork-io/terratest',
+    'gruntwork-io/terragrunt',
+    'gruntwork-io/terragrunt-infrastructure-live-example',
+    'gruntwork-io/terragrunt-infrastructure-modules-example',
+    'gruntwork-io/toc',
+    'hashicorp/terraform-google-consul',
+    'hashicorp/terraform-google-nomad',
+    'hashicorp/terraform-google-vault'
 ]
 
 
@@ -98,13 +104,14 @@ def find_github_team(name):
 
 # Create a GitHub team with the given name and description. Returns the team ID.
 # https://developer.github.com/v3/teams/#create-team
-def create_github_team(name, description):
+def create_github_team(name, description, repos):
     logging.info('Creating new GitHub team called %s' % name)
 
     payload = {
         'name': name,
         'description': description,
-        'privacy': 'secret'
+        'privacy': 'secret',
+        'repo_names': repos
     }
 
     response = requests.post('https://api.github.com/orgs/gruntwork-io/teams', auth=github_creds, json=payload)
@@ -117,34 +124,18 @@ def create_github_team(name, description):
         raise Exception('Failed to create team called %s. Got response %d from GitHub with body: %s.' % (name, response.status_code, response.json()))
 
 
-# Add the given repo to the GitHub team with the given ID.
-# https://developer.github.com/v3/teams/#add-or-update-team-repository
-def add_repo_to_team(repo_owner, repo_name, team_id):
-    logging.info("Adding repo %s/%s to team %s" % (repo_owner, repo_name, team_id))
-
-    url = 'https://api.github.com/teams/%s/repos/%s/%s' % (team_id, repo_owner, repo_name)
-    payload = {
-        'permission': 'pull'
-    }
-
-    response = requests.put(url, auth=github_creds, json=payload)
-    if response.status_code != 204:
-        raise Exception('Failed to add repo %s/%s to team %s. Got response code %d with body: %s.' % (repo_owner, repo_name, team_id, response.status_code, response.json()))
-
-
 def run():
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
-    # TODO: need name to be passed in dynamically
+    # TODO: need name and list of repos to be passed in dynamically
     name = 'jim-testing'
     description = 'Jim testing the GitHub APIs and Zapier'
+    repos = aws_repos
 
-    team_id = find_github_team(name)
-    if team_id is None:
-        team_id = create_github_team(name, description)
-
-    for repo in aws_repos:
-        add_repo_to_team(repo['owner'], repo['name'], team_id)
+    if find_github_team(name):
+        logging.info('Team %s already exists. Will not create again.' % name)
+    else:
+        create_github_team(name, description, repos)
 
 
 if __name__ == '__main__':
