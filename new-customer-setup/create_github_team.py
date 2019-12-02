@@ -171,7 +171,7 @@ def run():
     team_repos = repos_for_subscription[subscription_type]
 
     if find_github_team(team_name, github_creds):
-        logging.info('Team %s already exists. Will not create again.' % team_name)
+        raise Exception('Team %s already exists! Cannot create again.' % team_name)
     else:
         create_github_team(team_name, team_description, team_repos, github_creds)
 
