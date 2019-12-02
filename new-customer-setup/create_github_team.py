@@ -101,9 +101,7 @@ repos_for_subscription = {
 # Zapier code step (https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps). If it's not in input_data,
 # the method then looks for an environment variable. If that isn't set either, this method raises an exception.
 def read_from_env(key):
-    # input_data is mmagically added by the Zapier code step into the global scope, so this is the only way to look
-    # it up when running locally.
-    value = globals().get('input_data', {}).get(key)
+    value = read_input_data(key)
     if value:
         return value
 
@@ -112,6 +110,16 @@ def read_from_env(key):
         return value
 
     raise Exception('Did not find value for key %s in either input_data or environment variables.' % key)
+
+
+# Reads the given key from the Zapier code step input_data. Note that input_data is magically added by the Zapier code
+# step, so this is the only way I could find to look it up that works both when running locally (with no input_data)
+# and in Zapier. https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps
+def read_input_data(key):
+    try:
+        return input_data.get(key)
+    except:
+        return None
 
 
 # Find a GitHub team with the given name. Returns the team ID or None.
@@ -158,9 +166,7 @@ def dasherize(name):
 
 # Main entrypoint for the code. Reads data from the environment and creates the GitHub team. Returns the response body
 # of the GitHub create team API call.
-def run():
-    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-
+def create_team():
     github_user = read_from_env('GITHUB_USER')
     github_pass = read_from_env('GITHUB_TOKEN')
     github_creds = (github_user, github_pass)
@@ -178,7 +184,7 @@ def run():
         return create_github_team(team_name, team_description, team_repos, github_creds)
 
 
-# Execute the main entrypoint if this script is called directly; do nothing if this script is imported from another
-# script.
-if __name__ == '__main__':
-    run()
+# Zapier requires that you set a variable called output with your returned data
+logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
+output = create_team()
+logging.info(output)
