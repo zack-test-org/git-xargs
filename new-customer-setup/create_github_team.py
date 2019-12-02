@@ -1,11 +1,14 @@
+# `create_github_team.py` is a script that can be executed as a [Zapier code 
+# step](https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps) to create a team in GitHub for a Gruntwork
+# customer and to grant that team access to all the repos it should have access to. To be able to version and code 
+# review this script, it lives in the [Gruntwork prototypes repo](https://github.com/gruntwork-io/prototypes). Every 
+# time you want to update the Zap, update the script in this repo first, submit a PR, and when approved, manually 
+# copy/paste the updated code into Zapier.
+
 import requests
 import logging
 import os
-
-# TODO: plug in creds for machine user
-github_user = 'brikis98'
-github_pass = os.environ['GITHUB_TOKEN']
-github_creds = (github_user, github_pass)
+import re
 
 aws_repos = [
     'gruntwork-io/bash-commons',
@@ -70,8 +73,8 @@ gcp_repos = [
     'gruntwork-io/gruntwork-installer',
     'gruntwork-io/helm-kubernetes-services',
     'gruntwork-io/infrastructure-as-code-training',
-    {'owner': 'gruntwork-io', 'name': "infrastructure-live-google"},
-    {'owner': 'gruntwork-io', 'name': "infrastructure-modules-google"},
+    'gruntwork-io/infrastructure-live-google',
+    'gruntwork-io/infrastructure-modules-google',
     'gruntwork-io/intro-to-terraform',
     'gruntwork-io/kubergrunt',
     'gruntwork-io/module-ci',
@@ -87,10 +90,33 @@ gcp_repos = [
     'hashicorp/terraform-google-vault'
 ]
 
+repos_for_subscription = {
+    'aws': aws_repos,
+    'gcp': gcp_repos,
+    'enterprise': list(set(aws_repos + gcp_repos))
+}
+
+
+# Read the given key from the environment. This method first checks the input_data global, which is provided by the
+# Zapier code step (https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps). If it's not in input_data,
+# the method then looks for an environment variable. If that isn't set either, this method raises an exception.
+def read_from_env(key):
+    # input_data is mmagically added by the Zapier code step into the global scope, so this is the only way to look
+    # it up when running locally.
+    value = globals().get('input_data', {}).get(key)
+    if value:
+        return value
+
+    value = os.environ.get(key)
+    if value:
+        return value
+
+    raise Exception('Did not find value for key %s in either input_data or environment variables.' % key)
+
 
 # Find a GitHub team with the given name. Returns the team ID or None.
 # https://developer.github.com/v3/teams/#get-team
-def find_github_team(name):
+def find_github_team(name, github_creds):
     logging.info('Looking for a GitHub team called %s' % name)
     response = requests.get('https://api.github.com/orgs/gruntwork-io/teams/%s' % name, auth=github_creds)
     if response.status_code == 200:
@@ -104,8 +130,8 @@ def find_github_team(name):
 
 # Create a GitHub team with the given name and description. Returns the team ID.
 # https://developer.github.com/v3/teams/#create-team
-def create_github_team(name, description, repos):
-    logging.info('Creating new GitHub team called %s' % name)
+def create_github_team(name, description, repos, github_creds):
+    logging.info('Creating new GitHub team called %s and granting it access to repos: %s' % (name, repos))
 
     payload = {
         'name': name,
@@ -124,18 +150,29 @@ def create_github_team(name, description, repos):
         raise Exception('Failed to create team called %s. Got response %d from GitHub with body: %s.' % (name, response.status_code, response.json()))
 
 
+# Convert the given name to a lower case, dash-separated string. E.g., "Foo Bar" becomes "foo-bar".
+def dasherize(name):
+    return re.sub(r'\s', '-', name).lower()
+
+
 def run():
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
-    # TODO: need name and list of repos to be passed in dynamically
-    name = 'jim-testing'
-    description = 'Jim testing the GitHub APIs and Zapier'
-    repos = aws_repos
+    github_user = read_from_env('GITHUB_USER')
+    github_pass = read_from_env('GITHUB_TOKEN')
+    github_creds = (github_user, github_pass)
 
-    if find_github_team(name):
-        logging.info('Team %s already exists. Will not create again.' % name)
+    company_name = read_from_env('COMPANY_NAME')
+    subscription_type = read_from_env('SUBSCRIPTION_TYPE')
+
+    team_name = dasherize(company_name)
+    team_description = 'Gruntwork customer %s' % company_name
+    team_repos = repos_for_subscription[subscription_type]
+
+    if find_github_team(team_name, github_creds):
+        logging.info('Team %s already exists. Will not create again.' % team_name)
     else:
-        create_github_team(name, description, repos)
+        create_github_team(team_name, team_description, team_repos, github_creds)
 
 
 if __name__ == '__main__':
