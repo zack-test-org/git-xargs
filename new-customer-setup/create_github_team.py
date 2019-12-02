@@ -128,7 +128,7 @@ def find_github_team(name, github_creds):
         return None
 
 
-# Create a GitHub team with the given name and description. Returns the team ID.
+# Create a GitHub team with the given name and description. Returns the GitHub API response body JSON.
 # https://developer.github.com/v3/teams/#create-team
 def create_github_team(name, description, repos, github_creds):
     logging.info('Creating new GitHub team called %s and granting it access to repos: %s' % (name, repos))
@@ -143,9 +143,10 @@ def create_github_team(name, description, repos, github_creds):
     response = requests.post('https://api.github.com/orgs/gruntwork-io/teams', auth=github_creds, json=payload)
 
     if response.status_code == 201:
-        team_id = response.json()['id']
+        response_body = response.json()
+        team_id = response_body['id']
         logging.info('Successfully created GitHub team called %s with ID %s' % (name, team_id))
-        return team_id
+        return response_body
     else:
         raise Exception('Failed to create team called %s. Got response %d from GitHub with body: %s.' % (name, response.status_code, response.json()))
 
@@ -155,7 +156,8 @@ def dasherize(name):
     return re.sub(r'\s', '-', name).lower()
 
 
-# Main entrypoint for the code. Reads data from the environment and creates the GitHub team.
+# Main entrypoint for the code. Reads data from the environment and creates the GitHub team. Returns the response body
+# of the GitHub create team API call.
 def run():
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
@@ -173,7 +175,7 @@ def run():
     if find_github_team(team_name, github_creds):
         raise Exception('Team %s already exists! Cannot create again.' % team_name)
     else:
-        create_github_team(team_name, team_description, team_repos, github_creds)
+        return create_github_team(team_name, team_description, team_repos, github_creds)
 
 
 # Execute the main entrypoint if this script is called directly; do nothing if this script is imported from another
