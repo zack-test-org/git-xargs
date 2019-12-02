@@ -7,7 +7,7 @@ the Slack channel you follow to only those you intend to respond to. When I'm on
 customer shared channel requests, but when I'm not, I only intend to respond to `#support-discussion` messages. 
 
 That means I want to [mute](https://get.slack.help/hc/en-us/articles/204411433-Mute-a-channel) all shared channels while
-not on support, but unmute them when I'm not on support. Doing this for our 60+ shared channels manually is painful to the
+not on support, but unmute them when I'm on support. Doing this for our 60+ shared channels manually is painful to the
 point of being prohibitive, so this script automates it.
 
 ## How It Works
