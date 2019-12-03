@@ -190,11 +190,10 @@ def run():
 
     company_name = read_from_env('company_name')
     subscription_type = read_from_env('subscription_type')
+    active = read_from_env('active')
 
     assert len(company_name) > 2, 'Company name does not seem to be valid (less than 3 characters long)'
     assert subscription_type in ['aws', 'gcp', 'enterprise'], 'Invalid subscription type. Must be one of: aws, gcp, enterprise.'
-
-    active = read_from_env('active')
 
     if active == "Yes":
         logging.info('The "active" input is set to "Yes", so creating new team.')
