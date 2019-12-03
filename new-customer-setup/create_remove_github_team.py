@@ -1,9 +1,9 @@
-# `create_github_team.py` is a script that can be executed as a [Zapier code 
-# step](https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps) to create a team in GitHub for a Gruntwork
-# customer and to grant that team access to all the repos it should have access to. To be able to version and code 
-# review this script, it lives in the [Gruntwork prototypes repo](https://github.com/gruntwork-io/prototypes). Every 
-# time you want to update the Zap, update the script in this repo first, submit a PR, and when approved, manually 
-# copy/paste the updated code into Zapier.
+# `create_remove_github_team.py` is a script that can be executed as a [Zapier code
+# step](https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps) to create or remove a team in GitHub for
+# a Gruntwork customer. To be able to version and code review this script, it lives in the
+# [Gruntwork prototypes repo](https://github.com/gruntwork-io/prototypes). Every time you want to update the Zap,
+# update the script in this repo first, submit a PR, and when approved, manually copy/paste the updated code into
+# Zapier.
 
 import requests
 import logging
@@ -163,6 +163,21 @@ def create_github_team(name, description, repos, github_creds):
         raise Exception('Failed to create team called %s. Got response %d from GitHub with body: %s.' % (name, response.status_code, response.json()))
 
 
+# Remove a GitHub team with the given name and description. Returns an empty object.
+# https://developer.github.com/v3/teams/#delete-team
+def remove_github_team(name, team_id, github_creds):
+    logging.info('Deleting GitHub team called %s with ID %s' % (name, team_id))
+
+    url = 'https://api.github.com/teams/%s' % team_id
+    response = requests.delete(url, auth=github_creds)
+
+    if response.status_code == 204:
+        logging.info('Successfully deleted GitHub team called %s with ID %s' % (name, team_id))
+        return {}
+    else:
+        raise Exception('Failed to delete team called %s. Got response %d from GitHub with body: %s.' % (name, response.status_code, response.json()))
+
+
 # Convert the given name to a lower case, dash-separated string. E.g., "Foo Bar" becomes "foo-bar".
 def dasherize(name):
     return re.sub(r'\s', '-', name).lower()
@@ -179,6 +194,18 @@ def create_github_team_if_necessary(company_name, subscription_type, github_cred
         raise Exception('Team %s already exists! Cannot create again.' % team_name)
     else:
         return create_github_team(team_name, team_description, team_repos, github_creds)
+
+
+# Remove the GitHub team for the given company and subscription type, if it already exists. If it doesn't, raise an
+# Exception.
+def remove_github_team_if_necessary(company_name, github_creds):
+    team_name = dasherize(company_name)
+    team_id = find_github_team(team_name, github_creds)
+
+    if not team_id:
+        raise Exception('Did not find a GitHub team called %s.' % team_name)
+
+    return remove_github_team(team_name, team_id, github_creds)
 
 
 # Main entrypoint for the code. Reads data from the environment and creates the GitHub team. Returns the response body
@@ -200,10 +227,11 @@ def run():
     assert subscription_type in ['aws', 'gcp', 'enterprise'], 'Invalid subscription type. Must be one of: aws, gcp, enterprise.'
 
     if active == "Yes":
-        logging.info('The "active" input is set to "Yes", so creating new team.')
+        logging.info('The "active" input is set to "Yes", so creating a new GitHub team for company %s.' % company_name)
         return create_github_team_if_necessary(company_name, subscription_type, github_creds)
     elif active == "No":
-        raise Exception('The "active" input is set to "No", but team deletion has not been implemented yet!')
+        logging.info('The "active" input is set to "No", so deleting the GitHub team for company %s.' % company_name)
+        return remove_github_team_if_necessary(company_name, github_creds)
     else:
         logging.info('The "active" input is not set to "Yes" or "No", so assuming this entry is still a WIP and will not take any action.')
         return {}

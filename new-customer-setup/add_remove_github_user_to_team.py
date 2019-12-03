@@ -1,6 +1,6 @@
-# `add_github_user_to_team.py` is a script that can be executed as a [Zapier code 
-# step](https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps) to add a user to a Gruntwork customer's
-# GitHub team. To be able to version and code review this script, it lives in the 
+# `add_remove_github_user_to_team.py` is a script that can be executed as a [Zapier code 
+# step](https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps) to add or remove a user to or from a 
+# Gruntwork customer's GitHub team. To be able to version and code review this script, it lives in the 
 # [Gruntwork prototypes repo](https://github.com/gruntwork-io/prototypes). Every time you want to update the Zap, 
 # update the script in this repo first, submit a PR, and when approved, manually copy/paste the updated code into 
 # Zapier.
@@ -54,6 +54,24 @@ def find_github_team(name, github_creds):
         return None
 
 
+# Fetch information about the membership of the uesr with the given GitHub ID on the GitHub team with the given ID
+# https://developer.github.com/v3/teams/members/#get-team-membership
+def get_user_team_membership(github_id, team_id, github_creds):
+    logging.info('Looking up membership info of GitHub user %s on team %s' % (github_id, team_id))
+
+    url = 'https://api.github.com/teams/%s/memberships/%s' % (team_id, github_id)
+    response = requests.get(url, auth=github_creds)
+
+    if response.status_code == 200:
+        logging.info('User %s is a member of team %s' % (github_id, team_id))
+        return response.json()
+    elif response.status_code == 404:
+        logging.info('User %s is not a member of team %s' % (github_id, team_id))
+        return None        
+    else:
+        raise Exception('Failed to look up membership for user %s in team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
+
+
 # Add the user with the given GitHub ID to the GitHub team with the given ID
 # https://developer.github.com/v3/teams/members/#add-or-update-team-membership
 def add_user_to_team(github_id, team_id, github_creds):
@@ -71,7 +89,22 @@ def add_user_to_team(github_id, team_id, github_creds):
         logging.info('Successfully added user %s to team %s' % (github_id, team_id))
         return response.json()
     else:
-        raise Exception('Failed to add user %s to team %s. Got response %d from GitHub witt body: %s.' % (github_id, team_id, response.status_code, response.json()))
+        raise Exception('Failed to add user %s to team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
+
+
+# Remove the user with the given GitHub ID from the GitHub team with the given ID
+# https://developer.github.com/v3/teams/members/#remove-team-membership
+def remove_user_from_team(github_id, team_id, github_creds):
+    logging.info('Deleting GitHub user %s from team %s' % (github_id, team_id))
+
+    url = 'https://api.github.com/teams/%s/memberships/%s' % (team_id, github_id)
+    response = requests.delete(url, auth=github_creds)
+
+    if response.status_code == 204:
+        logging.info('Successfully deleted user %s from team %s' % (github_id, team_id))
+        return {}
+    else:
+        raise Exception('Failed to delete user %s from team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
 
 
 # Convert the given name to a lower case, dash-separated string. E.g., "Foo Bar" becomes "foo-bar".
@@ -80,18 +113,38 @@ def dasherize(name):
 
 
 # Add the user with the given GitHub ID to the GitHub team for the company with the given name
-def add_user_to_team_if_necessary(github_id, company_name, github_creds):
+def do_add_user_to_team(github_id, company_name, github_creds):
     team_name = dasherize(company_name)
     team_id = find_github_team(team_name, github_creds)
 
     if not team_id:
         raise Exception('Did not find GitHub team called %s' % team_name)
 
+    membership = get_user_team_membership(github_id, team_id, github_creds)
+    if membership:
+        logging.info('User %s is already a member of team %s. Will not add again.' % (github_id, team_name))
+        return {}
+
     return add_user_to_team(github_id, team_id, github_creds)
 
 
-# Main entrypoint for the code. Reads data from the environment and creates the GitHub team. Returns the response body
-# of the GitHub create team API call.
+# Remove the user with the given GitHub ID from the GitHub team for the company with the given name
+def do_remove_user_from_team(github_id, company_name, github_creds):
+    team_name = dasherize(company_name)
+    team_id = find_github_team(team_name, github_creds)
+
+    if not team_id:
+        raise Exception('Did not find GitHub team called %s' % team_name)
+
+    membership = get_user_team_membership(github_id, team_id, github_creds)
+    if not membership:
+        raise Exception('User %s is not a member of team %s' % (github_id, team_name))
+
+    return remove_user_from_team(github_id, team_id, github_creds)
+
+
+# Main entrypoint for the code. Reads data from the environment and adds or removes the specified user to/from the
+# specified team. Returns the response body of the GitHub add user or delete user GitHub API call.
 def run():
     github_user = read_from_env('GITHUB_USER')
     github_pass = read_from_env('GITHUB_TOKEN')
@@ -121,9 +174,10 @@ def run():
 
     if user_active == "Yes":
         logging.info('The "active" input for the user is set to "Yes", so adding user to team.')
-        return add_user_to_team_if_necessary(github_id, company_name, github_creds)
-    elif company_active == "No":
-        raise Exception('The "active" input for the user is is set to "No", but user deletion has not been implemented yet!')
+        return do_add_user_to_team(github_id, company_name, github_creds)
+    elif user_active == "No":
+        logging.info('The "active" input for the user is set to "No", so removing user from the team.')
+        return do_remove_user_from_team(github_id, company_name, github_creds)
     else:
         logging.info('The "active" input for the user is not set to "Yes" or "No", so assuming this entry is still a WIP and will not take any action.')
         return {}
