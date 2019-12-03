@@ -13,8 +13,9 @@ import re
 
 # Read the given key from the environment. This method first checks the input_data global, which is provided by the
 # Zapier code step (https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps). If it's not in input_data,
-# the method then looks for an environment variable. If that isn't set either, this method raises an exception.
-def read_from_env(key):
+# the method then looks for an environment variable. If that isn't set either, and required is set to True, this method 
+# raises an exception.
+def read_from_env(key, required=True):
     value = read_input_data(key)
     if value:
         return value
@@ -23,7 +24,10 @@ def read_from_env(key):
     if value:
         return value
 
-    raise Exception('Did not find value for key %s in either input_data or environment variables.' % key)
+    if required:
+        raise Exception('Did not find value for key %s in either input_data or environment variables.' % key)
+    else:
+        return None
 
 
 # Reads the given key from the Zapier code step input_data. Note that input_data is magically added by the Zapier code
@@ -98,7 +102,7 @@ def run():
     github_creds = (github_user, github_pass)
 
     github_id = read_from_env('github_id')
-    user_active = read_from_env('user_active')
+    user_active = read_from_env('user_active', required=False)
 
     assert len(github_id) > 2, 'GitHub ID does not seem to be valid (less than 3 characters long)'
 
