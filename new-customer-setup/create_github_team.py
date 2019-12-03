@@ -164,16 +164,9 @@ def dasherize(name):
     return re.sub(r'\s', '-', name).lower()
 
 
-# Main entrypoint for the code. Reads data from the environment and creates the GitHub team. Returns the response body
-# of the GitHub create team API call.
-def create_team():
-    github_user = read_from_env('GITHUB_USER')
-    github_pass = read_from_env('GITHUB_TOKEN')
-    github_creds = (github_user, github_pass)
-
-    company_name = read_from_env('COMPANY_NAME')
-    subscription_type = read_from_env('SUBSCRIPTION_TYPE')
-
+# Create the GitHub team for the given company and subscription type, unless the team already exists, in which case,
+# raise an Exception.
+def create_github_team_if_necessary(company_name, subscription_type, github_creds):
     team_name = dasherize(company_name)
     team_description = 'Gruntwork customer %s' % company_name
     team_repos = repos_for_subscription[subscription_type]
@@ -184,7 +177,28 @@ def create_team():
         return create_github_team(team_name, team_description, team_repos, github_creds)
 
 
+# Main entrypoint for the code. Reads data from the environment and creates the GitHub team. Returns the response body
+# of the GitHub create team API call.
+def run():
+    github_user = read_from_env('GITHUB_USER')
+    github_pass = read_from_env('GITHUB_TOKEN')
+    github_creds = (github_user, github_pass)
+
+    company_name = read_from_env('company_name')
+    subscription_type = read_from_env('subscription_type')
+    active = read_from_env('active')
+
+    if active == "Yes":
+        logging.info('The "active" input is set to "Yes", so creating new team.')
+        return create_github_team_if_necessary(company_name, subscription_type, github_creds)
+    elif active == "No":
+        raise Exception('The "active" input is set to "No", but team deletion has not been implemented yet!')
+    else:
+        logging.info('The "active" input is not set to "Yes" or "No", so assuming this entry is still a WIP and will not take any action.')
+        return {}
+
+
 # Zapier requires that you set a variable called output with your returned data
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-output = create_team()
+output = run()
 logging.info(output)

@@ -25,8 +25,9 @@ Then, configure environment variables for the values that Zapier would've passed
 ```bash
 export GITHUB_USER=xxx       # GitHub user name to use for auth
 export GITHUB_TOKEN=xxx      # GitHub personal access token to use for auth
-export COMPANY_NAME=xxx      # The name of the company for which to create a GitHub team
-export SUBSCRIPTION_TYPE=xxx # The company's subscription type. Must be one of: aws, gcp, enterprise.
+export company_name=xxx      # The name of the company for which to create a GitHub team
+export subscription_type=xxx # The company's subscription type. Must be one of: aws, gcp, enterprise.
+export active=yes            # Set to "yes" to indicate the company is active and a GitHub team should be created.
 ```
 
 Finally, run the script:
