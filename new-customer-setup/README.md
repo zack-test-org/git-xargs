@@ -28,13 +28,16 @@ copy/paste the updated code into Zapier.
 
 ## Local setup
 
-Both scripts require Python 3+.
+1. Both scripts require Python 3+.
+1. To run the scripts locally, you first need to install dependencies:
 
-To run them locally, you need to install dependencies:
-
-```bash
-pip3 install -r requirements.txt --user
-```
+    ```bash
+    pip3 install -r requirements.txt --user
+    ```
+1. You will need a [GitHub personal access 
+   token](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line)
+   with `admin:org` permissions. You must also have admin access to all repos in the Gruntwork IaC Library and/or be an
+   owner of the `gruntwork-io` GitHub org.
 
 
 
