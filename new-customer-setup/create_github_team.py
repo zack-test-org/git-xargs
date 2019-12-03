@@ -182,10 +182,18 @@ def create_github_team_if_necessary(company_name, subscription_type, github_cred
 def run():
     github_user = read_from_env('GITHUB_USER')
     github_pass = read_from_env('GITHUB_TOKEN')
+
+    assert len(github_user) > 2, 'GitHub username does not seem to be valid (less than 3 characters long)'
+    assert len(github_pass) > 2, 'GitHub password does not seem to be valid (less than 3 characters long)'
+
     github_creds = (github_user, github_pass)
 
     company_name = read_from_env('company_name')
     subscription_type = read_from_env('subscription_type')
+
+    assert len(company_name) > 2, 'Company name does not seem to be valid (less than 3 characters long)'
+    assert subscription_type in ['aws', 'gcp', 'enterprise'], 'Invalid subscription type. Must be one of: aws, gcp, enterprise.'
+
     active = read_from_env('active')
 
     if active == "Yes":
