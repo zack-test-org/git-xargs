@@ -170,7 +170,7 @@ def run():
     assert company_current_users <= company_max_users, 'Company current user must not exceed company max users'
 
     if company_active != 'Yes':
-        raise Exception('Company %s is not active, cannot add more users!' % company_name)
+        raise Exception('Company %s is not active, cannot add or remove users!' % company_name)
 
     if user_active == "Yes":
         logging.info('The "active" input for the user is set to "Yes", so adding user to team.')
