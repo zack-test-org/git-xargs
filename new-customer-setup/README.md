@@ -50,7 +50,7 @@ Configure environment variables for the values that Zapier would've passed in as
 export GITHUB_USER=xxx       # GitHub user name to use for auth
 export GITHUB_TOKEN=xxx      # GitHub personal access token to use for auth
 export company_name=xxx      # The name of the company. The GitHub team will use a dasherized version of this name.
-export subscription_type=xxx # The company's subscription type. Must be one of: aws, gcp, enterprise.
+export subscription_type=xxx # The company's subscription type. Must be one of: aws, gcp, enterprise, aws-cis, enterprise-cis.
 export active=Yes            # Set to "Yes" to add a GitHub team for the company and "No" to remove the GitHub team.
 ```
 

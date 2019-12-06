@@ -90,10 +90,16 @@ gcp_repos = [
     'hashicorp/terraform-google-vault'
 ]
 
+aws_cis_repos = [
+    'gruntwork-io/cis-compliance-aws'
+]
+
 repos_for_subscription = {
     'aws': aws_repos,
     'gcp': gcp_repos,
-    'enterprise': list(set(aws_repos + gcp_repos))
+    'enterprise': list(set(aws_repos + gcp_repos)),
+    'aws-cis': list(set(aws_repos + aws_cis_repos)),
+    'enterprise-cis': list(set(aws_repos + gcp_repos + aws_cis_repos))
 }
 
 
@@ -267,7 +273,7 @@ def run():
     active = read_from_env('active', required=False)
 
     assert len(company_name) > 2, 'Company name does not seem to be valid (less than 3 characters long)'
-    assert subscription_type in ['aws', 'gcp', 'enterprise'], 'Invalid subscription type. Must be one of: aws, gcp, enterprise.'
+    assert subscription_type in repos_for_subscription, 'Invalid subscription type. Must be one of: {}'.format(list(repos_for_subscription.keys()))
 
     if active == "Yes":
         logging.info('The "active" input is set to "Yes", so creating a new GitHub team for company {}.'.format(company_name))
