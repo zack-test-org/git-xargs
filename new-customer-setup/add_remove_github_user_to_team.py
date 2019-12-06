@@ -190,6 +190,24 @@ def do_remove_user_from_team(github_id, company_name, github_creds):
     return remove_user_from_team(github_id, team_id, github_creds)
 
 
+def is_affirmative_value(value):
+    """
+    Returns true if the given value represents an "affirmative" from the user (i.e., a "Yes")
+    :param value:
+    :return:
+    """
+    return value.lower() in ["yes", "true", "1"]
+
+
+def is_negative_value(value):
+    """
+    Returns true if the given value represents an "negative" from the user (i.e., a "No")
+    :param value:
+    :return:
+    """
+    return value.lower() in ["no", "false", "0"]
+
+
 def run():
     """
     Main entrypoint for the code. Reads data from the environment and adds or removes the specified user to/from the
@@ -218,13 +236,13 @@ def run():
     assert company_max_users >= 0, 'Company max users should not be negative'
     assert company_current_users <= company_max_users, 'Company current user must not exceed company max users'
 
-    if company_active != 'Yes':
+    if not is_affirmative_value(company_active):
         raise Exception('Company {} is not active, cannot add or remove users!'.format(company_name))
 
-    if user_active == 'Yes':
+    if is_affirmative_value(user_active):
         logging.info('The "active" input for the user is set to "Yes", so adding user to team.')
         return do_add_user_to_team(github_id, company_name, github_creds)
-    elif user_active == 'No':
+    elif is_negative_value(user_active):
         logging.info('The "active" input for the user is set to "No", so removing user from the team.')
         return do_remove_user_from_team(github_id, company_name, github_creds)
     else:

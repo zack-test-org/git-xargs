@@ -255,6 +255,24 @@ def remove_github_team_if_necessary(company_name, github_creds):
     return remove_github_team(team_name, team_id, github_creds)
 
 
+def is_affirmative_value(value):
+    """
+    Returns true if the given value represents an "affirmative" from the user (i.e., a "Yes")
+    :param value:
+    :return:
+    """
+    return value.lower() in ["yes", "true", "1"]
+
+
+def is_negative_value(value):
+    """
+    Returns true if the given value represents an "negative" from the user (i.e., a "No")
+    :param value:
+    :return:
+    """
+    return value.lower() in ["no", "false", "0"]
+
+
 def run():
     """
     Main entrypoint for the code. Reads data from the environment and creates the GitHub team. Returns the response body
@@ -275,10 +293,10 @@ def run():
     assert len(company_name) > 2, 'Company name does not seem to be valid (less than 3 characters long)'
     assert subscription_type in repos_for_subscription, 'Invalid subscription type. Must be one of: {}'.format(list(repos_for_subscription.keys()))
 
-    if active == 'Yes':
+    if is_affirmative_value(active):
         logging.info('The "active" input is set to "Yes", so creating a new GitHub team for company {}.'.format(company_name))
         return create_github_team_if_necessary(company_name, subscription_type, github_creds)
-    elif active == 'No':
+    elif is_negative_value(active):
         logging.info('The "active" input is set to "No", so deleting the GitHub team for company {}.'.format(company_name))
         return remove_github_team_if_necessary(company_name, github_creds)
     else:
