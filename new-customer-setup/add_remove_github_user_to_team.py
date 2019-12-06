@@ -30,7 +30,7 @@ def read_from_env(key, required=True):
         return value
 
     if required:
-        raise Exception('Did not find value for key %s in either input_data or environment variables.' % key)
+        raise Exception('Did not find value for key {} in either input_data or environment variables.'.format(key))
     else:
         return None
 
@@ -56,14 +56,14 @@ def find_github_team(name, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password). 
     :return: The team ID or None
     """
-    logging.info('Looking for a GitHub team called %s' % name)
-    response = requests.get('https://api.github.com/orgs/gruntwork-io/teams/%s' % name, auth=github_creds)
+    logging.info('Looking for a GitHub team called {}'.format(name))
+    response = requests.get('https://api.github.com/orgs/gruntwork-io/teams/{}'.format(name), auth=github_creds)
     if response.status_code == 200:
         team_id = response.json()['id']
-        logging.info('Found GitHub team with ID %s' % team_id)
+        logging.info('Found GitHub team with ID {}'.format(team_id))
         return team_id
     else:
-        logging.info('No team with name %s found (got response %d from GitHub)' % (name, response.status_code))
+        logging.info('No team with name {} found (got response {} from GitHub)'.format(name, response.status_code))
         return None
 
 
@@ -76,19 +76,19 @@ def get_user_team_membership(github_id, team_id, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password). 
     :return: The JSON response from the GitHub get-team-membership API.
     """
-    logging.info('Looking up membership info of GitHub user %s on team %s' % (github_id, team_id))
+    logging.info('Looking up membership info of GitHub user {} on team {}'.format(github_id, team_id))
 
-    url = 'https://api.github.com/teams/%s/memberships/%s' % (team_id, github_id)
+    url = 'https://api.github.com/teams/{}/memberships/{}'.format(team_id, github_id)
     response = requests.get(url, auth=github_creds)
 
     if response.status_code == 200:
-        logging.info('User %s is a member of team %s' % (github_id, team_id))
+        logging.info('User {} is a member of team {}'.format(github_id, team_id))
         return response.json()
     elif response.status_code == 404:
-        logging.info('User %s is not a member of team %s' % (github_id, team_id))
+        logging.info('User {} is not a member of team {}'.format(github_id, team_id))
         return None        
     else:
-        raise Exception('Failed to look up membership for user %s in team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
+        raise Exception('Failed to look up membership for user {} in team {}. Got response {} from GitHub with body: {}.'.format(github_id, team_id, response.status_code, response.json()))
 
 
 def add_user_to_team(github_id, team_id, github_creds):
@@ -100,9 +100,9 @@ def add_user_to_team(github_id, team_id, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
     :return: The JSON response from the GitHub add-or-update-team-membership API
     """
-    logging.info('Adding GitHub user %s to team %s' % (github_id, team_id))
+    logging.info('Adding GitHub user {} to team {}'.format(github_id, team_id))
 
-    url = 'https://api.github.com/teams/%s/memberships/%s' % (team_id, github_id)
+    url = 'https://api.github.com/teams/{}/memberships/{}'.format(team_id, github_id)
 
     payload = {
         'role': 'member'
@@ -111,10 +111,10 @@ def add_user_to_team(github_id, team_id, github_creds):
     response = requests.put(url, auth=github_creds, json=payload)
 
     if response.status_code == 200:
-        logging.info('Successfully added user %s to team %s' % (github_id, team_id))
+        logging.info('Successfully added user {} to team {}'.format(github_id, team_id))
         return response.json()
     else:
-        raise Exception('Failed to add user %s to team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
+        raise Exception('Failed to add user {} to team {}. Got response {} from GitHub with body: {}.'.format(github_id, team_id, response.status_code, response.json()))
 
 
 def remove_user_from_team(github_id, team_id, github_creds):
@@ -126,16 +126,16 @@ def remove_user_from_team(github_id, team_id, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
     :return: An empty object
     """
-    logging.info('Deleting GitHub user %s from team %s' % (github_id, team_id))
+    logging.info('Deleting GitHub user {} from team {}'.format(github_id, team_id))
 
-    url = 'https://api.github.com/teams/%s/memberships/%s' % (team_id, github_id)
+    url = 'https://api.github.com/teams/{}/memberships/{}'.format(team_id, github_id)
     response = requests.delete(url, auth=github_creds)
 
     if response.status_code == 204:
-        logging.info('Successfully deleted user %s from team %s' % (github_id, team_id))
+        logging.info('Successfully deleted user {} from team {}'.format(github_id, team_id))
         return {}
     else:
-        raise Exception('Failed to delete user %s from team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
+        raise Exception('Failed to delete user {} from team {}. Got response {} from GitHub with body: {}.'.format(github_id, team_id, response.status_code, response.json()))
 
 
 def dasherize(name):
@@ -159,11 +159,11 @@ def do_add_user_to_team(github_id, company_name, github_creds):
     team_id = find_github_team(team_name, github_creds)
 
     if not team_id:
-        raise Exception('Did not find GitHub team called %s' % team_name)
+        raise Exception('Did not find GitHub team called {}'.format(team_name))
 
     membership = get_user_team_membership(github_id, team_id, github_creds)
     if membership:
-        logging.info('User %s is already a member of team %s. Will not add again.' % (github_id, team_name))
+        logging.info('User {} is already a member of team {}. Will not add again.'.format(github_id, team_name))
         return {}
 
     return add_user_to_team(github_id, team_id, github_creds)
@@ -181,11 +181,11 @@ def do_remove_user_from_team(github_id, company_name, github_creds):
     team_id = find_github_team(team_name, github_creds)
 
     if not team_id:
-        raise Exception('Did not find GitHub team called %s' % team_name)
+        raise Exception('Did not find GitHub team called {}'.format(team_name))
 
     membership = get_user_team_membership(github_id, team_id, github_creds)
     if not membership:
-        raise Exception('User %s is not a member of team %s' % (github_id, team_name))
+        raise Exception('User {} is not a member of team {}'.format(github_id, team_name))
 
     return remove_user_from_team(github_id, team_id, github_creds)
 
@@ -219,7 +219,7 @@ def run():
     assert company_current_users <= company_max_users, 'Company current user must not exceed company max users'
 
     if company_active != 'Yes':
-        raise Exception('Company %s is not active, cannot add or remove users!' % company_name)
+        raise Exception('Company {} is not active, cannot add or remove users!'.format(company_name))
 
     if user_active == "Yes":
         logging.info('The "active" input for the user is set to "Yes", so adding user to team.')

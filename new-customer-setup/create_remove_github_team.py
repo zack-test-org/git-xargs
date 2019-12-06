@@ -116,7 +116,7 @@ def read_from_env(key, required=True):
         return value
 
     if required:
-        raise Exception('Did not find value for key %s in either input_data or environment variables.' % key)
+        raise Exception('Did not find value for key {} in either input_data or environment variables.'.format(key))
     else:
         return None
 
@@ -143,14 +143,14 @@ def find_github_team(name, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
     :return: The ID of the team or None
     """
-    logging.info('Looking for a GitHub team called %s' % name)
-    response = requests.get('https://api.github.com/orgs/gruntwork-io/teams/%s' % name, auth=github_creds)
+    logging.info('Looking for a GitHub team called {}'.format(name))
+    response = requests.get('https://api.github.com/orgs/gruntwork-io/teams/{}'.format(name), auth=github_creds)
     if response.status_code == 200:
         team_id = response.json()['id']
-        logging.info('Found GitHub team with ID %s' % team_id)
+        logging.info('Found GitHub team with ID {}'.format(team_id))
         return team_id
     else:
-        logging.info('No team with name %s found (got response %d from GitHub)' % (name, response.status_code))
+        logging.info('No team with name {} found (got response {} from GitHub)'.format(name, response.status_code))
         return None
 
 
@@ -163,7 +163,7 @@ def create_github_team(name, description, repos, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
     :return: Returns the JSON body of the GitHub create-team API response
     """
-    logging.info('Creating new GitHub team called %s and granting it access to repos: %s' % (name, repos))
+    logging.info('Creating new GitHub team called {} and granting it access to repos: {}'.format(name, repos))
 
     payload = {
         'name': name,
@@ -177,10 +177,10 @@ def create_github_team(name, description, repos, github_creds):
     if response.status_code == 201:
         response_body = response.json()
         team_id = response_body['id']
-        logging.info('Successfully created GitHub team called %s with ID %s' % (name, team_id))
+        logging.info('Successfully created GitHub team called {} with ID {}'.format(name, team_id))
         return response_body
     else:
-        raise Exception('Failed to create team called %s. Got response %d from GitHub with body: %s.' % (name, response.status_code, response.json()))
+        raise Exception('Failed to create team called {}. Got response {} from GitHub with body: {}.'.format(name, response.status_code, response.json()))
 
 
 def remove_github_team(name, team_id, github_creds):
@@ -192,16 +192,16 @@ def remove_github_team(name, team_id, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
     :return: An empty object
     """
-    logging.info('Deleting GitHub team called %s with ID %s' % (name, team_id))
+    logging.info('Deleting GitHub team called {} with ID {}'.format(name, team_id))
 
-    url = 'https://api.github.com/teams/%s' % team_id
+    url = 'https://api.github.com/teams/{}'.format(team_id)
     response = requests.delete(url, auth=github_creds)
 
     if response.status_code == 204:
-        logging.info('Successfully deleted GitHub team called %s with ID %s' % (name, team_id))
+        logging.info('Successfully deleted GitHub team called {} with ID {}'.format(name, team_id))
         return {}
     else:
-        raise Exception('Failed to delete team called %s. Got response %d from GitHub with body: %s.' % (name, response.status_code, response.json()))
+        raise Exception('Failed to delete team called {}. Got response {} from GitHub with body: {}.'.format(name, response.status_code, response.json()))
 
 
 def dasherize(name):
@@ -223,11 +223,11 @@ def create_github_team_if_necessary(company_name, subscription_type, github_cred
     :return: The return value of create_github_team
     """
     team_name = dasherize(company_name)
-    team_description = 'Gruntwork customer %s' % company_name
+    team_description = 'Gruntwork customer {}'.format(company_name)
     team_repos = repos_for_subscription[subscription_type]
 
     if find_github_team(team_name, github_creds):
-        raise Exception('Team %s already exists! Cannot create again.' % team_name)
+        raise Exception('Team {} already exists! Cannot create again.'.format(team_name))
     else:
         return create_github_team(team_name, team_description, team_repos, github_creds)
 
@@ -244,7 +244,7 @@ def remove_github_team_if_necessary(company_name, github_creds):
     team_id = find_github_team(team_name, github_creds)
 
     if not team_id:
-        raise Exception('Did not find a GitHub team called %s.' % team_name)
+        raise Exception('Did not find a GitHub team called {}.'.format(team_name))
 
     return remove_github_team(team_name, team_id, github_creds)
 
@@ -270,10 +270,10 @@ def run():
     assert subscription_type in ['aws', 'gcp', 'enterprise'], 'Invalid subscription type. Must be one of: aws, gcp, enterprise.'
 
     if active == "Yes":
-        logging.info('The "active" input is set to "Yes", so creating a new GitHub team for company %s.' % company_name)
+        logging.info('The "active" input is set to "Yes", so creating a new GitHub team for company {}.'.format(company_name))
         return create_github_team_if_necessary(company_name, subscription_type, github_creds)
     elif active == "No":
-        logging.info('The "active" input is set to "No", so deleting the GitHub team for company %s.' % company_name)
+        logging.info('The "active" input is set to "No", so deleting the GitHub team for company {}.'.format(company_name))
         return remove_github_team_if_necessary(company_name, github_creds)
     else:
         logging.info('The "active" input is not set to "Yes" or "No", so assuming this entry is still a WIP and will not take any action.')
