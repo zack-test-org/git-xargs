@@ -221,10 +221,10 @@ def run():
     if company_active != 'Yes':
         raise Exception('Company {} is not active, cannot add or remove users!'.format(company_name))
 
-    if user_active == "Yes":
+    if user_active == 'Yes':
         logging.info('The "active" input for the user is set to "Yes", so adding user to team.')
         return do_add_user_to_team(github_id, company_name, github_creds)
-    elif user_active == "No":
+    elif user_active == 'No':
         logging.info('The "active" input for the user is set to "No", so removing user from the team.')
         return do_remove_user_from_team(github_id, company_name, github_creds)
     else:

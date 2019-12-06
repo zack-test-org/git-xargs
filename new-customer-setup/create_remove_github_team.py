@@ -275,10 +275,10 @@ def run():
     assert len(company_name) > 2, 'Company name does not seem to be valid (less than 3 characters long)'
     assert subscription_type in repos_for_subscription, 'Invalid subscription type. Must be one of: {}'.format(list(repos_for_subscription.keys()))
 
-    if active == "Yes":
+    if active == 'Yes':
         logging.info('The "active" input is set to "Yes", so creating a new GitHub team for company {}.'.format(company_name))
         return create_github_team_if_necessary(company_name, subscription_type, github_creds)
-    elif active == "No":
+    elif active == 'No':
         logging.info('The "active" input is set to "No", so deleting the GitHub team for company {}.'.format(company_name))
         return remove_github_team_if_necessary(company_name, github_creds)
     else:
