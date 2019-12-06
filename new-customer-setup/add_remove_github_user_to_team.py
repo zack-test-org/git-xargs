@@ -11,11 +11,16 @@ import os
 import re
 
 
-# Read the given key from the environment. This method first checks the input_data global, which is provided by the
-# Zapier code step (https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps). If it's not in input_data,
-# the method then looks for an environment variable. If that isn't set either, and required is set to True, this method 
-# raises an exception.
 def read_from_env(key, required=True):
+    """
+    Read the given key from the environment. This method first checks the input_data global, which is provided by the
+    Zapier code step (https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps). If it's not in input_data,
+    the method then looks for an environment variable. If that isn't set either, and required is set to True, this 
+    function raises an exception.
+    :param key: The key to lookup
+    :param required: If set to True and no value is found for the key, raise an Exception 
+    :return: The value for the key
+    """
     value = read_input_data(key)
     if value:
         return value
@@ -30,19 +35,27 @@ def read_from_env(key, required=True):
         return None
 
 
-# Reads the given key from the Zapier code step input_data. Note that input_data is magically added by the Zapier code
-# step, so this is the only way I could find to look it up that works both when running locally (with no input_data)
-# and in Zapier. https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps
 def read_input_data(key):
+    """
+    Reads the given key from the Zapier code step input_data. Note that input_data is magically added by the Zapier code
+    step, so this is the only way I could find to look it up that works both when running locally (with no input_data)
+    and in Zapier. https://zapier.com/help/create/code-webhooks/use-python-code-in-zaps
+    :param key: The key to read from input_data
+    :return: The value of the key or None if it's not set
+    """
     try:
         return input_data.get(key)
     except:
         return None
 
 
-# Find a GitHub team with the given name. Returns the team ID or None.
-# https://developer.github.com/v3/teams/#get-team
 def find_github_team(name, github_creds):
+    """
+    Find a GitHub team with the given name. https://developer.github.com/v3/teams/#get-team    
+    :param name: The GitHub team name to lookup 
+    :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password). 
+    :return: The team ID or None
+    """
     logging.info('Looking for a GitHub team called %s' % name)
     response = requests.get('https://api.github.com/orgs/gruntwork-io/teams/%s' % name, auth=github_creds)
     if response.status_code == 200:
@@ -54,9 +67,15 @@ def find_github_team(name, github_creds):
         return None
 
 
-# Fetch information about the membership of the uesr with the given GitHub ID on the GitHub team with the given ID
-# https://developer.github.com/v3/teams/members/#get-team-membership
 def get_user_team_membership(github_id, team_id, github_creds):
+    """
+    Fetch information about the membership of the user with the given GitHub ID on the GitHub team with the given ID.
+    https://developer.github.com/v3/teams/members/#get-team-membership    
+    :param github_id: The user's GitHub ID
+    :param team_id: The GitHub team's ID (NOT the team name)
+    :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password). 
+    :return: The JSON response from the GitHub get-team-membership API.
+    """
     logging.info('Looking up membership info of GitHub user %s on team %s' % (github_id, team_id))
 
     url = 'https://api.github.com/teams/%s/memberships/%s' % (team_id, github_id)
@@ -72,9 +91,15 @@ def get_user_team_membership(github_id, team_id, github_creds):
         raise Exception('Failed to look up membership for user %s in team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
 
 
-# Add the user with the given GitHub ID to the GitHub team with the given ID
-# https://developer.github.com/v3/teams/members/#add-or-update-team-membership
 def add_user_to_team(github_id, team_id, github_creds):
+    """
+    Add the user with the given GitHub ID to the GitHub team with the given ID.
+    https://developer.github.com/v3/teams/members/#add-or-update-team-membership    
+    :param github_id: The user's GitHub ID 
+    :param team_id: The GitHub team's ID (NOT the team name)
+    :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
+    :return: The JSON response from the GitHub add-or-update-team-membership API
+    """
     logging.info('Adding GitHub user %s to team %s' % (github_id, team_id))
 
     url = 'https://api.github.com/teams/%s/memberships/%s' % (team_id, github_id)
@@ -92,9 +117,15 @@ def add_user_to_team(github_id, team_id, github_creds):
         raise Exception('Failed to add user %s to team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
 
 
-# Remove the user with the given GitHub ID from the GitHub team with the given ID
-# https://developer.github.com/v3/teams/members/#remove-team-membership
 def remove_user_from_team(github_id, team_id, github_creds):
+    """
+    Remove the user with the given GitHub ID from the GitHub team with the given ID.
+    https://developer.github.com/v3/teams/members/#remove-team-membership    
+    :param github_id: The user's GitHub ID
+    :param team_id: The GitHub team's ID (NOT the team name)
+    :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
+    :return: An empty object
+    """
     logging.info('Deleting GitHub user %s from team %s' % (github_id, team_id))
 
     url = 'https://api.github.com/teams/%s/memberships/%s' % (team_id, github_id)
@@ -107,13 +138,23 @@ def remove_user_from_team(github_id, team_id, github_creds):
         raise Exception('Failed to delete user %s from team %s. Got response %d from GitHub with body: %s.' % (github_id, team_id, response.status_code, response.json()))
 
 
-# Convert the given name to a lower case, dash-separated string. E.g., "Foo Bar" becomes "foo-bar".
 def dasherize(name):
+    """
+    Convert the given name to a lower case, dash-separated string. E.g., "Foo Bar" becomes "foo-bar".
+    :param name: The name to dasherize
+    :return: The dasherized version of name.
+    """
     return re.sub(r'\s', '-', name).lower()
 
 
-# Add the user with the given GitHub ID to the GitHub team for the company with the given name
 def do_add_user_to_team(github_id, company_name, github_creds):
+    """
+    Add the user with the given GitHub ID to the GitHub team for the company with the given name.
+    :param github_id: The user's GitHub ID
+    :param company_name: The name of the company. Will be dasherized and looked up in the GitHub API.
+    :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
+    :return: If the user is already a member, an empty object. Otherwise, the return value of add_user_to_team.
+    """
     team_name = dasherize(company_name)
     team_id = find_github_team(team_name, github_creds)
 
@@ -128,8 +169,14 @@ def do_add_user_to_team(github_id, company_name, github_creds):
     return add_user_to_team(github_id, team_id, github_creds)
 
 
-# Remove the user with the given GitHub ID from the GitHub team for the company with the given name
 def do_remove_user_from_team(github_id, company_name, github_creds):
+    """
+    Remove the user with the given GitHub ID from the GitHub team for the company with the given name.
+    :param github_id: The user's GitHub ID
+    :param company_name: The name of the company. Will be dasherized and looked up in the GitHub API.
+    :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
+    :return: The return value of remove_user_from_team.
+    """
     team_name = dasherize(company_name)
     team_id = find_github_team(team_name, github_creds)
 
@@ -143,9 +190,11 @@ def do_remove_user_from_team(github_id, company_name, github_creds):
     return remove_user_from_team(github_id, team_id, github_creds)
 
 
-# Main entrypoint for the code. Reads data from the environment and adds or removes the specified user to/from the
-# specified team. Returns the response body of the GitHub add user or delete user GitHub API call.
 def run():
+    """
+    Main entrypoint for the code. Reads data from the environment and adds or removes the specified user to/from the
+    specified team. Returns the response body of the GitHub add user or delete user GitHub API call.
+    """
     github_user = read_from_env('GITHUB_USER')
     github_pass = read_from_env('GITHUB_TOKEN')
 
