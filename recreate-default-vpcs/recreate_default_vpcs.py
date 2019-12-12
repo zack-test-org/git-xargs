@@ -9,12 +9,23 @@ def get_all_regions():
 def has_default_vpc(region):
     client = boto3.client('ec2', region_name=region)
     filters = [{'Name': 'isDefault', 'Values': ['true']}]
-    return bool(list(client.describe_vpcs(Filters=filters)['Vpcs']))
+    vpcs = client.describe_vpcs(Filters=filters)['Vpcs']
+    return len(vpcs) > 0
 
 
 def create_default_vpc(region):
     client = boto3.client('ec2', region_name=region)
     return client.create_default_vpc()['Vpc']
+
+
+def create_default_vpc_if_not_exist(region):
+    if has_default_vpc(region):
+        print('Region {} has default VPC. Skipping create.'.format(region))
+        return
+
+    print('Region {} does not have default VPC. Creating.'.format(region))
+    vpc = create_default_vpc(region)
+    print('Created VPC {}'.format(vpc['VpcId']))
 
 
 def main():
@@ -24,13 +35,7 @@ def main():
     print('Found {} regions'.format(len(regions)))
     print('Ensuring default VPC exists in each region')
     for region in regions:
-        if has_default_vpc(region):
-            print('Region {} has default VPC. Skipping create.'.format(region))
-            continue
-
-        print('Region {} does not have default VPC. Creating.'.format(region))
-        vpc = create_default_vpc(region)
-        print('Created VPC {}'.format(vpc['VpcId']))
+        create_default_vpc_if_not_exist(region)
 
 
 if __name__ == '__main__':
