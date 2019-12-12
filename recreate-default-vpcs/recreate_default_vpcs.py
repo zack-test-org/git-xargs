@@ -36,7 +36,7 @@ def main():
     print('Ensuring default VPC exists in each region')
     for region in regions:
         client = boto3.client('ec2', region_name=region)
-        create_default_vpc_if_not_exist(client)
+        create_default_vpc_if_not_exist(client, region)
 
 
 if __name__ == '__main__':
