@@ -9,6 +9,7 @@ import (
 
 	awsgo "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/gruntwork-io/gruntwork-cli/files"
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/gruntwork-io/terratest/modules/collections"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -18,12 +19,17 @@ import (
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	test_structure "github.com/gruntwork-io/terratest/modules/test-structure"
 	"github.com/stretchr/testify/require"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/plotutil"
+	"gonum.org/v1/plot/vg"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	NumBenchmarks = 1
+	NumBenchmarks   = 1
+	ChartOutputPath = "./charts"
 
 	EksClusterModulePath  = "./eks-cluster"
 	BenchmarkModulePath   = "./benchmark"
@@ -104,7 +110,7 @@ func runFargateCpuInfoTest(t *testing.T, awsRegion string) {
 
 	test_structure.RunTestStage(t, "collect_benchmark_results", func() {
 		results := scanTable(t, awsRegion)
-		summarizeResults(t, results)
+		summarizeResults(t, awsRegion, results)
 	})
 }
 
@@ -212,7 +218,7 @@ func scanTable(t *testing.T, awsRegion string) []map[string]*dynamodb.AttributeV
 	return items
 }
 
-func summarizeResults(t *testing.T, results []map[string]*dynamodb.AttributeValue) {
+func summarizeResults(t *testing.T, awsRegion string, results []map[string]*dynamodb.AttributeValue) {
 	counter := map[string]int{}
 	runTimes := map[string][]float32{}
 	for _, item := range results {
@@ -231,10 +237,11 @@ func summarizeResults(t *testing.T, results []map[string]*dynamodb.AttributeValu
 		}
 	}
 
-	logger.Logf(t, "Histogram of processors:")
+	logger.Logf(t, "Processors:")
 	for procInfo, count := range counter {
 		logger.Logf(t, "\t%s : %d", procInfo, count)
 	}
+	plotProcessors(t, counter, "Processors", filepath.Join(ChartOutputPath, awsRegion, "processors.png"))
 
 	logger.Logf(t, "Min runtime of each processor:")
 	for procInfo, data := range runTimes {
@@ -264,4 +271,31 @@ func getUsableAvailabilityZones(t *testing.T, region string) []string {
 		}
 	}
 	return usableZones
+}
+
+func plotProcessors(t *testing.T, counter map[string]int, label string, chartPath string) {
+	data := plotter.Values{}
+	labels := []string{}
+	for label, count := range counter {
+		labels = append(labels, label)
+		data = append(data, float64(count))
+	}
+
+	bars, err := plotter.NewBarChart(data, vg.Points(20))
+	require.NoError(t, err)
+	bars.LineStyle.Width = vg.Length(0)
+	bars.Color = plotutil.Color(0)
+
+	p, err := plot.New()
+	require.NoError(t, err)
+	p.Title.Text = label
+	p.Y.Label.Text = "Number of Instances"
+	p.Add(bars)
+	p.NominalX(labels...)
+
+	dir := filepath.Dir(chartPath)
+	if !files.IsDir(dir) {
+		require.NoError(t, os.MkdirAll(dir, 0755))
+	}
+	require.NoError(t, p.Save(8*vg.Inch, 6*vg.Inch, chartPath))
 }

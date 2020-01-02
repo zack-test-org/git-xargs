@@ -13,8 +13,5 @@ hardware used for Fargate.
 ## TODO!!!!!
 
 - Flush out README more, especially with motivation
-- Add module for EKS cluster to make test easier to run
-- Update test to output graphs and store as artifacts
-- Add a test runner that will run across all regions
 - Add comments to code everywhere
 - Record video to add to hackfest video
