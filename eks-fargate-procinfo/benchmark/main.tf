@@ -1,3 +1,18 @@
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# PROVISION A KUBERNETES JOB TO RUN BENCHMARK CODE
+# This terraform module will deploy a Kubernetes Job that runs the benchmark code against an existing EKS cluster. This
+# includes:
+# - Creating a DynamoDB table for recording results
+# - Creating a Kubernetes Service Account and AWS IAM Role to access DynamoDB and linking them together
+# - Creating a Kubernetes ConfigMap with benchmark scripts that is mounted to the Pod. This avoids having to bake a
+#   custom docker container to run the benchmark.
+# - Creating a Kubernetes Job configured with the Service Account to access DynamoDB
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# ---------------------------------------------------------------------------------------------------------------------
+# SET TERRAFORM REQUIREMENTS FOR RUNNING THIS MODULE
+# ---------------------------------------------------------------------------------------------------------------------
+
 terraform {
   required_version = ">= 0.12"
 }
@@ -143,7 +158,7 @@ resource "kubernetes_job" "cpu_benchmark" {
             read_only  = true
             mount_path = "/tmp/scripts"
           }
-          # Make sure to mount the ServiceAccount token.
+          # Make sure to mount the ServiceAccount token so it is available.
           volume_mount {
             mount_path = "/var/run/secrets/kubernetes.io/serviceaccount"
             name       = kubernetes_service_account.cpu_benchmark.default_secret_name
@@ -166,8 +181,8 @@ resource "kubernetes_job" "cpu_benchmark" {
             default_mode = "0755"
           }
         }
-        # We have to mount the service account token so that Tiller can access the Kubernetes API as the attached
-        # ServiceAccount.
+        # Terraform Kubernetes doesn't automatically mount the ServiceAccount token to the Pods, so we need to manually
+        # do it.
         volume {
           name = kubernetes_service_account.cpu_benchmark.default_secret_name
 

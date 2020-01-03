@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -46,16 +48,16 @@ const (
 )
 
 var FargateRegions = []string{
-	//"us-east-1",
+	"us-east-1",
 	"us-east-2",
-	//"eu-west-1",
-	//"ap-northeast-1",
+	"eu-west-1",
+	"ap-northeast-1",
 }
 
 // For each Fargate region:
-// - Launch a Fargate cluster
-// - Run a benchmark job
-// - Collect results into a graph
+// - Launch a Fargate cluster using eks-cluster module
+// - Run a benchmark job using benchmark module
+// - Collect results into a graph and store it in the `charts/REGION` folder.
 func TestFargateCpuInfoAllRegions(t *testing.T) {
 	for _, awsRegion := range FargateRegions {
 		t.Run(awsRegion, func(t *testing.T) {
@@ -67,6 +69,7 @@ func TestFargateCpuInfoAllRegions(t *testing.T) {
 
 func runFargateCpuInfoTest(t *testing.T, awsRegion string) {
 	// Uncomment any of the following to skip that stage in the test
+	//os.Setenv("SKIP_foo", "true") // This is not a real stage, but helps with skipping the terraform folder copying
 	//os.Setenv("SKIP_setup", "true")
 	//os.Setenv("SKIP_deploy_cluster", "true")
 	//os.Setenv("SKIP_run_benchmark", "true")
@@ -74,8 +77,11 @@ func runFargateCpuInfoTest(t *testing.T, awsRegion string) {
 	//os.Setenv("SKIP_destroy_benchmark", "true")
 	//os.Setenv("SKIP_destroy_cluster", "true")
 
+	// Namespace the working dir and modules by AWS region
 	workingDir := filepath.Join("stages", awsRegion)
 	testFolder := test_structure.CopyTerraformFolderToTemp(t, ".", ".")
+
+	// Start Section: EKS Cluster
 
 	test_structure.RunTestStage(t, "setup", func() {
 		createEksClusterOptions(t, awsRegion, workingDir, filepath.Join(testFolder, EksClusterModulePath))
@@ -89,6 +95,10 @@ func runFargateCpuInfoTest(t *testing.T, awsRegion string) {
 		terraform.InitAndApply(t, test_structure.LoadTerraformOptions(t, workingDir))
 	})
 
+	// End Section: EKS Cluster
+
+	// Start Section: Benchmark
+
 	// This doesn't need to be stored, because all the dynamic information is captured in the eks cluster module
 	// options. Given that, the benchmark options can be deterministically calculated across test stage runs.
 	benchmarkOptions := createBenchmarkOptions(t, awsRegion, workingDir, filepath.Join(testFolder, BenchmarkModulePath))
@@ -98,6 +108,11 @@ func runFargateCpuInfoTest(t *testing.T, awsRegion string) {
 	})
 
 	test_structure.RunTestStage(t, "run_benchmark", func() {
+		// We repeatedly call apply on the benchmark module to repeat the trial multiple times, if we want to collect
+		// results from more than 90 runs. This is due to a limitation of Fargate and Kubernetes Jobs, where completed
+		// Pods from Jobs still take up a Fargate node even though nothing is running. This means that you can easily
+		// blow through the Fargate limit without running anything!
+		// To work around this, we destroy the Kubernetes Job for each trial so that all the Pods get culled at the end.
 		terraform.Init(t, benchmarkOptions)
 		for i := 0; i < NumBenchmarks; i++ {
 			logger.Logf(t, "Running trial %d/%d", i+1, NumBenchmarks)
@@ -112,6 +127,8 @@ func runFargateCpuInfoTest(t *testing.T, awsRegion string) {
 		results := scanTable(t, awsRegion)
 		summarizeResults(t, awsRegion, results)
 	})
+
+	// End Section: Benchmark
 }
 
 func createEksClusterOptions(t *testing.T, awsRegion string, workingDir string, terraformDir string) *terraform.Options {
@@ -157,8 +174,12 @@ func createBenchmarkOptions(t *testing.T, awsRegion string, workingDir string, t
 	return benchmarkOptions
 }
 
+// runBenchmarkTrial applies the benchmark module, which will provision the DynamoDB table and Kubernetes Job. Then,
+// repeatedly polls the Kubernetes API until the Job finishes. Once the Job finishes, destroy just the Job to prepare
+// for the next run.
 func runBenchmarkTrial(t *testing.T, options *terraform.Options, kubectlOptions *k8s.KubectlOptions) {
-	// Destroy just the kubernetes job at the end of each benchmark trial
+	// Destroy just the kubernetes job at the end of each benchmark trial so that all the Pods and Fargate instances are
+	// culled.
 	defer func() {
 		destroyOptions := &terraform.Options{
 			TerraformDir: options.TerraformDir,
@@ -218,6 +239,10 @@ func scanTable(t *testing.T, awsRegion string) []map[string]*dynamodb.AttributeV
 	return items
 }
 
+// summarizeResults summarizes the results from the Benchmark trials by providing the following information for each CPU
+// model found:
+// - The number of instances seen in the benchmark
+// - The minimum runtime seen from the benchmark
 func summarizeResults(t *testing.T, awsRegion string, results []map[string]*dynamodb.AttributeValue) {
 	counter := map[string]int{}
 	runTimes := map[string][]float32{}
@@ -273,12 +298,16 @@ func getUsableAvailabilityZones(t *testing.T, region string) []string {
 	return usableZones
 }
 
+// plotProcessors plots a bar chart of the processor models seen from the benchmark to the provided chartPath.
 func plotProcessors(t *testing.T, counter map[string]int, label string, chartPath string) {
 	data := plotter.Values{}
 	labels := []string{}
-	for label, count := range counter {
+	for label, _ := range counter {
 		labels = append(labels, label)
-		data = append(data, float64(count))
+	}
+	sort.Strings(labels)
+	for _, label := range labels {
+		data = append(data, float64(counter[label]))
 	}
 
 	bars, err := plotter.NewBarChart(data, vg.Points(20))
@@ -297,5 +326,5 @@ func plotProcessors(t *testing.T, counter map[string]int, label string, chartPat
 	if !files.IsDir(dir) {
 		require.NoError(t, os.MkdirAll(dir, 0755))
 	}
-	require.NoError(t, p.Save(8*vg.Inch, 6*vg.Inch, chartPath))
+	require.NoError(t, p.Save(11*vg.Inch, 6*vg.Inch, chartPath))
 }
