@@ -65,9 +65,3 @@ and Platinum 8175M), so we can guess that the Fargate fleet consists of these in
 ## Usage
 
 Run `go test -timeout 4h .`
-
-
-
-## TODO!!!!!
-
-- Record video to add to hackfest video
