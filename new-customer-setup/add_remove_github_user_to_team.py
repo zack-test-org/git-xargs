@@ -138,13 +138,14 @@ def remove_user_from_team(github_id, team_id, github_creds):
         raise Exception('Failed to delete user {} from team {}. Got response {} from GitHub with body: {}.'.format(github_id, team_id, response.status_code, response.json()))
 
 
-def dasherize(name):
+def format_github_team_name(name):
     """
-    Convert the given name to a lower case, dash-separated string. E.g., "Foo Bar" becomes "foo-bar".
+    Convert the given name to a GitHub team name for a customer. We do this by converting the name to a lower case,
+    dash-separated string with a "client-" prefix. E.g., "Foo Bar" becomes "client-foo-bar".
     :param name: The name to dasherize
-    :return: The dasherized version of name.
+    :return: The GitHub-friendly team version of name.
     """
-    return re.sub(r'\s', '-', name).lower()
+    return 'client-{}'.format(re.sub(r'\s', '-', name).lower())
 
 
 def do_add_user_to_team(github_id, company_name, github_creds):
@@ -155,7 +156,7 @@ def do_add_user_to_team(github_id, company_name, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
     :return: If the user is already a member, an empty object. Otherwise, the return value of add_user_to_team.
     """
-    team_name = dasherize(company_name)
+    team_name = format_github_team_name(company_name)
     team_id = find_github_team(team_name, github_creds)
 
     if not team_id:
@@ -177,7 +178,7 @@ def do_remove_user_from_team(github_id, company_name, github_creds):
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
     :return: The return value of remove_user_from_team.
     """
-    team_name = dasherize(company_name)
+    team_name = format_github_team_name(company_name)
     team_id = find_github_team(team_name, github_creds)
 
     if not team_id:
