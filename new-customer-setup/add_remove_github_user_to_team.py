@@ -233,6 +233,8 @@ def run():
     company_active = read_from_env('company_active')
 
     assert len(company_name) > 2, 'First name does not seem to be valid (less than 3 characters long)'
+    assert len(user_active) > 1, 'User active field does not seem to be valid (less than 2 characters long)'
+    assert len(company_active) > 1, 'Company active field does not seem to be valid (less than 2 characters long)'
     assert company_current_users >= 0, 'Company current users should not be negative'
     assert company_max_users >= 0, 'Company max users should not be negative'
     assert company_current_users <= company_max_users, 'Company current user must not exceed company max users'
