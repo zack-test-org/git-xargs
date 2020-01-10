@@ -91,7 +91,9 @@ gcp_repos = [
 ]
 
 aws_cis_repos = [
-    'gruntwork-io/cis-compliance-aws'
+    'gruntwork-io/cis-compliance-aws',
+    'gruntwork-io/cis-infrastructure-live-acme',
+    'gruntwork-io/cis-infrastructure-modules-acme',
 ]
 
 repos_for_subscription = {
