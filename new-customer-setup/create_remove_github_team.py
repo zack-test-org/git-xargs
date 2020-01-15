@@ -293,7 +293,7 @@ def run():
     subscription_type = read_from_env('subscription_type')
     active = read_from_env('active', required=False)
 
-    assert len(company_name) > 2, 'Company name does not seem to be valid (less than 3 characters long)'
+    assert len(company_name) > 1, 'Company name does not seem to be valid (less than 2 characters long)'
     assert subscription_type in repos_for_subscription, 'Invalid subscription type. Must be one of: {}'.format(list(repos_for_subscription.keys()))
 
     if is_affirmative_value(active):
