@@ -14,6 +14,16 @@ the `sbv2srt.py` script:
 python sbv2srt.py $PATH_TO_SBVFILE
 ```
 
+### Formatting long manually generated captions
+
+Manual captions for long videos generated using the Youtube UI will generate `.json` files. This can be converted to
+`.srt` files using the `json2srt.py` script:
+
+```
+python json2srt.py $PATH_TO_SBVFILE
+```
+
+
 ### Formatting automatically generated captions
 
 Automatically generated captions can be downloaded as `.srt` files using the Youtube UI. However, these are not in a
