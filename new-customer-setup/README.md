@@ -98,7 +98,7 @@ This section gives information about working with the [Gruntwork Customers Googl
 
 ### Migrating a Customer from `github-terraform`
 
-1. Add the company on the Company tab of the sheet. Enter all the info, but do NOT set “Run Zapier” to “Yes”. Instead, set it to something like (migrated-from-github-terraform) to indicate the company already exists. Zapier will ignore this row, which is correct, as there’s nothing to do.
+1. Add the company on the Company tab of the sheet. Enter all the info, but do NOT set “Run Zapier” to “Yes”. Instead, set it to `(migrated-from-github-terraform)` to indicate the company already exists. Zapier will ignore this row, which is correct, as there’s nothing to do.
 1. Add each user to the Users tab of the sheet. Enter all the info for the user, but do NOT set “Run Zapier” to “Yes”. Instead, set it to something like (migrated-from-github-terraform) to indicate the user already exists. Zapier will ignore this row, which is correct, as there’s nothing to do. You may have to look up each user’s GitHub ID, name, and email in different places: e.g., GitHub ID in github-terraform, the rest in ZenDesk, Slack, or the New Customer Setup Form (i.e., when the customer requested the user be added), or possibly Teachable.
 1. Delete the company’s folder from github-terraform and submit a PR with the changes.
 1. Now you can update the company in the Gruntwork Customers Sheet from here on out. Add or remove users, set “Run in Zapier” to “Yes”, and Zapier will do the rest.
