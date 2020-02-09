@@ -141,11 +141,11 @@ def remove_user_from_team(github_id, team_id, github_creds):
 def format_github_team_name(name):
     """
     Convert the given name to a GitHub team name for a customer. We do this by converting the name to a lower case,
-    dash-separated string with a "client-" prefix. E.g., "Foo Bar" becomes "client-foo-bar".
+    dash-separated string with a "client-" prefix. E.g., "Foo Bar.com" becomes "client-foo-bar-com".
     :param name: The name to dasherize
     :return: The GitHub-friendly team version of name.
     """
-    return 'client-{}'.format(re.sub(r'\s', '-', name).lower())
+    return 'client-{}'.format(re.sub(r'[\s.]', '-', name).lower())
 
 
 def do_add_user_to_team(github_id, company_name, github_creds):
