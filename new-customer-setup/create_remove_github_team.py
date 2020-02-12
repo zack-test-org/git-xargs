@@ -171,29 +171,12 @@ def find_github_team(name, github_creds, teams_api_url='https://api.github.com/o
             logging.info('Found ID {} for GitHub team {}'.format(team['id'], name))
             return team['id']
 
-    next_url = get_next_url(response)
+    next_url = response.links.get('next')
     if next_url:
-        return find_github_team(name, github_creds, next_url)
+        return find_github_team(name, github_creds, next_url['url'])
     else:
         logging.info('No team with name {} found'.format(name))
         return None
-
-
-def get_next_url(response):
-    """
-    Extract the "next" URL from the given GitHub API response. This URL can be used to fetch the next page of results.
-    If there is no "next" URL, return None.
-    :param response:
-    :return:
-    """
-    link_header = response.headers.get('Link')
-    if link_header:
-        links = link_header.split(', ')
-        for link in links:
-            matches = github_api_next_regex.search(link)
-            if matches:
-                return matches.group(1)
-    return None
 
 
 def create_github_team(name, description, repos, github_creds):
