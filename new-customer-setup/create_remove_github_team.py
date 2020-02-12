@@ -104,6 +104,9 @@ repos_for_subscription = {
     'enterprise-cis': list(set(aws_repos + gcp_repos + aws_cis_repos))
 }
 
+# Regex to match "next" URLs in the GitHub API Link header. Example: <https://api.github.com/foo/bar?page=2>; rel="next"
+github_api_next_regex = re.compile('<(.+?)>; rel="next"')
+
 
 def read_from_env(key, required=True):
     """
@@ -143,23 +146,54 @@ def read_input_data(key):
         return None
 
 
-def find_github_team(name, github_creds):
+def find_github_team(name, github_creds, teams_api_url='https://api.github.com/orgs/gruntwork-io/teams?per_page=100'):
     """
-    Find a GitHub team with the given name. Returns the team ID or None.
-    https://developer.github.com/v3/teams/#get-team
+    Find a GitHub team with the given name. Returns the team ID or None. Note that we have to use the teams list API
+    (https://developer.github.com/v3/teams/#list-teams) to find the team because the API call to fetch a team by name
+    (https://developer.github.com/v3/teams/#get-team-by-name) requires a "slug", which is not the original team name
+    you used, but a version of that name with special characters modified in a variety of ways (e.g., whitespace
+    replaced with dashes, dots replaced with dashes, ampersands and surrounding whitespace dropped, etc.) that don't
+    seem to be published publicly.
     :param name: The name of the GitHub team
     :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
+    :param teams_api_url: The GitHub API URL to use. Used solely by this function to make recursive API calls
+      paginating.
     :return: The ID of the team or None
     """
-    logging.info('Looking for a GitHub team called {}'.format(name))
-    response = requests.get('https://api.github.com/orgs/gruntwork-io/teams/{}'.format(name), auth=github_creds)
-    if response.status_code == 200:
-        team_id = response.json()['id']
-        logging.info('Found GitHub team with ID {}'.format(team_id))
-        return team_id
+    logging.info('Looking up team {} in GitHub API via URL {}...'.format(name, teams_api_url))
+    response = requests.get(teams_api_url, auth=github_creds)
+    if response.status_code != 200:
+        raise Exception('Got response {} from GitHub when searching for teams at URL {}'.format(response.status_code, teams_api_url))
+
+    teams = response.json()
+    for team in teams:
+        if team['name'] == name:
+            logging.info('Found ID {} for GitHub team {}'.format(team['id'], name))
+            return team['id']
+
+    next_url = get_next_url(response)
+    if next_url:
+        return find_github_team(name, github_creds, next_url)
     else:
-        logging.info('No team with name {} found (got response {} from GitHub)'.format(name, response.status_code))
+        logging.info('No team with name {} found'.format(name))
         return None
+
+
+def get_next_url(response):
+    """
+    Extract the "next" URL from the given GitHub API response. This URL can be used to fetch the next page of results.
+    If there is no "next" URL, return None.
+    :param response:
+    :return:
+    """
+    link_header = response.headers.get('Link')
+    if link_header:
+        links = link_header.split(', ')
+        for link in links:
+            matches = github_api_next_regex.search(link)
+            if matches:
+                return matches.group(1)
+    return None
 
 
 def create_github_team(name, description, repos, github_creds):
