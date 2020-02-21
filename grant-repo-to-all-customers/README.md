@@ -16,3 +16,10 @@ export GITHUB_OAUTH_TOKEN=xxx
 pip install -r ./requirements.txt
 python ./grant_to_all_customers.py --repo new-repo --seed cis-compliance-aws
 ```
+
+## Which seed repo should I use for each subscription?
+
+**aws**: `module-vpc`
+**gcp**: `terraform-helm-gke-exts`
+**aws-cis**: `cis-compliance-aws`
+**enterprise**: `module-ci`
