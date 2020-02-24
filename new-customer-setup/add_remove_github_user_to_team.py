@@ -244,7 +244,7 @@ def run():
     github_id = read_from_env('github_id')
     user_active = read_from_env('user_active', required=False)
 
-    assert len(github_id) > 2, 'GitHub ID does not seem to be valid (less than 3 characters long)'
+    assert len(github_id) > 1, 'GitHub ID does not seem to be valid (less than 2 characters long)'
 
     company_name = read_from_env('company_name')
     company_current_users = int(read_from_env('company_current_users'))
