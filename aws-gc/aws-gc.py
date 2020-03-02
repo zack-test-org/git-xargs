@@ -3,6 +3,7 @@ import argparse
 import re
 import datetime as dt
 import pytz
+from collections import defaultdict
 from tabulate import tabulate
 from progress.bar import Bar
 
@@ -300,6 +301,86 @@ def delete_profile(profile):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS TO PROCESS AWS CONFIG
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def get_regions_with_aws_config():
+    """
+    Look up all the AWS regions that have AWS Config enabled. Returns a dict that maps regions with AWS config enabled
+    with the config recorder name and delivery channel name.
+    """
+    ec2 = boto3.client('ec2', 'us-east-1')
+    enabled_regions = [region['RegionName'] for region in ec2.describe_regions().get('Regions', [])]
+    regions_with_config = defaultdict(dict)
+
+    for region in enabled_regions:
+        print(f'checking region {region}')
+        config = boto3.client('config', region)
+
+        resp = config.describe_configuration_recorders()
+        if resp['ConfigurationRecorders']:
+            name = resp['ConfigurationRecorders'][0]['name']
+            regions_with_config[region]['config_recorder'] = name
+
+        resp = config.describe_delivery_channels()
+        if resp['DeliveryChannels']:
+            name = resp['DeliveryChannels'][0]['name']
+            regions_with_config[region]['delivery_channel'] = name
+    return regions_with_config
+
+
+def disable_aws_config(regions_with_config):
+    """
+    Given the output of get_regions_with_aws_config, go through each region and delete the configuration recorder and
+    delivery channel, if they exist.
+    """
+    for region, config_data in regions_with_config.items():
+        print(f'disabling config in region {region}')
+
+        config = boto3.client('config', region)
+
+        if 'config_recorder' in config_data:
+            print(f'deleting configuration recorder in region {region}')
+            name = config_data['config_recorder']
+            config.delete_configuration_recorder(ConfigurationRecorderName=name)
+
+        if 'delivery_channel' in config_data:
+            print(f'deleting delivery channel in region {region}')
+            name = config_data['delivery_channel']
+            config.delete_delivery_channel(DeliveryChannelName=name)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS TO PROCESS GUARDDUTY
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def get_regions_with_guardduty():
+    """ Look up all the AWS regions that have Guardduty enabled. """
+    ec2 = boto3.client('ec2', 'us-east-1')
+    enabled_regions = [region['RegionName'] for region in ec2.describe_regions().get('Regions', [])]
+    regions_with_guardduty = {}
+
+    for region in enabled_regions:
+        print(f'checking region {region}')
+        guardduty = boto3.client('guardduty', region)
+
+        resp = guardduty.list_detectors()
+        if resp['DetectorIds']:
+            regions_with_guardduty[region] = resp['DetectorIds'][0]
+    return regions_with_guardduty
+
+
+def disable_guardduty(regions_with_guardduty):
+    """ Given the output of get_regions_with_guardduty, go through each region and delete the detectors. """
+    for region, detector_id in regions_with_guardduty.items():
+        print(f'disabling guardduty in region {region}')
+        guardduty = boto3.client('guardduty', region)
+        guardduty.delete_detector(DetectorId=detector_id)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 # GENERAL HELPER FUNCTIONS
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -363,12 +444,34 @@ def is_test_user_or_group(name):
     regex_list = [
         r'^cross-account-iam-roles-test-[a-zA-Z0-9]{6}-[a-zA-Z0-9]{6}$',
         r'^test-user-non-sudo-[a-zA-Z0-9]{6}$',
+        r'^non-sudo-test-user-a-[a-zA-Z0-9]{6}$',
+        r'^non-sudo-test-user-b-[a-zA-Z0-9]{6}$',
         r'^test-user-sudo-[a-zA-Z0-9]{6}$',
+        r'^sudo-test-user-a-[a-zA-Z0-9]{6}$',
+        r'^sudo-test-user-b-[a-zA-Z0-9]{6}$',
+        r'^test-user-both-non-sudo-[a-zA-Z0-9]{6}$',
         r'^test-group-non-sudo-[a-zA-Z0-9]{6}$',
         r'^test-group-sudo-[a-zA-Z0-9]{6}$',
         r'^TestIamGroupUseExistingIamRoles-[a-zA-Z0-9]{6}$',
         r'^TestIamPolicyIamUserSelfMgmt-[a-zA-Z0-9]{6}$',
         r'^tst-openvpn-host-(\d+|[a-zA-Z0-9]{6})-(Admins|Users)$',
+        r'^access-all-[a-zA-Z0-9]{6}$',
+        r'^auto-deploy-[a-zA-Z0-9]{6}$',
+        r'^developers-[a-zA-Z0-9]{6}$',
+        r'^full-access-[a-zA-Z0-9]{6}$',
+        r'^read-only-[a-zA-Z0-9]{6}$',
+        r'^test-group-a-[a-zA-Z0-9]{6}$',
+        r'^test-sudo-group-a-[a-zA-Z0-9]{6}$',
+        r'^test-group-b-[a-zA-Z0-9]{6}$',
+        r'^test-sudo-group-b-[a-zA-Z0-9]{6}$',
+        r'^[a-zA-Z0-9]{6}-billing$',
+        r'^[a-zA-Z0-9]{6}-developers$',
+        r'^[a-zA-Z0-9]{6}-full-access$',
+        r'^[a-zA-Z0-9]{6}-read-only$',
+        r'^[a-zA-Z0-9]{6}-iam-user-self-mgmt$',
+        r'^[a-zA-Z0-9]{6}-ssh-iam-sudo-users$',
+        r'^[a-zA-Z0-9]{6}-ssh-iam-users$',
+        r'^[a-zA-Z0-9]{6}-use-existing-iam-roles$',
     ]
     return any(re.match(regex, name) for regex in regex_list)
 
@@ -627,6 +730,54 @@ def run_buckets(dry=True):
         delete_bucket(bucket)
 
 
+def run_config(dry=True):
+    """Run the garbage collection routine for AWS Config.
+
+    This will:
+    - Scan all enabled regions of the account and find those that have AWS config enabled
+    - List out all the regions it found
+    - If in "wet" mode, disable AWS config in each region it found.
+    """
+    regions_with_config = get_regions_with_aws_config()
+    num_regions = len(regions_with_config.keys())
+    print(f'Found {num_regions} regions with AWS config')
+    if num_regions == 0:
+        return
+
+    for region in regions_with_config:
+        print(f'\t{region}')
+
+    if dry:
+        return
+
+    input(f'Will disable AWS config in {num_regions} regions. [Ctrl+C] to cancel, or [ENTER] to proceed.')
+    disable_aws_config(regions_with_config)
+
+
+def run_guardduty(dry=True):
+    """Run the garbage collection routine for Guardduty.
+
+    This will:
+    - Scan all enabled regions of the account and find those that have Guardduty enabled
+    - List out all the regions it found
+    - If in "wet" mode, disable Guardduty in each region it found.
+    """
+    regions_with_guardduty = get_regions_with_guardduty()
+    num_regions = len(regions_with_guardduty.keys())
+    print(f'Found {num_regions} regions with Guardduty')
+    if num_regions == 0:
+        return
+
+    for region in regions_with_guardduty:
+        print(f'\t{region}')
+
+    if dry:
+        return
+
+    input(f'Will disable Guardduty in {num_regions} regions. [Ctrl+C] to cancel, or [ENTER] to proceed.')
+    disable_guardduty(regions_with_guardduty)
+
+
 def parse_args():
     """Parse command line args"""
     parser = argparse.ArgumentParser(description='This script garbage collects test IAM resources and S3 Buckets.')
@@ -646,6 +797,8 @@ def main():
     run_groups(dry)
     run_profiles(dry)
     run_roles(dry)
+    run_config(dry)
+    run_guardduty(dry)
 
 
 if __name__ == '__main__':
