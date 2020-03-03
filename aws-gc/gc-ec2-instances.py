@@ -1,6 +1,8 @@
+import sys
 import re
 import boto3
 from tabulate import tabulate
+from progress.bar import Bar
 from collections import namedtuple
 
 Instance = namedtuple('Instance', ['region', 'info'])
@@ -46,16 +48,16 @@ def run():
     print()
 
     input(f'Will remove termination protection on {len(instances)} instances. [Ctrl+C] to cancel, or [ENTER] to proceed.')
-    for instance in instances:
+    bar = Bar('Removing termination protection', max=len(instances))
+    for instance in bar.iter(instances):
         remove_termination_protection(instance.region, instance.info)
 
 
 def remove_termination_protection(region, instance):
     """ Remove termination protection from the given instance in the provided region. """
     ec2_client = boto3.client('ec2', region_name=region)
-    ec2_client.modify_instance_attribute(
+    resp = ec2_client.modify_instance_attribute(
         InstanceId=instance['InstanceId'],
-        Attribute='disableApiTermination',
         DisableApiTermination={'Value': False},
     )
 
@@ -86,7 +88,7 @@ def is_termination_protected(region, instance):
     response = ec2_client.describe_instance_attribute(
         Attribute='disableApiTermination', InstanceId=instance['InstanceId']
     )
-    return response['DisableApiTermination']
+    return response['DisableApiTermination']['Value']
 
 
 def is_test_instance(instance):
