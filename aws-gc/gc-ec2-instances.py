@@ -35,11 +35,12 @@ def run():
                     inst.region,
                     inst.info['LaunchTime'].isoformat(),
                     inst.info['InstanceId'],
+                    inst.info['InstanceType'],
                     get_instance_tag_by_key(inst.info, 'Name'),
                 )
                 for inst in instances
             ],
-            headers=('Region', 'Launch Time', 'Id', 'Name'),
+            headers=('Region', 'Launch Time', 'Id', 'Type', 'Name'),
         )
     )
     print()
