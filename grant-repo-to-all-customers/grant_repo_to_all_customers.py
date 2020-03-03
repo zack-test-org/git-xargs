@@ -2,6 +2,7 @@ import os
 import click
 import github
 import logging
+from progress.bar import Bar
 
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
@@ -18,11 +19,11 @@ logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logg
     help='Name of a repo in the Gruntwork organization to use as a reference for teams to grant access to.',
 )
 @click.option(
-    '--dry/--apply',
-    default=True,
-    help='Do a dry run, showing all the teams that will be granted access to the repo but not actually grant acces.',
+    '--force/--prompt',
+    default=False,
+    help='When --force is passed in, skip the prompt to confirm if the team should be granted access.',
 )
-def main(repo, seed, dry):
+def main(repo, seed, force):
     """
     Grant access to a new repo to all customers who already have access to another repo in the library.
     """
@@ -37,14 +38,19 @@ def main(repo, seed, dry):
     customer_teams = [t for t in teams if t.startswith('client-')]
     logging.info(f'Found {len(customer_teams)} customer teams that have access to {seed}')
 
-    logging.info('Granting all found teams access to repo')
+    logging.info('The following teams will be granted access:')
     for team in customer_teams:
-        logging.info(f'Granting access to {repo} to {team}')
-        if dry:
-            logging.info('DRY RUN: Skipping')
-        else:
-            github.add_repo_to_team(clt, team, repo)
-            logging.info('Successfully granted access')
+        logging.info(f'\t{team}')
+    logging.info()
+
+    if force:
+        logging.warn('--force flag was passed in. Skipping prompt.')
+    else:
+        input('Will grant access to the teams. [Ctrl+C] to cancel, or [ENTER] to proceed.')
+
+    bar = Bar('Granting access', max=len(customer_teams))
+    for team in bar.iter(customer_teams):
+        github.add_repo_to_team(clt, team, repo)
 
 
 if __name__ == '__main__':
