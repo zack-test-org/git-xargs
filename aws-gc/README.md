@@ -1,10 +1,21 @@
 # AWS GC (Garbage Collect)
 
-This script can be used to garbage collect IAM resources and S3 buckets in the phxdevops test account.
+This script can be used to garbage collect various AWS resources in the phxdevops test account that are not supported by
+`cloud-nuke`.
 
-We often hit the IAM and S3 limits due to test failures. This is problematic because cloud-nuke does not clean up IAM
-resources and S3 buckets due to the difficulty in differentiating real resources from test resources. This script
-relies on the operator to scan the list it finds, making sure there aren't any resources that it shouldn't delete.
+Many of the resources in this script are not included for cleanup because it is hard to differentiate real resources
+from test resources. This is primarily due to the nature of the resource. For example, in a sandbox AWS account, you
+will still have real IAM roles and users because you need some credentials to be able to deploy and destroy resources.
+`cloud-nuke` currently does not support any form of configuration involving regex or name globs for selecting resources,
+which would be a prerequisite for adding these resources there. In the mean time, we use the scripts in this repo to
+clean up resources that aren't supported by `cloud-nuke`.
+
+Scripts:
+
+- `aws-gc.py`: Clean up S3 buckets, IAM users, IAM groups, IAM instance profiles, IAM roles, AWS Config, and AWS
+  Guardduty.
+- `gc-ecs-cluster.py`: Clean up ECS clusters.
+
 
 ## Usage
 
