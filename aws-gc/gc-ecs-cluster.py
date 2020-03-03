@@ -23,7 +23,7 @@ def run():
         region_name = region['RegionName']
         print(f'Looking up ECS clusters in region {region_name}')
         ecs_clusters_in_region = [
-            ECSCluster(carn, region) for carn in get_all_ecs_clusters(region_name)
+            ECSCluster(carn, region_name) for carn in get_all_ecs_clusters(region_name)
             if want_ecs_cluster(region_name, carn)
         ]
         print(f'Found {len(ecs_clusters_in_region)} clusters in region {region_name}')
