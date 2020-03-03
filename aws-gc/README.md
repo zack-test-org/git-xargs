@@ -15,6 +15,7 @@ Scripts:
 - `aws-gc.py`: Clean up S3 buckets, IAM users, IAM groups, IAM instance profiles, IAM roles, AWS Config, and AWS
   Guardduty.
 - `gc-ecs-cluster.py`: Clean up ECS clusters.
+- `gc-ec2-instances.py`: Take termination protected EC2 instances and disable termination protection.
 
 
 ## Usage
