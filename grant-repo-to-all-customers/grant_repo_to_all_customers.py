@@ -41,7 +41,7 @@ def main(repo, seed, force):
     logging.info('The following teams will be granted access:')
     for team in customer_teams:
         logging.info(f'\t{team}')
-    logging.info()
+    logging.info('')
 
     if force:
         logging.warn('--force flag was passed in. Skipping prompt.')
