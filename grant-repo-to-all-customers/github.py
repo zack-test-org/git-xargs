@@ -32,16 +32,28 @@ class GithubApiClient:
     def get(self, url, *args, **kwargs):
         if not url.startswith(self._rest_api_base_url):
             url = self._rest_api_base_url + url
+        if 'headers' in kwargs:
+            kwargs['headers'] = {**self._api_headers, **kwargs['headers']}
+        else:
+            kwargs['headers'] = self._api_headers
         return self._rate_limit_aware_request(lambda: requests.get(url, *args, **kwargs))
 
     def put(self, url, *args, **kwargs):
         if not url.startswith(self._rest_api_base_url):
             url = self._rest_api_base_url + url
+        if 'headers' in kwargs:
+            kwargs['headers'] = {**self._api_headers, **kwargs['headers']}
+        else:
+            kwargs['headers'] = self._api_headers
         return self._rate_limit_aware_request(lambda: requests.put(url, *args, **kwargs))
 
     def post(self, url, *args, **kwargs):
         if not url.startswith(self._rest_api_base_url):
             url = self._rest_api_base_url + url
+        if 'headers' in kwargs:
+            kwargs['headers'] = {**self._api_headers, **kwargs['headers']}
+        else:
+            kwargs['headers'] = self._api_headers
         return self._rate_limit_aware_request(lambda: requests.post(url, *args, **kwargs))
 
     def _rate_limit_aware_request(self, request_func):
