@@ -381,6 +381,38 @@ def disable_guardduty(regions_with_guardduty):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# HELPER FUNCTIONS TO PROCESS SECURITYHUB
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def get_regions_with_securityhub():
+    """ Look up all the AWS regions that have SecurityHub enabled. """
+    ec2 = boto3.client('ec2', 'us-east-1')
+    enabled_regions = [region['RegionName'] for region in ec2.describe_regions().get('Regions', [])]
+    regions_with_securityhub = []
+
+    for region in enabled_regions:
+        print(f'checking region {region}')
+        securityhub = boto3.client('securityhub', region)
+
+        try:
+            securityhub.describe_hub()
+            regions_with_securityhub.append(region)
+        except securityhub.exceptions.InvalidAccessException:
+            # This means security hub is not enabled
+            continue
+    return regions_with_securityhub
+
+
+def disable_securityhub(regions_with_securityhub):
+    """ Given the output of get_regions_with_securityhub, go through each region and disable securityhub. """
+    for region in regions_with_securityhub:
+        print(f'disabling securityhub in region {region}')
+        securityhub = boto3.client('securityhub', region)
+        securityhub.disable_security_hub()
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 # GENERAL HELPER FUNCTIONS
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -645,6 +677,9 @@ def run_roles(dry=True):
     """
     roles = [role for role in get_all_roles() if want_role(role)]
     print('Found {} roles'.format(len(roles)))
+    if len(roles) == 0:
+        return
+
     print('Last role created {}'.format(max(role['CreateDate'] for role in roles).isoformat()))
     roles.sort(key=lambda p: p['CreateDate'], reverse=True)
     print(
@@ -778,6 +813,30 @@ def run_guardduty(dry=True):
     disable_guardduty(regions_with_guardduty)
 
 
+def run_securityhub(dry=True):
+    """Run the garbage collection routine for SecurityHub.
+
+    This will:
+    - Scan all enabled regions of the account and find those that have SecurityHub enabled
+    - List out all the regions it found
+    - If in "wet" mode, disable SecurityHub in each region it found.
+    """
+    regions_with_securityhub = get_regions_with_securityhub()
+    num_regions = len(regions_with_securityhub)
+    print(f'Found {num_regions} regions with SecurityHub')
+    if num_regions == 0:
+        return
+
+    for region in regions_with_securityhub:
+        print(f'\t{region}')
+
+    if dry:
+        return
+
+    input(f'Will disable SecurityHub in {num_regions} regions. [Ctrl+C] to cancel, or [ENTER] to proceed.')
+    disable_securityhub(regions_with_securityhub)
+
+
 def parse_args():
     """Parse command line args"""
     parser = argparse.ArgumentParser(description='This script garbage collects test IAM resources and S3 Buckets.')
@@ -799,6 +858,7 @@ def main():
     run_roles(dry)
     run_config(dry)
     run_guardduty(dry)
+    run_securityhub(dry)
 
 
 if __name__ == '__main__':
