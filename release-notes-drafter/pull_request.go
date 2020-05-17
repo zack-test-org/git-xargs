@@ -61,11 +61,7 @@ func getDescription(pullRequest *github.PullRequest) string {
 
 // getContributor will take a pull request object and find the contributor to thank.
 func getContributor(pullRequest *github.PullRequest) string {
-	user := pullRequest.GetUser()
-	if user == nil {
-		return ""
-	}
-	return user.GetLogin()
+	return pullRequest.GetUser().GetLogin()
 }
 
 // getLink will take a pull request object and return the URL to it.
