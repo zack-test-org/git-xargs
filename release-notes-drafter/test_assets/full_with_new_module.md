@@ -16,14 +16,14 @@
 
 - `kubergrunt`
 - `eks-cluster`
-- `another-module`
 - `new-module`
+- `another-module`
 <!-- RELEASE_NOTES_DRAFTER_MARKER_MODULES_AFFECTED_NEXT -->
 
 
 ## Description
 
-<!-- A description of the changes made in this release. --> 
+<!-- A description of the changes made in this release. -->
 
 Description preamble text.
 
@@ -38,5 +38,3 @@ Description preamble text.
 
 - [PR](https://github.com/gruntwork-io/package-k8s)
 <!-- RELEASE_NOTES_DRAFTER_MARKER_RELATED_LINKS_NEXT -->
-
-

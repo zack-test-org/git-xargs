@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v31/github"
 	"github.com/gruntwork-io/gruntwork-cli/entrypoint"
 	"github.com/gruntwork-io/gruntwork-cli/errors"
 	"github.com/gruntwork-io/gruntwork-cli/logging"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v31/github"
 )
 
 // getModulesAffected will process the diff of the pull request and look for updates to modules, extracting them as
