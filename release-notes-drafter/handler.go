@@ -103,6 +103,11 @@ func processPullRequestMerged(logger *logrus.Entry, event *github.PullRequestEve
 	if err != nil {
 		return err
 	}
+	contributor := getContributor(pullRequest)
+	draftBody, err = addContributor(draftBody, contributor)
+	if err != nil {
+		return err
+	}
 	link := getLink(pullRequest)
 	draftBody, err = addRelatedLink(draftBody, link)
 	if err != nil {

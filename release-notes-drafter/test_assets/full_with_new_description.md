@@ -31,6 +31,17 @@ Description preamble text.
 <!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->
 
 
+## Special thanks
+
+<!-- Usernames of users that contributed to this release, if the contribution was external to Gruntwork. -->
+TODO: remove gruntwork users and reword text
+
+Special thanks to the following users for their contribution!
+
+- @yorinasub17
+<!-- RELEASE_NOTES_DRAFTER_MARKER_CONTRIBUTORS_NEXT -->
+
+
 ## Related links
 
 <!-- Links to each PR or issue that are being addressed in this release. The drafter will autoinclude each merged PR. -->

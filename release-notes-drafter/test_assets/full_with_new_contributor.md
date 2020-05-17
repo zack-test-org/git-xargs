@@ -16,8 +16,6 @@
 
 - `kubergrunt`
 - `eks-cluster`
-- `new-module`
-- `another-module`
 <!-- RELEASE_NOTES_DRAFTER_MARKER_MODULES_AFFECTED_NEXT -->
 
 
@@ -40,6 +38,7 @@ TODO: remove gruntwork users and reword text
 Special thanks to the following users for their contribution!
 
 - @yorinasub17
+- @grunty
 <!-- RELEASE_NOTES_DRAFTER_MARKER_CONTRIBUTORS_NEXT -->
 
 

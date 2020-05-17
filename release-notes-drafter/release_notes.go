@@ -12,6 +12,7 @@ import (
 const (
 	ModulesAffectedMarker = "<!-- RELEASE_NOTES_DRAFTER_MARKER_MODULES_AFFECTED_NEXT -->"
 	DescriptionMarker     = "<!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->"
+	ContributorsMarker    = "<!-- RELEASE_NOTES_DRAFTER_MARKER_CONTRIBUTORS_NEXT -->"
 	RelatedLinksMarker    = "<!-- RELEASE_NOTES_DRAFTER_MARKER_RELATED_LINKS_NEXT -->"
 )
 
@@ -52,6 +53,12 @@ func addDescription(releaseNoteBody string, description string) (string, error) 
 // it in verbatim as a list item.
 func addRelatedLink(releaseNoteBody string, relatedLink string) (string, error) {
 	return findMarkerAndInsertLine(releaseNoteBody, RelatedLinksMarker, fmt.Sprintf("- %s", relatedLink))
+}
+
+// addContributor will search the release note body for the marker where the contributor username should be inserted,
+// and inserts it in verbatim as a list item.
+func addContributor(releaseNoteBody string, contributorUsername string) (string, error) {
+	return findMarkerAndInsertLine(releaseNoteBody, ContributorsMarker, fmt.Sprintf("- @%s", contributorUsername))
 }
 
 // findMarkerAndInsertLine will insert a new line where the given text marker is.
@@ -120,6 +127,16 @@ const ReleaseNoteTemplate = `<!--
 <!-- A description of the changes made in this release. Be sure to update any TODOs. -->
 
 <!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->
+
+
+## Special thanks
+
+<!-- Usernames of users that contributed to this release, if the contribution was external to Gruntwork. -->
+TODO: remove gruntwork users and reword text
+
+Special thanks to the following users for their contribution!
+
+<!-- RELEASE_NOTES_DRAFTER_MARKER_CONTRIBUTORS_NEXT -->
 
 
 ## Related links
