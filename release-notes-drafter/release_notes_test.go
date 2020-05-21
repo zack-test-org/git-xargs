@@ -43,6 +43,15 @@ func TestAddRelatedLink(t *testing.T) {
 	assert.Equal(t, releaseNote, readFileAsString(t, "test_assets/full_with_new_link.md"))
 }
 
+func TestAddContributor(t *testing.T) {
+	t.Parallel()
+
+	fullNote := readFileAsString(t, "test_assets/full.md")
+	releaseNote, err := addContributor(fullNote, "grunty")
+	assert.NoError(t, err)
+	assert.Equal(t, releaseNote, readFileAsString(t, "test_assets/full_with_new_contributor.md"))
+}
+
 func TestAddModulesAffectedDedups(t *testing.T) {
 	t.Parallel()
 

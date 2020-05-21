@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v31/github"
 	"github.com/gruntwork-io/gruntwork-cli/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"

@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v31/github"
 	"github.com/gruntwork-io/gruntwork-cli/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -57,11 +58,18 @@ func proxyRequestAsRequest(request events.APIGatewayProxyRequest) http.Request {
 // - Update the release note draft with the new description
 // Note: This assumes the passed in event is a pull request merged event
 func processPullRequestMerged(logger *logrus.Entry, event *github.PullRequestEvent) error {
-	logger.Infof("Processing pull request %s/%d merge", event.GetRepo().GetFullName(), event.GetNumber())
+	prInfo := fmt.Sprintf("%s/%d", event.GetRepo().GetFullName(), event.GetNumber())
+	logger.Infof("Processing pull request %s merge", prInfo)
 
 	// Assert that this is a pull request merge event
 	if event.GetAction() != "closed" || !event.GetPullRequest().GetMerged() {
 		return errors.WithStackTrace(IncorrectHandlerError{event.GetAction()})
+	}
+
+	// Check to see if the target is master. If not, ignore.
+	if !strings.HasSuffix(event.GetPullRequest().GetBase().GetLabel(), ":master") {
+		logger.Warnf("Ignoring pull request merge %s: base branch is not master", prInfo)
+		return nil
 	}
 
 	if ProjectLockTableName != "" {
@@ -100,6 +108,11 @@ func processPullRequestMerged(logger *logrus.Entry, event *github.PullRequestEve
 	}
 	description := getDescription(pullRequest)
 	draftBody, err = addDescription(draftBody, description)
+	if err != nil {
+		return err
+	}
+	contributor := getContributor(pullRequest)
+	draftBody, err = addContributor(draftBody, contributor)
 	if err != nil {
 		return err
 	}

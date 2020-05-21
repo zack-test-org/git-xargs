@@ -22,6 +22,10 @@ The draft is based on the Gruntwork release notes style guide. Specifically, it 
   -- TODO, containing the PR title.
   -->
 
+## Special Thanks
+
+<!-- Contains the list of users who contributed to this release. Note that it include Gruntwork engineers as well. -->
+
 ## References
 
 <!-- Contains a list of links to the PRs -->

@@ -12,6 +12,7 @@ import (
 const (
 	ModulesAffectedMarker = "<!-- RELEASE_NOTES_DRAFTER_MARKER_MODULES_AFFECTED_NEXT -->"
 	DescriptionMarker     = "<!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->"
+	ContributorsMarker    = "<!-- RELEASE_NOTES_DRAFTER_MARKER_CONTRIBUTORS_NEXT -->"
 	RelatedLinksMarker    = "<!-- RELEASE_NOTES_DRAFTER_MARKER_RELATED_LINKS_NEXT -->"
 )
 
@@ -32,40 +33,42 @@ func findMarker(bodyLines []string, marker string) int {
 // addModulesAffected will search the release note body for the marker where the next modules affected should be
 // inserted, and insert them in as inline code list items.
 func addModulesAffected(releaseNoteBody string, modulesAffected []string) (string, error) {
-	bodyLines := strings.Split(releaseNoteBody, "\n")
-	modulesAffectedMarkerIdx := findMarker(bodyLines, ModulesAffectedMarker)
-	if modulesAffectedMarkerIdx == -1 {
-		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{ModulesAffectedMarker, releaseNoteBody})
-	}
+	var err error
 	for _, newModuleAffected := range modulesAffected {
-		bodyLines = insertLine(bodyLines, modulesAffectedMarkerIdx, fmt.Sprintf("- `%s`", newModuleAffected))
+		releaseNoteBody, err = findMarkerAndInsertLine(releaseNoteBody, ModulesAffectedMarker, fmt.Sprintf("- `%s`", newModuleAffected))
+		if err != nil {
+			return releaseNoteBody, err
+		}
 	}
-	bodyLines = dedupLines(bodyLines, DedupWhitelist)
-	return strings.Join(bodyLines, "\n"), nil
+	return releaseNoteBody, nil
 }
 
 // addDescription will search the release note body for the marker where the next description should be inserted, and
 // inserts it in verbatim as a list item.
 func addDescription(releaseNoteBody string, description string) (string, error) {
-	bodyLines := strings.Split(releaseNoteBody, "\n")
-	descriptionMarkerIdx := findMarker(bodyLines, DescriptionMarker)
-	if descriptionMarkerIdx == -1 {
-		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{DescriptionMarker, releaseNoteBody})
-	}
-	bodyLines = insertLine(bodyLines, descriptionMarkerIdx, fmt.Sprintf("- %s", description))
-	bodyLines = dedupLines(bodyLines, DedupWhitelist)
-	return strings.Join(bodyLines, "\n"), nil
+	return findMarkerAndInsertLine(releaseNoteBody, DescriptionMarker, fmt.Sprintf("- %s", description))
 }
 
 // addRelatedLink will search the release note body for the marker where the next link should be inserted, and inserts
 // it in verbatim as a list item.
 func addRelatedLink(releaseNoteBody string, relatedLink string) (string, error) {
+	return findMarkerAndInsertLine(releaseNoteBody, RelatedLinksMarker, fmt.Sprintf("- %s", relatedLink))
+}
+
+// addContributor will search the release note body for the marker where the contributor username should be inserted,
+// and inserts it in verbatim as a list item.
+func addContributor(releaseNoteBody string, contributorUsername string) (string, error) {
+	return findMarkerAndInsertLine(releaseNoteBody, ContributorsMarker, fmt.Sprintf("- @%s", contributorUsername))
+}
+
+// findMarkerAndInsertLine will insert a new line where the given text marker is.
+func findMarkerAndInsertLine(releaseNoteBody string, marker string, line string) (string, error) {
 	bodyLines := strings.Split(releaseNoteBody, "\n")
-	relatedLinkMarkerIdx := findMarker(bodyLines, RelatedLinksMarker)
-	if relatedLinkMarkerIdx == -1 {
-		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{RelatedLinksMarker, releaseNoteBody})
+	markerIdx := findMarker(bodyLines, marker)
+	if markerIdx == -1 {
+		return releaseNoteBody, errors.WithStackTrace(MissingMarkerError{marker, releaseNoteBody})
 	}
-	bodyLines = insertLine(bodyLines, relatedLinkMarkerIdx, fmt.Sprintf("- %s", relatedLink))
+	bodyLines = insertLine(bodyLines, markerIdx, line)
 	bodyLines = dedupLines(bodyLines, DedupWhitelist)
 	return strings.Join(bodyLines, "\n"), nil
 }
@@ -121,9 +124,19 @@ const ReleaseNoteTemplate = `<!--
 
 ## Description
 
-<!-- A description of the changes made in this release. Be sure to update any TODOs. --> 
+<!-- A description of the changes made in this release. Be sure to update any TODOs. -->
 
 <!-- RELEASE_NOTES_DRAFTER_MARKER_DESCRIPTIONS_NEXT -->
+
+
+## Special thanks
+
+<!-- Usernames of users that contributed to this release, if the contribution was external to Gruntwork. -->
+TODO: remove gruntwork users and reword text
+
+Special thanks to the following users for their contribution!
+
+<!-- RELEASE_NOTES_DRAFTER_MARKER_CONTRIBUTORS_NEXT -->
 
 
 ## Related links

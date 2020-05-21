@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v31/github"
 )
 
 // getModulesAffected will process the diff of the pull request and look for updates to modules, extracting them as
@@ -57,6 +57,11 @@ func getModuleString(path string) string {
 // getDescription will take a pull request object and construct a place holder description string.
 func getDescription(pullRequest *github.PullRequest) string {
 	return fmt.Sprintf("TODO: %s", pullRequest.GetTitle())
+}
+
+// getContributor will take a pull request object and find the contributor to thank.
+func getContributor(pullRequest *github.PullRequest) string {
+	return pullRequest.GetUser().GetLogin()
 }
 
 // getLink will take a pull request object and return the URL to it.
