@@ -5,6 +5,8 @@ import os
 import re
 
 github_token = os.environ['GITHUB_OAUTH_TOKEN']
+github_api_next_regex = re.compile('<(.+?)>; rel="next"')
+expected_admins = {'brikis98', 'josh-padnick'}
 
 
 def make_github_request(path=None, url=None, expected_status=200):
@@ -44,9 +46,6 @@ def make_github_request_all_pages(path=None, url=None, body_so_far=[]):
         return body_so_far
 
 
-github_api_next_regex = re.compile('<(.+?)>; rel="next"')
-
-
 def get_next_link(headers):
     for header in headers:
         if header[0] == "Link":
@@ -70,30 +69,61 @@ def get_users_with_admin_permissions(repo):
 
 
 def get_all_repos():
-    return make_github_request_all_pages('/orgs/gruntwork-io/repos?per_page=100')
-
-
-if __name__ == '__main__':
     print('Fetching list of repos in gruntwork-io org...')
-    repos = get_all_repos()
-    print(f'Found {len(repos)} repositories.')
+    all_repos = make_github_request_all_pages('/orgs/gruntwork-io/repos?per_page=100')
+    print(f'Found {len(all_repos)} repositories.')
+    return all_repos
 
-    unexpected_repo_admins = {}
+
+def get_all_admins(repos):
+    all_admins = {}
+    hit_errors = False
+
     for repo in repos:
-        repo_name = repo['name']
-        print(f'Looking up users for repo {repo_name}...')
-        admins_for_repo = get_users_with_admin_permissions(repo_name)
-        print(f'Admins for {repo_name}: {set(admins_for_repo)}')
+        try:
+            repo_name = repo['name']
+            print(f'Looking up users for repo {repo_name}...')
+            admins_for_repo = set(get_users_with_admin_permissions(repo_name))
+            print(f'Admins for {repo_name}: {admins_for_repo}')
+            all_admins[repo_name] = admins_for_repo
+        except Exception as err:
+            print(f'Caught an error while processing repo {repo}: {err}')
+            hit_errors = True
 
-        unexpected_admins_for_repo = [admin for admin in admins_for_repo if admin not in ['brikis98', 'josh-padnick']]
-        if unexpected_admins_for_repo:
-            unexpected_repo_admins[repo_name] = unexpected_admins_for_repo
+    return all_admins, hit_errors
 
+
+def get_unexpected_admins(all_admins):
+    all_unexpected_admins = {}
+
+    for repo, admins in all_admins.items():
+        unexpected_admins = expected_admins - admins
+        if unexpected_admins:
+            all_unexpected_admins[repo] = unexpected_admins
+
+    return all_unexpected_admins
+
+
+def print_results(all_unexpected_admins, hit_errors):
     print('\n\n======= RESULTS =======\n')
 
-    if unexpected_repo_admins:
+    if all_unexpected_admins:
         print('Unexpected admins found!')
-        for repo, admins in unexpected_repo_admins:
+        for repo, admins in all_unexpected_admins.items():
             print(f'{repo}: {admins}')
     else:
         print('No unexpected admins found!')
+
+    if hit_errors:
+        print('\nWARNING: There were errors during the search. See the logs above!')
+
+
+def print_unexpected_admins():
+    all_repos = get_all_repos()
+    all_admins, hit_errors = get_all_admins(all_repos)
+    all_unexpected_admins = get_unexpected_admins(all_admins)
+    print_results(all_unexpected_admins, hit_errors)
+
+
+if __name__ == '__main__':
+    print_unexpected_admins()
