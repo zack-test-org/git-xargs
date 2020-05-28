@@ -35,15 +35,15 @@ def make_github_request(path=None, url=None, expected_status=200):
     return json_body, headers
 
 
-def make_github_request_all_pages(path=None, url=None, body_so_far=[]):
+def make_github_request_all_pages(path=None, url=None, body_so_far=None):
     body, headers = make_github_request(path=path, url=url)
-    body_so_far += body
+    result = body_so_far + body if body_so_far else body
 
     next_link = get_next_link(headers)
     if next_link:
-        return make_github_request_all_pages(path=None, url=next_link, body_so_far=body_so_far)
+        return make_github_request_all_pages(path=None, url=next_link, body_so_far=result)
     else:
-        return body_so_far
+        return result
 
 
 def get_next_link(headers):
@@ -58,9 +58,7 @@ def get_next_link(headers):
 
 
 def is_collaborator_admin(collaborator):
-    # For some reason, the collaborators API returns not only users, but also other repos... And those repos don't have
-    # a 'login' field... So we ignore them here.
-    return collaborator.get('permissions', {}).get('admin', False) and collaborator.get('login', False)
+    return collaborator.get('permissions', {}).get('admin', False)
 
 
 def get_users_with_admin_permissions(repo):
@@ -79,10 +77,10 @@ def get_all_admins(repos):
     all_admins = {}
     hit_errors = False
 
-    for repo in repos:
+    for index, repo in enumerate(repos):
         try:
             repo_name = repo['name']
-            print(f'Looking up users for repo {repo_name}...')
+            print(f'Processing repo {index + 1} / {len(repos)}: Looking up users for repo {repo_name}...')
             admins_for_repo = set(get_users_with_admin_permissions(repo_name))
             print(f'Admins for {repo_name}: {admins_for_repo}')
             all_admins[repo_name] = admins_for_repo
@@ -97,7 +95,7 @@ def get_unexpected_admins(all_admins):
     all_unexpected_admins = {}
 
     for repo, admins in all_admins.items():
-        unexpected_admins = expected_admins - admins
+        unexpected_admins = admins - expected_admins
         if unexpected_admins:
             all_unexpected_admins[repo] = unexpected_admins
 

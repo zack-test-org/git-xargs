@@ -26,7 +26,7 @@ Then, run the script:
 python find-github-admin-users.py
 ```
 
-Go get a cup of coffee, as this script takes a fairly long time to run (see [how it works](#how-it-works)). At the end,
+Go get a cup of coffee, as this script takes ~25 min to run (see [how it works](#how-it-works)). At the end,
 it'll print out any repos that have unexpected admin users and who those users are.
 
 
