@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gruntwork-io/gruntwork-cli/errors"
 	"github.com/jedib0t/go-pretty/table"
@@ -26,6 +27,35 @@ const (
 	// This is the spreadsheet sheet where the user information is recorded for each registered customer.
 	usersSheetName       = "Users"
 	usersSheetLastColumn = "L"
+
+	// We start with the 2nd row of the first column when scanning for data to avoid the header row.
+	startOfData = "A2"
+)
+
+// The following enum iotas represent the column organization of the company spreadsheet. Whenever we change the column
+// representations, this enum should be updated.
+// This should be exactly in order of the column headings in the spreadsheet. That is, the first defined const is the
+// first column, the second const is the next column, and so on.
+const (
+	companySheetName = iota
+	companySheetDateSubscribed
+	companySheetMaxUsers
+	companySheetSubscriptionType
+	companySheetHasProSupport
+	companySheetIsActive
+)
+
+// The following enum iotas represent the column organization of the user spreadsheet. Whenever we change the column
+// representations, this enum should be updated.
+// This should be exactly in order of the column headings in the spreadsheet. That is, the first defined const is the
+// first column, the second const is the next column, and so on.
+const (
+	userSheetFirstName = iota
+	userSheetLastName
+	userSheetEmail
+	userSheetGithubID
+	userSheetCompany
+	userSheetIsActive
 )
 
 type company struct {
@@ -132,10 +162,14 @@ func printCompanyInfo(selectedCompany company, activeUsers []user, inactiveUsers
 	inactiveTabWrt.Render()
 }
 
+func checkSheetBool(data string) bool {
+	return strings.ToLower(data) == "yes"
+}
+
 func getUsersForCompany(client *sheets.Service, companyName string) ([]user, []user, error) {
 	logger := GetProjectLogger()
 
-	readRange := fmt.Sprintf("%s!A2:%s", usersSheetName, usersSheetLastColumn)
+	readRange := fmt.Sprintf("%s!%s:%s", usersSheetName, startOfData, usersSheetLastColumn)
 	resp, err := client.Spreadsheets.Values.Get(gruntworkCustomersSpreadsheetID, readRange).Do()
 	if err != nil {
 		return nil, nil, errors.WithStackTrace(err)
@@ -144,18 +178,21 @@ func getUsersForCompany(client *sheets.Service, companyName string) ([]user, []u
 	activeUsers := []user{}
 	inactiveUsers := []user{}
 	for i, row := range resp.Values {
+		// We need all the data about the user to proceed. Some rows do not contain all the data because it was
+		// partially filled, skipped, or is in progress of being edited, so we do a quick check to make sure all the
+		// data we expect exists.
 		if len(row) < 5 {
 			// Row count is i+2 to align with spreadsheet row count. Spreadsheet row count starts at 1 and we ignored
 			// the header, so +2.
 			logger.Warnf("Skipping malformed row %d: %v", i+2, row)
-		} else if row[4].(string) == companyName {
+		} else if row[userSheetCompany].(string) == companyName {
 			authorizedUser := user{
-				firstName: row[0].(string),
-				lastName:  row[1].(string),
-				email:     row[2].(string),
-				githubID:  row[3].(string),
+				firstName: row[userSheetFirstName].(string),
+				lastName:  row[userSheetLastName].(string),
+				email:     row[userSheetEmail].(string),
+				githubID:  row[userSheetGithubID].(string),
 			}
-			if row[5].(string) == "Yes" {
+			if checkSheetBool(row[userSheetIsActive].(string)) {
 				activeUsers = append(activeUsers, authorizedUser)
 			} else {
 				inactiveUsers = append(inactiveUsers, authorizedUser)
@@ -193,7 +230,7 @@ func selectCompany(companies []company) (*company, error) {
 func getCompanies(client *sheets.Service) ([]company, error) {
 	logger := GetProjectLogger()
 
-	readRange := fmt.Sprintf("%s!A2:%s", companiesSheetName, companiesSheetLastColumn)
+	readRange := fmt.Sprintf("%s!%s:%s", companiesSheetName, startOfData, companiesSheetLastColumn)
 	resp, err := client.Spreadsheets.Values.Get(gruntworkCustomersSpreadsheetID, readRange).Do()
 	if err != nil {
 		return nil, errors.WithStackTrace(err)
@@ -201,23 +238,24 @@ func getCompanies(client *sheets.Service) ([]company, error) {
 
 	companies := []company{}
 	for _, row := range resp.Values {
-		if row[5].(string) == "Yes" {
-			maxUsers, err := strconv.Atoi(row[2].(string))
+		companyName := row[companySheetName].(string)
+		if checkSheetBool(row[companySheetIsActive].(string)) {
+			maxUsers, err := strconv.Atoi(row[companySheetMaxUsers].(string))
 			if err != nil {
 				return nil, errors.WithStackTrace(err)
 			}
 			companies = append(
 				companies,
 				company{
-					name:             row[0].(string),
+					name:             companyName,
 					maxUsers:         maxUsers,
-					dateSubscribed:   row[1].(string),
-					subscriptionType: row[3].(string),
-					hasProSupport:    row[4].(string) == "Yes",
+					dateSubscribed:   row[companySheetDateSubscribed].(string),
+					subscriptionType: row[companySheetSubscriptionType].(string),
+					hasProSupport:    checkSheetBool(row[companySheetHasProSupport].(string)),
 				},
 			)
 		} else {
-			logger.Warnf("Skipping company %s : Not active", row[0].(string))
+			logger.Warnf("Skipping company %s : Not active", companyName)
 		}
 	}
 
