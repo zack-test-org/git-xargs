@@ -64,7 +64,7 @@ func lookupUsers(client *sheets.Service) error {
 		return err
 	}
 	if selected == nil {
-		logger.Error("Selected company is nil! This should never happen.")
+		logger.Error("Selected company is nil! This should never happen. There's probably a bug in this code!")
 		return fmt.Errorf("Impossible error")
 	}
 
