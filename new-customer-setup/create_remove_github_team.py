@@ -36,7 +36,7 @@ aws_repos = [
     'gruntwork-io/module-load-balancer',
     'gruntwork-io/module-security',
     'gruntwork-io/module-server',
-    'gruntwork-io/module-vpc',
+    'gruntwork-io/terraform-aws-vpc',
     'gruntwork-io/package-beanstalk',
     'gruntwork-io/package-elk',
     'gruntwork-io/package-kafka',
