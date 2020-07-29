@@ -27,7 +27,7 @@ aws_repos = [
     'gruntwork-io/intro-to-terraform',
     'gruntwork-io/kubergrunt',
     'gruntwork-io/module-asg',
-    'gruntwork-io/module-aws-monitoring',
+    'gruntwork-io/terraform-aws-monitoring',
     'gruntwork-io/module-cache',
     'gruntwork-io/module-ci',
     'gruntwork-io/module-ci-pipeline-example',
