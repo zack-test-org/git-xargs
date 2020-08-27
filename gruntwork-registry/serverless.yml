@@ -1,0 +1,55 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: gruntwork-registry
+
+plugins:
+  - serverless-offline
+  - serverless-python-requirements
+
+provider:
+  name: aws
+  runtime: python3.8
+  stage: default
+  region: eu-west-1
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "secretsmanager:GetSecretValue"
+      Resource:
+        - "arn:aws:secretsmanager:eu-west-1:738755648600:secret:GruntworkCiMachineUserPersonalAccessToken-Vim5nO"
+
+functions:
+  service_discovery:
+    handler: src.handler.get_terraform_service_discovery_json
+    memorySize: 512
+    timeout: 10
+    events:
+      - http:
+          path: .well-known/terraform.json
+          method: get
+
+  versions_for_module:
+    handler: src.handler.get_versions_for_module
+    memorySize: 512
+    timeout: 10
+    events:
+      - http:
+          path: v1/modules/gruntwork-io/{proxy+}
+          method: get
+
+package:
+  exclude:
+    - node_modules/**
+    - .idea/**
+    - .requirements/**
+    - src/__pycache__/**
+    - env/**
+    - README.md
+    - package.json
+    - package-lock.json
+    - requirements.txt

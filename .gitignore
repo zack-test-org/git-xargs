@@ -23,3 +23,23 @@ vendor
 
 # Vim
 *.sw[p|o|n]
+
+# Serverless Framework and serverless Python apps
+.Python
+env/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+.serverless
+node_modules/
+__pycache__/
