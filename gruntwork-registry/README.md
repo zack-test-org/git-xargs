@@ -41,10 +41,10 @@ This app is built using the [Serverless Framework](https://www.serverless.com/).
 
 ## Deploy
 
-We deploy this app officially to the Gruntwork websites account (see [Gruntwork AWS 
+We deploy this app officially to the Gruntwork sandbox account (see [Gruntwork AWS 
 accounts](https://www.notion.so/AWS-Accounts-d936fc8f10674c9aafef34c4de87f2f2)). 
 
-1. Authenticate to the websites account.
+1. Authenticate to the sandbox account.
 
 1. Deploy:
 
@@ -62,5 +62,7 @@ private repos.
 - In dev, you export your own personal access token using the `GITHUB_OAUTH_TOKEN` environment variable.
 
 - In AWS, someone manually needs to put a machine user's personal access token into AWS Secrets Manager into the same
-  region as the app (this has already been done in the websites account). See [`serverless.yml`](serverless.yml) for 
-  the AWS region and Secrets Manager ID the app is using. 
+  region as the app (this has already been done in the sandbox account). See [`serverless.yml`](serverless.yml) for 
+  the AWS region and [`handler.py`](./src/handler.py) for the Secrets Manager ID. Note that 
+  [`serverless.yml`](serverless.yml) also attaches permissions to the IAM role to read that secret from Secrets Manager.
+    
