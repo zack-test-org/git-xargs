@@ -25,7 +25,7 @@ provider:
 
 functions:
   service_discovery:
-    handler: src/handler.get_terraform_service_discovery_json
+    handler: src.handler.get_terraform_service_discovery_json
     memorySize: 512
     timeout: 10
     events:
@@ -34,7 +34,7 @@ functions:
           method: get
 
   versions_for_module:
-    handler: src/handler.get_versions_for_module
+    handler: src.handler.get_versions_for_module
     memorySize: 512
     timeout: 10
     events:
@@ -47,6 +47,7 @@ package:
     - node_modules/**
     - .idea/**
     - .requirements/**
+    - src/__pycache__/**
     - env/**
     - README.md
     - package.json
