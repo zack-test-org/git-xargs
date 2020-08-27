@@ -16,12 +16,12 @@ provider:
   runtime: python3.8
   stage: default
   region: eu-west-1
-
-  environment:
-    # In local dev, we read the token from env vars
-    GITHUB_OAUTH_TOKEN: ${env:GITHUB_OAUTH_TOKEN}
-    # In AWS, we read it from AWS Secrets Manager. This must be put into Secrets Manager manually by someone.
-    GITHUB_OAUTH_TOKEN_SECRETS_MANAGER_ID: GruntworkCiMachineUserPersonalAccessToken
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "secretsmanager:GetSecretValue"
+      Resource:
+        - "arn:aws:secretsmanager:eu-west-1:738755648600:secret:GruntworkCiMachineUserPersonalAccessToken-Vim5nO"
 
 functions:
   service_discovery:
@@ -53,22 +53,6 @@ package:
     - package.json
     - package-lock.json
     - requirements.txt
-
-# you can add statements to the Lambda function's IAM Role here
-#  iamRoleStatements:
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:ListBucket"
-#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:PutObject"
-#      Resource:
-#        Fn::Join:
-#          - ""
-#          - - "arn:aws:s3:::"
-#            - "Ref" : "ServerlessDeploymentBucket"
-#            - "/*"
 
 # you can add packaging information here
 #package:

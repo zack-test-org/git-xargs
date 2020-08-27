@@ -35,7 +35,10 @@ def format_response(body, status_code=200):
 def get_github_oauth_token(aws_region, secret_name):
     token = os.environ.get('GITHUB_OAUTH_TOKEN')
     if token:
+        print(f'Using GitHub token from environment variable GITHUB_OAUTH_TOKEN')
         return token
+
+    print(f'Did not find GitHub token in environment variable GITHUB_OAUTH_TOKEN, so looking it up in AWS Secrets Manager in region ${aws_region} with ID ${secret_name}')
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
@@ -48,4 +51,4 @@ def get_github_oauth_token(aws_region, secret_name):
         SecretId=secret_name
     )
 
-    return response.SecretString
+    return response['SecretString']

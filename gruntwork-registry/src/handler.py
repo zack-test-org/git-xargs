@@ -3,7 +3,10 @@ import re
 import os
 from . import helpers
 
-github_token = helpers.get_github_oauth_token(os.environ['AWS_REGION'], os.environ['GITHUB_OAUTH_TOKEN_SECRETS_MANAGER_ID'])
+aws_region = os.environ['AWS_REGION']
+github_oauth_token_secrets_manager_id = 'GruntworkCiMachineUserPersonalAccessToken'
+
+github_token = helpers.get_github_oauth_token(aws_region, github_oauth_token_secrets_manager_id)
 
 
 def get_terraform_service_discovery_json(event, context):
