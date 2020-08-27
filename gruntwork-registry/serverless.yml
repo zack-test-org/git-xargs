@@ -1,0 +1,79 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: gruntwork-registry
+
+plugins:
+  - serverless-offline
+  - serverless-python-requirements
+
+provider:
+  name: aws
+  runtime: python3.8
+  stage: default
+  region: eu-west-1
+
+  environment:
+    # In local dev, we read the token from env vars
+    GITHUB_OAUTH_TOKEN: ${env:GITHUB_OAUTH_TOKEN}
+    # In AWS, we read it from AWS Secrets Manager. This must be put into Secrets Manager manually by someone.
+    GITHUB_OAUTH_TOKEN_SECRETS_MANAGER_ID: GruntworkCiMachineUserPersonalAccessToken
+
+functions:
+  service_discovery:
+    handler: src/handler.get_terraform_service_discovery_json
+    memorySize: 512
+    timeout: 10
+    events:
+      - http:
+          path: .well-known/terraform.json
+          method: get
+
+  versions_for_module:
+    handler: src/handler.get_versions_for_module
+    memorySize: 512
+    timeout: 10
+    events:
+      - http:
+          path: v1/modules/gruntwork-io/{proxy+}
+          method: get
+
+package:
+  exclude:
+    - node_modules/**
+    - .idea/**
+    - .requirements/**
+    - env/**
+    - README.md
+    - package.json
+    - package-lock.json
+    - requirements.txt
+
+# you can add statements to the Lambda function's IAM Role here
+#  iamRoleStatements:
+#    - Effect: "Allow"
+#      Action:
+#        - "s3:ListBucket"
+#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
+#    - Effect: "Allow"
+#      Action:
+#        - "s3:PutObject"
+#      Resource:
+#        Fn::Join:
+#          - ""
+#          - - "arn:aws:s3:::"
+#            - "Ref" : "ServerlessDeploymentBucket"
+#            - "/*"
+
+# you can add packaging information here
+#package:
+#  include:
+#    - include-me.py
+#    - include-me-dir/**
+#  exclude:
+#    - exclude-me.py
+#    - exclude-me-dir/**

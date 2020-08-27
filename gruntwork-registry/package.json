@@ -1,0 +1,11 @@
+{
+  "name": "gruntwork-registry",
+  "version": "0.0.1",
+  "dependencies": {
+    "serverless-offline": "^6.7.0",
+    "serverless-python-requirements": "^5.1.0"
+  },
+  "devDependencies": {},
+  "author": "Gruntwork <gruntwork.io>",
+  "license": "Gruntwork Proprietary"
+}
