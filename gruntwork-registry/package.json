@@ -5,7 +5,9 @@
     "serverless-offline": "^6.7.0",
     "serverless-python-requirements": "^5.1.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "serverless-domain-manager": "^4.2.0"
+  },
   "author": "Gruntwork <gruntwork.io>",
   "license": "Gruntwork Proprietary"
 }

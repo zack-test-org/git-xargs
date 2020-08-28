@@ -10,6 +10,7 @@ service: gruntwork-registry
 plugins:
   - serverless-offline
   - serverless-python-requirements
+  - serverless-domain-manager
 
 provider:
   name: aws
@@ -22,6 +23,13 @@ provider:
         - "secretsmanager:GetSecretValue"
       Resource:
         - "arn:aws:secretsmanager:eu-west-1:738755648600:secret:GruntworkCiMachineUserPersonalAccessToken-Vim5nO"
+
+custom:
+  customDomain:
+    domainName: registry.gruntwork-sandbox.com
+    basePath: ''
+    stage: ${self:provider.stage}
+    createRoute53Record: true
 
 functions:
   service_discovery:
