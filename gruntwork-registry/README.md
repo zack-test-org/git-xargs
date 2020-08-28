@@ -51,7 +51,14 @@ accounts](https://www.notion.so/AWS-Accounts-d936fc8f10674c9aafef34c4de87f2f2)).
     ```bash
     serverless deploy
     ```           
-    
+
+1. This should deploy the app to AWS and configure it with the domain name `registry.gruntwork-sandbox.com`. You can 
+   try out various endpoints:     
+
+    1. Test the service discovery endpoint: https://registry.gruntwork-sandbox.com/.well-known/terraform.json        
+    1. Get all the available versions for `module-security`: https://registry.gruntwork-sandbox.com/v1/modules/gruntwork-io/module-security/aws
+
+
 
 
 ## Secrets management
