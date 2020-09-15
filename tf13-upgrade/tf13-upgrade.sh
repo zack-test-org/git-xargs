@@ -37,7 +37,7 @@ terraform_folders_str=$(git --git-dir "$working_dir/.git" ls-files *.tf | sed s,
 # Split a newline-separated string into an array: https://stackoverflow.com/a/24426608/483528
 IFS=$'\n' read -d '' -ra terraform_folders_arr < <(printf '%s\0' "$terraform_folders_str")
 
-required_version_regex='required_version = ">= 0.13"'
+required_version_regex='required_version[[:space:]]*=[[:space:]]*".*"'
 required_version_replacement_first_line="This module is now only being tested with Terraform 0.13.x. However, to make upgrading easier, we are setting"
 # Note that the backslashes and newlines here in the middle of the string below are intentional! That's because we use
 # this variable with sed, and on MacOS, sed does not support '\n' in replacement text, but a backslash followed by a
@@ -47,8 +47,9 @@ required_version_replacement="\\
   # 0.12.26 as the minimum version, as that version added support for required_providers with source URLs, making it\\
   # forwards compatible with 0.13.x code.\\
   required_version = \">= 0.12.26\""
+required_version_replacement_without_slashes="${required_version_replacement//\\/}"
 
-legacy_required_version_uses=()
+missing_required_version=()
 destroy_provisioner_uses=()
 
 for path in "${terraform_folders_arr[@]}"; do
@@ -58,7 +59,7 @@ for path in "${terraform_folders_arr[@]}"; do
 
   # Try to make this script idempotent by not re-upgrading code that has already been upgraded and has our comment in
   # it indicating that we've patched the versions.tf file.
-  if grep -q "$required_version_replacement_first_line" "$versions_file" > /dev/null 2>&1; then
+  if grep -q "$required_version_replacement_first_line" "$main_file" > /dev/null 2>&1; then
     echo "We've already upgraded the code in '$folder'. Will not upgrade again."
   else
     echo "Running terraform 0.13upgrade in '$folder'"
@@ -77,19 +78,21 @@ for path in "${terraform_folders_arr[@]}"; do
       exit "$exit_code"
     fi
 
-    if [[ ! -f "$versions_file" ]]; then
-      # This usually only happens in super simple Terraform examples that use no providers.
-      echo "The 0.13upgrade command did not create a versions.tf file. Creating one at '$versions_file'."
-      echo -e "terraform {\n  $required_version_regex\n}\n" > "$versions_file"
+    if [[ -f "$versions_file" ]]; then
+      # The way the 0.13upgrade command handles version upgrade is... quite poor. Instead of spending loads of time
+      # trying to clean it up, we just delete the versions.tf file, as it's not necessary. See the discussion at
+      # https://github.com/gruntwork-io/prototypes/pull/75#discussion_r488787369 for more context.
+      echo "Deleting the versions.tf file created by the 0.13upgrade command."
+      rm -f "$versions_file"
     fi
 
-    echo "Overwriting version constraint in '$versions_file' to support TF 0.12.x."
-    sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$versions_file"
+    echo "Overwriting version constraint in '$main_file' to support TF 0.12.x."
+    sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$main_file"
   fi
 
-  if grep -q "required_version" "$main_file" > /dev/null 2>&1; then
-    echo "[WARN] Found legacy usage of required_version in '$main_file'."
-    legacy_required_version_uses+=("$main_file")
+  if ! grep -q "$required_version_regex" "$main_file" > /dev/null 2>&1; then
+    echo "[WARN] Did not find required_version in '$main_file'."
+    missing_required_version+=("$main_file")
   fi
 
   if grep -q 'when[[:space:]]*=[[:space:]]*"\?destroy"\?' "$main_file" > /dev/null 2>&1; then
@@ -102,12 +105,12 @@ echo
 echo "Next steps:"
 echo
 
-if [[ -n "${legacy_required_version_uses[*]}" ]]; then
+if [[ -n "${missing_required_version[*]}" ]]; then
   echo '=== required_version usage ==='
   echo
-  echo "We now handle required_version in versions.tf, so you now need to remove any 'required_version' usage and related comments from the following files:"
+  echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {\n$required_version_replacement_without_slashes\n}\n"
   echo
-  for file in "${legacy_required_version_uses[@]}"; do
+  for file in "${missing_required_version[@]}"; do
     echo "- $file"
   done
   echo
