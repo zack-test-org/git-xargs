@@ -4,14 +4,29 @@ set -e
 
 working_dir="${1:-$(pwd)}"
 
-terraform_version=$(terraform version)
-terraform_version_regex="Terraform v0\.13\..+"
-
-if [[ "$terraform_version" =~ $terraform_version_regex ]]; then
-  echo "Detected Terraform version 0.13.x"
-else
-  echo "[ERROR] Expected Terraform version 0.13.x to be installed but found '$terraform_version'."
+if ! command -v "tfenv" > /dev/null; then
+  echo "[ERROR] This script requires that tfenv (https://github.com/tfutils/tfenv) is installed! Run: brew install tfenv."
   exit 1
+fi
+
+terraform_version_constraint="latest:^0.13"
+
+echo "Using tfenv to switch Terraform version to '$terraform_version_constraint'"
+set +e
+output=$(tfenv use "$terraform_version_constraint" 2>&1 | tee /dev/tty)
+exit_code="$?"
+set -e
+
+if [[ "$exit_code" -ne 0 ]]; then
+  if [[ "$output" == *"No installed versions of terraform matched"* ]]; then
+    echo "Looks like no Terraform version matching '$terraform_version_constraint' is installed. Using tfenv to install it."
+    tfenv install "$terraform_version_constraint"
+    echo "Using tfenv to switch Terraform version to '$terraform_version_constraint'"
+    tfenv use "$terraform_version_constraint"
+  else
+    echo "[ERROR] Expected 'tfenv use' to exit with status code 0 but got $exit_code. Log output is above."
+    exit 1
+  fi
 fi
 
 echo "Finding all folders with Terraform code in '$working_dir'"
