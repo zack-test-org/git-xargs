@@ -43,15 +43,27 @@ for folder in "${terraform_folders_arr[@]}"; do
     echo "We've already upgraded the code in '$folder'. Will not upgrade again."
   else
     echo "Running terraform 0.13upgrade in '$folder'"
-    terraform 0.13upgrade -yes "$folder"
 
-    # The 0.13upgrade command should have created this file
-    if [[ ! -f "$versions_file" ]]; then
-      echo "ERROR: Expected file '$versions_file' does not exist!"
-      exit 1
+    # To reduce log output noise, we capture stdout/stderr from the 0.13.upgrade command. However, if it exits in an
+    # error, we want to show the log output to help with debugging. Therefore, we temporarily disable -e, and check
+    # for errors manually.
+    set +e
+    output=$(terraform 0.13upgrade -yes "$folder" 2>&1)
+    exit_code="$?"
+    set -e
+
+    if [[ "$exit_code" -ne 0 ]]; then
+      echo "ERROR: Expected the terraform 0.13upgrade command to exit with code 0, but it exited with code $exit_code. Log output from the commandd is shown below."
+      echo -e "$output"
     fi
 
-    echo "Overwriting version constraint in '$versions_file' to indicate the code is still compatible with TF 0.12"
+    if [[ ! -f "$versions_file" ]]; then
+      # This usually only happens in super simple Terraform examples that use no providers.
+      echo "The 0.13upgrade command did not create a versions.tf file. Creating one at '$versions_file'."
+      echo -e "terraform {\n  $required_version_regex\n}\n" > "$versions_file"
+    fi
+
+    echo "Overwriting version constraint in '$versions_file' to support TF 0.12."
     sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$versions_file"
   fi
 done
