@@ -104,7 +104,9 @@ echo
 
 if [[ -n "${legacy_required_version_uses[*]}" ]]; then
   echo '=== required_version usage ==='
+  echo
   echo "We now handle required_version in versions.tf, so you now need to remove any 'required_version' usage and related comments from the following files:"
+  echo
   for file in "${legacy_required_version_uses[@]}"; do
     echo "- $file"
   done
@@ -113,7 +115,9 @@ fi
 
 if [[ -n "${destroy_provisioner_uses[*]}" ]]; then
   echo "=== destroy provisioner usage ==="
+  echo
   echo "Terraform 0.13 does not allow destroy-time provisioners to refer to other resources. Check the following files and fix if necessary. https://www.terraform.io/upgrade-guides/0-13.html#destroy-time-provisioners-may-not-refer-to-other-resources"
+  echo
   for file in "${destroy_provisioner_uses[@]}"; do
     echo "- $file"
   done
@@ -121,7 +125,10 @@ if [[ -n "${destroy_provisioner_uses[*]}" ]]; then
 fi
 
 echo "=== Commit ==="
+echo
 echo "Once all the above is done, do the following:"
+echo
 echo "- Check the diffs in Git"
 echo "- Test the code"
 echo "- Submit a PR"
+echo
