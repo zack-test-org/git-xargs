@@ -30,9 +30,9 @@ required_version_replacement_first_line="This module is now only being tested wi
 # literal newline should work: https://superuser.com/a/307486
 required_version_replacement="\\
   # $required_version_replacement_first_line\\
-  # 0.12.20 as the minimum version, as that version added support for required_providers, making it forwards compatible\\
-  # with 0.13.x code.\\
-  required_version = \">= 0.12.20\""
+  # 0.12.26 as the minimum version, as that version added support for required_providers with source URLs, making it\\
+  # forwards compatible with 0.13.x code.\\
+  required_version = \">= 0.12.26\""
 
 legacy_required_version_uses=()
 destroy_provisioner_uses=()
@@ -67,7 +67,7 @@ for folder in "${terraform_folders_arr[@]}"; do
       echo -e "terraform {\n  $required_version_regex\n}\n" > "$versions_file"
     fi
 
-    echo "Overwriting version constraint in '$versions_file' to support TF 0.12."
+    echo "Overwriting version constraint in '$versions_file' to support TF 0.12.x."
     sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$versions_file"
   fi
 
