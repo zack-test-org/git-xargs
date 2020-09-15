@@ -105,4 +105,8 @@ if [[ -n "${destroy_provisioner_uses[*]}" ]]; then
   echo
 fi
 
-echo "[TODO] Check the diffs in Git, test the code, and submit a PR!"
+echo "=== Commit ==="
+echo "Once all the above is done, do the following:"
+echo "- Check the diffs in Git"
+echo "- Test the code"
+echo "- Submit a PR"
