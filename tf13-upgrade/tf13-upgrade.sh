@@ -87,8 +87,8 @@ echo "Next steps:"
 echo
 
 if [[ -n "${legacy_required_version_uses[*]}" ]]; then
-  echo '[TODO] required_version usage'
-  echo "We now handle required_version in versions.tf, so remove any 'required_version' usage and related comments from the following files:"
+  echo '=== required_version usage ==='
+  echo "We now handle required_version in versions.tf, so you now need to remove any 'required_version' usage and related comments from the following files:"
   for file in "${legacy_required_version_uses[@]}"; do
     echo "- $file"
   done
@@ -96,7 +96,7 @@ if [[ -n "${legacy_required_version_uses[*]}" ]]; then
 fi
 
 if [[ -n "${destroy_provisioner_uses[*]}" ]]; then
-  echo "[TODO] destroy provisioner usage:"
+  echo "=== destroy provisioner usage ==="
   echo "Terraform 0.13 does not allow destroy-time provisioners to refer to other resources. Check the following files and fix if necessary. https://www.terraform.io/upgrade-guides/0-13.html#destroy-time-provisioners-may-not-refer-to-other-resources"
   for file in "${destroy_provisioner_uses[@]}"; do
     echo "- $file"
