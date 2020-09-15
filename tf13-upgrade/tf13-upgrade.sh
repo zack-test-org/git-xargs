@@ -16,9 +16,8 @@ fi
 
 echo "Finding all folders with Terraform code in '$working_dir'"
 
-# Find all folders with Terraform files in them: https://unix.stackexchange.com/a/111952/215969
-# Skip hidden files and folders (e.g., .terraform): https://askubuntu.com/a/318211
-terraform_folders_str=$(find "$working_dir" -not -path '*/\.*' -type f -name '*.tf' -exec dirname {} \; | sort -u)
+# Find all folders tracked by Git with Terraform files in them: https://stackoverflow.com/a/20247815/483528
+terraform_folders_str=$(git --git-dir "$working_dir/.git" ls-files *.tf | sed s,/[^/]*$,, | uniq)
 
 # Split a newline-separated string into an array: https://stackoverflow.com/a/24426608/483528
 IFS=$'\n' read -d '' -ra terraform_folders_arr < <(printf '%s\0' "$terraform_folders_str")
@@ -37,7 +36,8 @@ required_version_replacement="\\
 legacy_required_version_uses=()
 destroy_provisioner_uses=()
 
-for folder in "${terraform_folders_arr[@]}"; do
+for path in "${terraform_folders_arr[@]}"; do
+  folder="$working_dir/$path"
   main_file="$folder/main.tf"
   versions_file="$folder/versions.tf"
 
@@ -57,8 +57,9 @@ for folder in "${terraform_folders_arr[@]}"; do
     set -e
 
     if [[ "$exit_code" -ne 0 ]]; then
-      echo "[ERROR] Expected the terraform 0.13upgrade command to exit with code 0, but it exited with code $exit_code. Log output from the commandd is shown below."
+      echo "[ERROR] Expected the terraform 0.13upgrade command to exit with code 0, but it exited with code $exit_code. Log output from the command is shown below."
       echo -e "$output"
+      exit "$exit_code"
     fi
 
     if [[ ! -f "$versions_file" ]]; then
