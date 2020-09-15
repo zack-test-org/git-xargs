@@ -10,7 +10,7 @@ terraform_version_regex="Terraform v0\.13\..+"
 if [[ "$terraform_version" =~ $terraform_version_regex ]]; then
   echo "Detected Terraform version 0.13.x"
 else
-  echo "ERROR: Expected Terraform version 0.13.x to be installed but found '$terraform_version'."
+  echo "[ERROR] Expected Terraform version 0.13.x to be installed but found '$terraform_version'."
   exit 1
 fi
 
@@ -34,7 +34,11 @@ required_version_replacement="\\
   # with 0.13.x code.\\
   required_version = \">= 0.12.20\""
 
+legacy_required_version_uses=()
+destroy_provisioner_uses=()
+
 for folder in "${terraform_folders_arr[@]}"; do
+  main_file="$folder/main.tf"
   versions_file="$folder/versions.tf"
 
   # Try to make this script idempotent by not re-upgrading code that has already been upgraded and has our comment in
@@ -53,7 +57,7 @@ for folder in "${terraform_folders_arr[@]}"; do
     set -e
 
     if [[ "$exit_code" -ne 0 ]]; then
-      echo "ERROR: Expected the terraform 0.13upgrade command to exit with code 0, but it exited with code $exit_code. Log output from the commandd is shown below."
+      echo "[ERROR] Expected the terraform 0.13upgrade command to exit with code 0, but it exited with code $exit_code. Log output from the commandd is shown below."
       echo -e "$output"
     fi
 
@@ -66,4 +70,38 @@ for folder in "${terraform_folders_arr[@]}"; do
     echo "Overwriting version constraint in '$versions_file' to support TF 0.12."
     sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$versions_file"
   fi
+
+  if grep -q "required_version" "$main_file" > /dev/null 2>&1; then
+    echo "[WARN] Found legacy usage of required_version in '$main_file'."
+    legacy_required_version_uses+=("$main_file")
+  fi
+
+  if grep -q 'when[[:space:]]*=[[:space:]]*"\?destroy"\?' "$main_file" > /dev/null 2>&1; then
+    echo "[WARN] Found usage of destroy provisioner in '$main_file'."
+    destroy_provisioner_uses+=("$main_file")
+  fi
 done
+
+echo
+echo "Next steps:"
+echo
+
+if [[ -n "${legacy_required_version_uses[*]}" ]]; then
+  echo '[TODO] required_version usage'
+  echo "We now handle required_version in versions.tf, so remove any 'required_version' usage and related comments from the following files:"
+  for file in "${legacy_required_version_uses[@]}"; do
+    echo "- $file"
+  done
+  echo
+fi
+
+if [[ -n "${destroy_provisioner_uses[*]}" ]]; then
+  echo "[TODO] destroy provisioner usage:"
+  echo "Terraform 0.13 does not allow destroy-time provisioners to refer to other resources. Check the following files and fix if necessary. https://www.terraform.io/upgrade-guides/0-13.html#destroy-time-provisioners-may-not-refer-to-other-resources"
+  for file in "${destroy_provisioner_uses[@]}"; do
+    echo "- $file"
+  done
+  echo
+fi
+
+echo "[TODO] Check the diffs in Git, test the code, and submit a PR!"
