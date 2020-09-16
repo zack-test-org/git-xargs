@@ -38,6 +38,15 @@ To use the script, run `go run . lookup`. This will download all dependencies, b
 
 ## Troubleshooting
 
+### Issues with credentials
+
+When running `go run . lookup`, you might see this error:
+```
+WARN[2020-09-16T10:13:56-07:00] Credentials not found: Credentials not found  name=refarch-init
+INFO[2020-09-16T10:13:56-07:00] No credentials found. Initiating flow.        name=refarch-init                                                                                               INFO[2020-09-16T10:13:56-07:00] Waiting for oauth flow to complete and retrieve credentials.  name=refarch-init
+```
+If you do, try running `go run . stop` and rerun the lookup.
+
 ### Issues accessing private dependencies
 
 This module depends on private repos, which requires authentication credentials when fetching the dependencies in `go`.
