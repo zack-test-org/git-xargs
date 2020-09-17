@@ -42,15 +42,13 @@ required_version_replacement_first_line="This module is now only being tested wi
 # Note that the backslashes and newlines here in the middle of the string below are intentional! That's because we use
 # this variable with sed, and on MacOS, sed does not support '\n' in replacement text, but a backslash followed by a
 # literal newline should work: https://superuser.com/a/307486
-required_version_replacement="\\
-  # $required_version_replacement_first_line\\
+required_version_replacement="# $required_version_replacement_first_line\\
   # 0.12.26 as the minimum version, as that version added support for required_providers with source URLs, making it\\
   # forwards compatible with 0.13.x code.\\
   required_version = \">= 0.12.26\""
 required_version_replacement_without_slashes="${required_version_replacement//\\/}"
 
 missing_required_version=()
-destroy_provisioner_uses=()
 
 for path in "${terraform_folders_arr[@]}"; do
   folder="$working_dir/$path"
@@ -86,18 +84,18 @@ for path in "${terraform_folders_arr[@]}"; do
       rm -f "$versions_file"
     fi
 
-    echo "Overwriting version constraint in '$main_file' to support TF 0.12.x."
-    sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$main_file"
+    if [[ -f "$main_file" ]] && grep -q "$required_version_regex" "$main_file" > /dev/null 2>&1; then
+      # We set the required_version to 0.12.26, as that version supports required_providers with source URLs, so it's
+      # forward compatible with Terraform 0.13.x. Although we'll only be testing our code with Terraform 0.13.x after
+      # the upgrade, allowing 0.12.26 and above will give our users more time to do the upgrade.
+      echo "Overwriting version constraint in '$main_file' to support TF 0.12.x."
+      sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$main_file"
+    fi
   fi
 
   if ! grep -q "$required_version_regex" "$main_file" > /dev/null 2>&1; then
     echo "[WARN] Did not find required_version in '$main_file'."
     missing_required_version+=("$main_file")
-  fi
-
-  if grep -q 'when[[:space:]]*=[[:space:]]*"\?destroy"\?' "$main_file" > /dev/null 2>&1; then
-    echo "[WARN] Found usage of destroy provisioner in '$main_file'."
-    destroy_provisioner_uses+=("$main_file")
   fi
 done
 
@@ -108,20 +106,9 @@ echo
 if [[ -n "${missing_required_version[*]}" ]]; then
   echo '=== required_version usage ==='
   echo
-  echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {\n$required_version_replacement_without_slashes\n}\n"
+  echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {\n  $required_version_replacement_without_slashes\n}\n"
   echo
   for file in "${missing_required_version[@]}"; do
-    echo "- $file"
-  done
-  echo
-fi
-
-if [[ -n "${destroy_provisioner_uses[*]}" ]]; then
-  echo "=== destroy provisioner usage ==="
-  echo
-  echo "Terraform 0.13 does not allow destroy-time provisioners to refer to other resources. Check the following files and fix if necessary. https://www.terraform.io/upgrade-guides/0-13.html#destroy-time-provisioners-may-not-refer-to-other-resources"
-  echo
-  for file in "${destroy_provisioner_uses[@]}"; do
     echo "- $file"
   done
   echo
