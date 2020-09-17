@@ -86,8 +86,13 @@ for path in "${terraform_folders_arr[@]}"; do
       rm -f "$versions_file"
     fi
 
-    echo "Overwriting version constraint in '$main_file' to support TF 0.12.x."
-    sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$main_file"
+    if [[ -f "$main_file" ]] && grep -q "$required_version_regex" "$main_file" > /dev/null 2>&1; then
+      # We set the required_version to 0.12.26, as that version supports required_providers with source URLs, so it's
+      # forward compatible with Terraform 0.13.x. Although we'll only be testing our code with Terraform 0.13.x after
+      # the upgrade, allowing 0.12.26 and above will give our users more time to do the upgrade.
+      echo "Overwriting version constraint in '$main_file' to support TF 0.12.x."
+      sed -i '' "s/$required_version_regex/$required_version_replacement/g" "$main_file"
+    fi
   fi
 
   if ! grep -q "$required_version_regex" "$main_file" > /dev/null 2>&1; then
