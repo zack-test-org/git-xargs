@@ -49,7 +49,6 @@ required_version_replacement="# $required_version_replacement_first_line\\
 required_version_replacement_without_slashes="${required_version_replacement//\\/}"
 
 missing_required_version=()
-destroy_provisioner_uses=()
 
 for path in "${terraform_folders_arr[@]}"; do
   folder="$working_dir/$path"
@@ -98,11 +97,6 @@ for path in "${terraform_folders_arr[@]}"; do
     echo "[WARN] Did not find required_version in '$main_file'."
     missing_required_version+=("$main_file")
   fi
-
-  if grep -q 'when[[:space:]]*=[[:space:]]*"\?destroy"\?' "$main_file" > /dev/null 2>&1; then
-    echo "[WARN] Found usage of destroy provisioner in '$main_file'."
-    destroy_provisioner_uses+=("$main_file")
-  fi
 done
 
 echo
@@ -115,17 +109,6 @@ if [[ -n "${missing_required_version[*]}" ]]; then
   echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {\n  $required_version_replacement_without_slashes\n}\n"
   echo
   for file in "${missing_required_version[@]}"; do
-    echo "- $file"
-  done
-  echo
-fi
-
-if [[ -n "${destroy_provisioner_uses[*]}" ]]; then
-  echo "=== destroy provisioner usage ==="
-  echo
-  echo "Terraform 0.13 does not allow destroy-time provisioners to refer to other resources. Check the following files and fix if necessary. https://www.terraform.io/upgrade-guides/0-13.html#destroy-time-provisioners-may-not-refer-to-other-resources"
-  echo
-  for file in "${destroy_provisioner_uses[@]}"; do
     echo "- $file"
   done
   echo

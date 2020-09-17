@@ -10,7 +10,6 @@ upgrade](https://www.notion.so/gruntwork/Terraform-0-13-Upgrade-0c88a38ab19e4f58
        discussion](https://github.com/gruntwork-io/prototypes/pull/75#discussion_r488787369) for why.
     1. Update the `required_version` parameter. 
     1. Output a warning if no `required_version` parameter could be found.
-    1. Output a warning about destroy-time `provisioner` usage.
 1. Print instructions on next steps.
 
 
