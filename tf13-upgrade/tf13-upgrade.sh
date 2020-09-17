@@ -112,7 +112,7 @@ echo
 if [[ -n "${missing_required_version[*]}" ]]; then
   echo '=== required_version usage ==='
   echo
-  echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {\n$required_version_replacement_without_slashes\n}\n"
+  echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {\n  $required_version_replacement_without_slashes\n}\n"
   echo
   for file in "${missing_required_version[@]}"; do
     echo "- $file"
