@@ -153,6 +153,9 @@ def remove_user_from_team(github_id, team_id, github_creds):
     if response.status_code == 204:
         logging.info('Successfully deleted user {} from team {}'.format(github_id, team_id))
         return {}
+    elif response.status_code == 404:
+        logging.info('Skipped deleting user {} not member of team {}'.format(github_id, team_id))
+        return {}
     else:
         raise Exception('Failed to delete user {} from team {}. Got response {} from GitHub with body: {}.'.format(github_id, team_id, response.status_code, response.json()))
 
