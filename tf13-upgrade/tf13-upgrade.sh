@@ -42,8 +42,7 @@ required_version_replacement_first_line="This module is now only being tested wi
 # Note that the backslashes and newlines here in the middle of the string below are intentional! That's because we use
 # this variable with sed, and on MacOS, sed does not support '\n' in replacement text, but a backslash followed by a
 # literal newline should work: https://superuser.com/a/307486
-required_version_replacement="\\
-  # $required_version_replacement_first_line\\
+required_version_replacement="# $required_version_replacement_first_line\\
   # 0.12.26 as the minimum version, as that version added support for required_providers with source URLs, making it\\
   # forwards compatible with 0.13.x code.\\
   required_version = \">= 0.12.26\""
@@ -113,7 +112,7 @@ echo
 if [[ -n "${missing_required_version[*]}" ]]; then
   echo '=== required_version usage ==='
   echo
-  echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {$required_version_replacement_without_slashes\n}\n"
+  echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {\n$required_version_replacement_without_slashes\n}\n"
   echo
   for file in "${missing_required_version[@]}"; do
     echo "- $file"
