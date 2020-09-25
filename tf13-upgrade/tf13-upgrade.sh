@@ -109,10 +109,10 @@ echo
 if [[ -n "${tf13_upgrade_modules_with_errors[*]}" ]]; then
   echo '===== terraform 0.13upgrade errors ====='
   echo
-  echo -e "The Terraform modules below had errors when we ran the 0.13upgrade command. Check the log output and fix the issues!"
+  echo -e "There were ${#tf13_upgrade_modules_with_errors[@]} Terraform modules with errors when we ran the 0.13upgrade command. The list of paths and their log output is below. Go through each one and fix the issues!"
   echo
-  for (( i=0; i<="${#tf13_upgrade_modules_with_errors[@]}"; i++ )); do
-    echo "== Path: ${tf13_upgrade_modules_with_errors[i]} =="
+  for (( i=0; i<"${#tf13_upgrade_modules_with_errors[@]}"; i++ )); do
+    echo "== Module $(( i+1 ))/${#tf13_upgrade_modules_with_errors[@]}: ${tf13_upgrade_modules_with_errors[i]} =="
     echo -e "\n\n${tf13_upgrade_modules_with_errors_log_output[i]}\n\n"
   done
   echo
