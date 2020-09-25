@@ -48,6 +48,8 @@ required_version_replacement="# $required_version_replacement_first_line\\
   required_version = \">= 0.12.26\""
 required_version_replacement_without_slashes="${required_version_replacement//\\/}"
 
+tf13_upgrade_modules_with_errors=()
+tf13_upgrade_modules_with_errors_log_output=()
 missing_required_version=()
 
 for path in "${terraform_folders_arr[@]}"; do
@@ -73,7 +75,8 @@ for path in "${terraform_folders_arr[@]}"; do
     if [[ "$exit_code" -ne 0 ]]; then
       echo "[ERROR] Expected the terraform 0.13upgrade command to exit with code 0, but it exited with code $exit_code. Log output from the command is shown below."
       echo -e "$output"
-      exit "$exit_code"
+      tf13_upgrade_modules_with_errors+=("$folder")
+      tf13_upgrade_modules_with_errors_log_output+=("$output")
     fi
 
     if [[ -f "$versions_file" ]]; then
@@ -103,8 +106,20 @@ echo
 echo "Next steps:"
 echo
 
+if [[ -n "${tf13_upgrade_modules_with_errors[*]}" ]]; then
+  echo '===== terraform 0.13upgrade errors ====='
+  echo
+  echo -e "The Terraform modules below had errors when we ran the 0.13upgrade command. Check the log output and fix the issues!"
+  echo
+  for (( i=0; i<="${#tf13_upgrade_modules_with_errors[@]}"; i++ )); do
+    echo "== Path: ${tf13_upgrade_modules_with_errors[i]} =="
+    echo -e "\n\n${tf13_upgrade_modules_with_errors_log_output[i]}\n\n"
+  done
+  echo
+fi
+
 if [[ -n "${missing_required_version[*]}" ]]; then
-  echo '=== required_version usage ==='
+  echo '===== required_version usage ====='
   echo
   echo -e "Did not find a terraform { ... } block with a 'required_version' param in the files below. Please add the following block to the files below:\n\nterraform {\n  $required_version_replacement_without_slashes\n}\n"
   echo
@@ -114,7 +129,7 @@ if [[ -n "${missing_required_version[*]}" ]]; then
   echo
 fi
 
-echo "=== Commit ==="
+echo "===== Commit ====="
 echo
 echo "Once all the above is done, do the following:"
 echo
