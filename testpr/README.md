@@ -19,3 +19,7 @@ cd local_repo_clone
 testpr --pr 42
 ```
 
+Dependencies:
+- You need `jq` installed locally (e.g. `brew install jq` on macOS)
+- Make sure the git remote that points to the gruntwork-io GH repo is named 'origin'
+
