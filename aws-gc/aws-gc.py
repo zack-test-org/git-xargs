@@ -518,6 +518,7 @@ def is_test_s3_bucket(name):
         r'^gruntwork-terratest-[a-zA-Z0-9]{6}$',
         r'^gw-cis-aws-config-all-regions-[a-zA-Z0-9]{6}-.*',
         r'^houston-static-[a-zA-Z0-9]{12}.*',
+        r'^cloud-nuke-test-[a-zA-Z0-9]{12}.*',
     ]
     return any(re.match(regex, name) for regex in regex_list)
 
