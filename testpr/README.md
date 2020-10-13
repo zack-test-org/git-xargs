@@ -15,11 +15,24 @@ Usage:
 
 ```
 export GITHUB_OAUTH_TOKEN=<YOUR PERSONAL ACCESS TOKEN>
-cd local_repo_clone
-testpr --pr 42
+cd <the local clone of the repo you have opened a PR against>
+~/path_to_testpr_folder/testpr --pr <pr_number>
 ```
 
 Dependencies:
 - You need `jq` installed locally (e.g. `brew install jq` on macOS)
+
+Helpful commands:
+- See what is the origin of the repo clone you have
+```
+git remote -v
+```
+- Add the remote if you haven't already
+```
+git remote add [<options>] <name> <url>
+```
 - Make sure the git remote that points to the gruntwork-io GH repo is named 'origin'
+```
+git remote rename <old> <new>
+```
 
