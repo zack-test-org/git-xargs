@@ -32,7 +32,10 @@ fi
 echo "Finding all folders with Terraform code in '$working_dir'"
 
 # Find all folders tracked by Git with Terraform files in them: https://stackoverflow.com/a/20247815/483528
-terraform_folders_str=$(git --git-dir "$working_dir/.git" ls-files *.tf | sed s,/[^/]*$,, | uniq)
+# The first sed converts file in the root folder (e.g., main.tf) to a dot to represent the folder itself.
+# The second sed strips filenames and leaves just folder names.
+# The sort and uniq are used to remove any duplicate folders
+terraform_folders_str=$(git --git-dir "$working_dir/.git" ls-files **/*.tf *.tf | sed 's,^[^/]*\.tf$,.,' | sed 's,/[^/]*$,,' | sort | uniq)
 
 # Split a newline-separated string into an array: https://stackoverflow.com/a/24426608/483528
 IFS=$'\n' read -d '' -ra terraform_folders_arr < <(printf '%s\0' "$terraform_folders_str")
