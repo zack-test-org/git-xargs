@@ -17,6 +17,7 @@ var (
 	CircleCIConfigPath                   = ".circleci/config.yml"
 )
 
+// Get all the repos for a given Github organization
 func getReposByOrg(org string) ([]*github.Repository, error) {
 
 	opts := &github.RepositoryListByOrgOptions{}
@@ -29,8 +30,10 @@ func getReposByOrg(org string) ([]*github.Repository, error) {
 	return repos, err
 }
 
-func filterReposWithCircleCIConfig(repos []*github.Repository) []*github.Repository {
+func processReposWithCircleCIConfigs(repos []*github.Repository) []*github.Repository {
 	rgco := &github.RepositoryContentGetOptions{}
+
+	var reposWithCircleCIConfigs []*github.Repository
 
 	for _, repo := range repos {
 		repositoryFile, _, _, err := GithubClient.Repositories.GetContents(context.Background(), GithubOrg, repo.GetName(), CircleCIConfigPath, rgco)
@@ -67,11 +70,15 @@ func filterReposWithCircleCIConfig(repos []*github.Repository) []*github.Reposit
 			OrgReposWithNoCircleCIConfig = append(OrgReposWithNoCircleCIConfig, repo)
 		} else {
 
-			fmt.Printf("GOT FILE CONTENTS: %s\n", fileContents)
-			OrgReposWithCircleCIConfig = append(OrgReposWithCircleCIConfig, repo)
+			reposWithCircleCIConfigs = append(reposWithCircleCIConfigs, repo)
+
+			// Process .circleci/config.yml file, updating context nodes as necessary
+			updatedYAML := updateYamlDocument([]byte(fileContents))
+
+			fmt.Printf("POST UPDATING YAML DOCUMENT: %s\n", string(updatedYAML))
 		}
 	}
-	return repos
+	return reposWithCircleCIConfigs
 }
 
 func ConvertReposContexts() {
@@ -92,5 +99,7 @@ func ConvertReposContexts() {
 
 		AllOrgRepos = append(AllOrgRepos, repo)
 	}
-	OrgReposWithCircleCIConfig = filterReposWithCircleCIConfig(AllOrgRepos)
+
+	// Set aside the repos that do have a .circleci/config.yml file
+	OrgReposWithCircleCIConfig = processReposWithCircleCIConfigs(AllOrgRepos)
 }

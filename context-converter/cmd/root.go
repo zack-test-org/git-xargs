@@ -49,6 +49,7 @@ var rootCmd = &cobra.Command{
 
 		// Update repos to use the target context, where applicable
 		ConvertReposContexts()
+
 	},
 }
 
