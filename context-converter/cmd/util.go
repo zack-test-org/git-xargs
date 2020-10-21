@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"context"
-	"errors"
-	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/google/go-github/github"
 	"github.com/sirupsen/logrus"
@@ -17,68 +16,32 @@ var (
 	CircleCIConfigPath                   = ".circleci/config.yml"
 )
 
-// Get all the repos for a given Github organization
-func getReposByOrg(org string) ([]*github.Repository, error) {
-
-	opts := &github.RepositoryListByOrgOptions{}
-
-	repos, _, err := GithubClient.Repositories.ListByOrg(context.Background(), org, opts)
-
-	if len(repos) == 0 {
-		return nil, errors.New("No repositories found!")
+func dependencyInstalled(dep string) bool {
+	_, err := exec.LookPath(dep)
+	if err != nil {
+		return false
 	}
-	return repos, err
+	return true
 }
 
-func processReposWithCircleCIConfigs(repos []*github.Repository) []*github.Repository {
-	rgco := &github.RepositoryContentGetOptions{}
+type Dependency struct {
+	Name string
+	URL  string
+}
 
-	var reposWithCircleCIConfigs []*github.Repository
+// Accepts a slice of dependencies, and FREAKS OUT if any of them are missing
+func MustHaveDependenciesInstalled(deps []Dependency) {
 
-	for _, repo := range repos {
-		repositoryFile, _, _, err := GithubClient.Repositories.GetContents(context.Background(), GithubOrg, repo.GetName(), CircleCIConfigPath, rgco)
+	for _, d := range deps {
 
-		if err != nil {
+		if !dependencyInstalled(d.Name) {
 			log.WithFields(logrus.Fields{
-				"Error":    err,
-				"Owner":    repo.GetOwner().GetName(),
-				"Repo":     repo.GetName(),
-				"Filepath": CircleCIConfigPath,
-			}).Debug("Error fetching file content! Repository does not have a CircleCI config file")
-
-			OrgReposWithNoCircleCIConfig = append(OrgReposWithNoCircleCIConfig, repo)
-
-			continue
-
-		}
-
-		fileContents, fileGetContentsErr := repositoryFile.GetContent()
-
-		if fileGetContentsErr != nil {
-			log.WithFields(logrus.Fields{
-				"Error": fileGetContentsErr,
-				"Path":  CircleCIConfigPath,
-			}).Debug("Error reading file contents!")
-		}
-
-		// If the file contents is an empty string, that means there is no config file at the expected path
-		if fileContents == "" {
-			log.WithFields(logrus.Fields{
-				"Repo": repo.GetName(),
-			}).Debug("Repository does not have CircleCI config file")
-
-			OrgReposWithNoCircleCIConfig = append(OrgReposWithNoCircleCIConfig, repo)
-		} else {
-
-			reposWithCircleCIConfigs = append(reposWithCircleCIConfigs, repo)
-
-			// Process .circleci/config.yml file, updating context nodes as necessary
-			updatedYAML := updateYamlDocument([]byte(fileContents))
-
-			fmt.Printf("POST UPDATING YAML DOCUMENT: %s\n", string(updatedYAML))
+				"Dependency":         d.Name,
+				"Install / info URL": d.URL,
+			}).Debug("Missing dependency. Please install it before using this tool")
+			os.Exit(1)
 		}
 	}
-	return reposWithCircleCIConfigs
 }
 
 func ConvertReposContexts() {

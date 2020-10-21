@@ -13,14 +13,22 @@ l.v3) tree
 1. ensure that the `.circleci/config.yml` `version` is `2.0` or greater, since context support 
 1. Recursively search for the `context` entries in the `Workflows -> Jobs -> Context` nodes and update them to have a test string, instead of their original value
 
+# Prerequisites 
+
+The following binaries are **required** for the Context converter tool: 
+* [yq](https://mikefarah.gitbook.io/yq/)
+
 # Getting started 
 
+1. Ensure you've installed the prerequisites! 
+1. Create and export a Github personal access token 
 ```
+
 export GITHUB_OAUTH_TOKEN
 go run main.go
 ```
 
-`GITHUB_OAUTH_TOKEN` must be a [Github personal access token](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token)
+`GITHUB_OAUTH_TOKEN` must be a [Github personal access token](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/creating-a-personal-access-token) that was created with an account that is a member of the Gruntwork-io Github organization. 
 
 # TODO
 

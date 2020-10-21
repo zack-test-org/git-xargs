@@ -24,16 +24,28 @@ func init() {
 
 }
 
+// Function that runs prior to execution of the main command. Useful for performing setup and verification tasks
+// such as checking for required user inputs, env vars, dependencies, etc
 func persistentPreRun(cmd *cobra.Command, args []string) {
 
 	// Ensure user provided a GITHUB_OAUTH_TOKEN
 	userProvidedToken := os.Getenv("GITHUB_OAUTH_TOKEN")
 	if userProvidedToken == "" {
-		panic("You must set a Github personal access token with access to Gruntwork repos via the Env var GITHUB_OAUTH_TOKEN")
+		log.WithFields(logrus.Fields{
+			"Error": "You must set a Github personal access token with access to Gruntwork repos via the Env var GITHUB_OAUTH_TOKEN",
+		}).Debug("Missing GITHUB_OAUTH_TOKEN")
+		os.Exit(1)
 	}
 
 	GithubOauthToken = userProvidedToken
 
+	requiredDeps := []Dependency{
+		{Name: "yq", URL: "https://mikefarah.gitbook.io/yq/"},
+		{Name: "yamllint", URL: "https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint"},
+	}
+
+	// Ensure that operator has all required dependencies installed
+	MustHaveDependenciesInstalled(requiredDeps)
 }
 
 var rootCmd = &cobra.Command{
