@@ -1,33 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"strconv"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 )
-
-var YQ_BINARY = "yq"
-
-// Accept an arbitrary number of string arguments to pass to the yq binary
-// Run yq with the supplied arguments and return its output as a byte slice
-func runYqCommand(args ...string) []byte {
-	cmd := exec.Command(YQ_BINARY, args...)
-	stdout, err := cmd.Output()
-
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"Error":   err,
-			"args...": args,
-		}).Debug(fmt.Sprintf("Error running command against %s", YQ_BINARY))
-	}
-
-	return stdout
-}
 
 // Count the number of workflows blocks defined in the config file, as we can only programmatically operate
 // on workflows blocks that already exist
@@ -63,51 +41,6 @@ func ensureWorkflowSyntaxVersion(filename string) bool {
 	return true
 }
 
-func getFloatFromCommand(args ...string) float64 {
-
-	cmdOutput := runYqCommand(args...)
-
-	cmdOutputString := string(cmdOutput)
-
-	strippedOutput := strings.ReplaceAll(cmdOutputString, "\\n", "")
-	cleanedOutput := strings.TrimSpace(strippedOutput)
-
-	parsedFloat, err := strconv.ParseFloat(cleanedOutput, 64)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"Error": err,
-			"Args":  args,
-		}).Debug("Error parsing float from cmd output")
-		return 0
-	}
-	return parsedFloat
-}
-
-func getIntFromCommand(args ...string) int64 {
-
-	cmdOutput := runYqCommand(args...)
-
-	cmdOutputString := string(cmdOutput)
-
-	strippedOutput := strings.ReplaceAll(cmdOutputString, "\\n", "")
-	cleanedOutput := strings.TrimSpace(strippedOutput)
-
-	// yq will return nothing to STDOUT if the count is empty
-	if cleanedOutput == "" {
-		cleanedOutput = "0"
-	}
-
-	parsedInt, err := strconv.ParseInt(cleanedOutput, 10, 64)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"Error": err,
-			"Args":  args,
-		}).Debug("Error parsing int from cmd output")
-		return 0
-	}
-	return parsedInt
-}
-
 // Count the number of nested Workflows -> Jobs -> Context fields in the YAML document
 func configFileHasContexts(filename string) bool {
 
@@ -119,6 +52,10 @@ func configFileHasContexts(filename string) bool {
 	return true
 }
 
+// Append the Workflows -> Jobs -> Context arrays to the YAML document (and add the "Gruntwork Admin" member to these context arrays)
+// Note that yq's append behavior is similar to `mkdir -p` in that it will add missing nodes as needed
+// to satisy the path expression passed into yq (workflows.*.jobs.*.context[+])
+// Therefore, this method can be called once it's determined that none of the YAML document's Workflows -> Jobs nodes have any context arrays
 func appendContextNodes(filename string) {
 
 	cmdOutput := runYqCommand("w", "-i", filename, "workflows.*.jobs.*.context[+]", "Gruntwork Admin")
@@ -128,6 +65,9 @@ func appendContextNodes(filename string) {
 	}).Debug("appendContextNodes ran command to add and populate context nodes")
 }
 
+// Takes in the raw YAML file bytes and creates a temporary file to write them to
+// This temporary file is then further processed by the various methods, with updates made in-place via yq's -i flag
+// When processing is complete, the final contents of this temporary file are read again and then PUT against the original file via the Github API in order to update it
 func writeYamlToTempFile(b []byte) *os.File {
 
 	tmpFile, err := ioutil.TempFile("", "circle-ci-context")
@@ -152,6 +92,8 @@ func writeYamlToTempFile(b []byte) *os.File {
 }
 
 // Use yq to make the required updates to the supplied YAML file
+// First, the YAML is written to temporary file, and then the temporary file is updated in place
+// When processing is complete, the final temp file contents are read out again and returned as bytes, suitable for making updates via the Github API
 func UpdateYamlDocument(b []byte) []byte {
 
 	tmpFile := writeYamlToTempFile(b)
@@ -175,6 +117,8 @@ func UpdateYamlDocument(b []byte) []byte {
 		appendContextNodes(tmpFileName)
 	}
 
+	// By this point, all processing of the tempfile via yq is complete, so its contents can
+	// be read out again
 	updatedYamlBytes, readErr := ioutil.ReadFile(tmpFileName)
 
 	if readErr != nil {
