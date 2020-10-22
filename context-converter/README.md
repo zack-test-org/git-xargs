@@ -8,10 +8,8 @@ Currently, when you run the `context-converter`, you specify a Github organizati
 
 1. fetch all the public and private repositories owned by this organization 
 1. filter down to only those repos containing a `.circleci/config.yml` file
-2. parse the contents of the `.circleci/config.yml` file into a [`*yaml.Node`](gopkg.in/yam
-l.v3) tree
 1. ensure that the `.circleci/config.yml` `version` is `2.0` or greater, since context support 
-1. Recursively search for the `context` entries in the `Workflows -> Jobs -> Context` nodes and update them to have a test string, instead of their original value
+1. add "Gruntwork Admin" to the `Workflows -> Jobs -> Contexts` arrays when necessary 
 
 # Prerequisites 
 
@@ -32,9 +30,8 @@ go run main.go
 
 # TODO
 
-* Improve node traversal logic
 * Support all cases for context repair: 
 - [x] Find `context` nodes and overwrite them (for testing purposes and familiarization with the yaml v3 API)
-- [ ] When no `context` node is present for a workflow job, add it along with the correct context
+- [x] When no `context` node is present for a workflow job, add it along with the correct context
 - [ ] When a `context` node is present, without the correct values, add the value
 - [ ] When a context node is present, with the correct value, do nothing
