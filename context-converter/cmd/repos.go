@@ -44,6 +44,8 @@ func processReposWithCircleCIConfigs(repos []*github.Repository) []*github.Repos
 
 		fileContents, fileGetContentsErr := repositoryFile.GetContent()
 
+		fmt.Printf("PRE UPDATING YAML DOCUMENT %s\n", string(fileContents))
+
 		if fileGetContentsErr != nil {
 			log.WithFields(logrus.Fields{
 				"Error": fileGetContentsErr,
