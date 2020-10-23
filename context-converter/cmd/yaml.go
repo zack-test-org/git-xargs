@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -66,10 +68,17 @@ func configFileHasContexts(filename string) bool {
 // Therefore, this method can be called once it's determined that none of the YAML document's Workflows -> Jobs nodes have any context arrays
 func appendContextNodes(filename string) {
 
-	cmdOutput := runYqCommand("w", "-i", filename, "workflows.*.jobs.*.*.context[+]", "Gruntwork Admin")
+	// Get the original workflows.version value from the YAML file
+	originalVersion := getIntFromCommand("r", filename, "workflows.version")
+
+	cmdOutput := runYqCommand("w", "-i", filename, "workflows.*.jobs[*].*.context[+]", "Gruntwork Admin")
+
+	// This is profoundly annoying, but for the time being we need to repair the workflows version field that gets nuked by the above write query
+	versionRepairOutput := runYqCommand("w", "-i", filename, "workflows.version", strconv.FormatInt(originalVersion, 10))
 
 	log.WithFields(logrus.Fields{
-		"cmdOutput": cmdOutput,
+		"cmdOutput":           cmdOutput,
+		"versionRepairOutput": versionRepairOutput,
 	}).Debug("appendContextNodes ran command to add and populate context nodes")
 }
 
@@ -165,11 +174,16 @@ func UpdateYamlDocument(b []byte) []byte {
 	// be read out again
 	updatedYamlBytes, readErr := ioutil.ReadFile(tmpFileName)
 
+	// Unfortunately there's an unknown bug in either yq or the underlying go-yaml library that results in our modified files
+	// having their *yaml.Node `tag` values written in front of the field itself - e.g.; !!merge <<: *stuff instead of just <<: *stuff, which would be correct
+	// Workaround it for the time being by replacing any instances of this - since it's also invalid YAML
+	sanitizedUpdatedYamlBytes := strings.ReplaceAll(string(updatedYamlBytes), "!!merge ", "")
+
 	if readErr != nil {
 		log.WithFields(logrus.Fields{
 			"Error": readErr,
 		}).Debug("Could not read updated YAML file into bytes")
 	}
 
-	return updatedYamlBytes
+	return []byte(sanitizedUpdatedYamlBytes)
 }

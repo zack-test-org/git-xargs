@@ -148,7 +148,7 @@ func openPullRequest(repo *github.Repository) {
 		}).Debug("Error opening Pull request")
 	} else {
 		log.WithFields(logrus.Fields{
-			"Pull request URL": *pr.URL,
+			"Pull request URL": *pr.HTMLURL,
 		}).Debug("Successfully opened pull request")
 	}
 }
