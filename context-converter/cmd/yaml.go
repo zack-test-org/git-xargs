@@ -66,7 +66,7 @@ func configFileHasContexts(filename string) bool {
 // Therefore, this method can be called once it's determined that none of the YAML document's Workflows -> Jobs nodes have any context arrays
 func appendContextNodes(filename string) {
 
-	cmdOutput := runYqCommand("w", "-i", filename, "workflows.*.jobs.*.context[+]", "Gruntwork Admin")
+	cmdOutput := runYqCommand("w", "-i", filename, "workflows.*.jobs.*.*.context[+]", "Gruntwork Admin")
 
 	log.WithFields(logrus.Fields{
 		"cmdOutput": cmdOutput,
