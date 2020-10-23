@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v32/github"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -11,6 +13,8 @@ import (
 var (
 	GithubOauthToken string
 	TargetContext    string
+	TargetBranch     = "IAC-1616-programmatically-fix-context"
+	RefsTargetBranch = fmt.Sprintf("heads/%s", TargetBranch)
 	GithubClient     *github.Client
 	GithubOrg        string
 	log              = logrus.New()
