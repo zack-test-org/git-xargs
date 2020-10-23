@@ -34,4 +34,4 @@ go run main.go
 - [x] Find `context` nodes and overwrite them (for testing purposes and familiarization with the yaml v3 API)
 - [x] When no `context` node is present for a workflow job, add it along with the correct context
 - [ ] When a `context` node is present, without the correct values, add the value
-- [ ] When a context node is present, with the correct value, do nothing
+- [x] When a context node is present, with the correct value, do nothing
