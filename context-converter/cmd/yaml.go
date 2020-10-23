@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -27,6 +28,13 @@ func ensureConfigFileHasWorkflowsBlock(filename string) bool {
 // Ensure the config file's Workflows block is using at least syntax version 2.0, which
 // contains support for contexts
 func ensureWorkflowSyntaxVersion(filename string) bool {
+
+	syntaxKeyCount := getIntFromCommand("r", filename, "--length", "workflows.version")
+
+	if syntaxKeyCount < 1 {
+		log.Debug("Could not find workflows.version key, so can't programmatically operate on this YAML file")
+		return false
+	}
 
 	syntaxVersion := getFloatFromCommand("r", filename, "workflows.version")
 
@@ -63,6 +71,33 @@ func appendContextNodes(filename string) {
 	log.WithFields(logrus.Fields{
 		"cmdOutput": cmdOutput,
 	}).Debug("appendContextNodes ran command to add and populate context nodes")
+}
+
+// Get the count of the all the context nodes under the path Workflows -> Jobs -> Context
+func countTotalContexts(filename string) int64 {
+
+	countTotalContexts := getIntFromCommand("r", filename, "--length", "--collect", "workflows.*.jobs.*.*.context")
+
+	return countTotalContexts
+}
+
+// Get the count of all the context arrays under the path Workflows -> Jobs -> Contexts that already contain "Gruntwork Admin" as a member
+func countContextsWithMember(filename string) int64 {
+
+	pathExpression := fmt.Sprintf("workflows.*.jobs.*.*.context(.==%s)", TargetContext)
+
+	countContextsCorrectlySet := getIntFromCommand("r", filename, "--length", "--collect", pathExpression)
+
+	return countContextsCorrectlySet
+}
+
+// Checks if the config file already has the expected contexts set, by comparing the count of total context arrays
+// with the count of context arrays that contain the TargetContext as a member
+func correctContextsAlreadyPresent(filename string) bool {
+	if countTotalContexts(filename) == countContextsWithMember(filename) {
+		return true
+	}
+	return false
 }
 
 // Takes in the raw YAML file bytes and creates a temporary file to write them to
@@ -115,6 +150,15 @@ func UpdateYamlDocument(b []byte) []byte {
 	// Note this function will both append the context arrays and add the correct "Gruntwork Admin" member
 	if !configFileHasContexts(tmpFileName) {
 		appendContextNodes(tmpFileName)
+	} else {
+		// If the config file's Workflows -> Jobs -> Contexts nodes already have the desired context set, return because there's nothing to do
+		// This is determined by checking if the count of context nodes is equal to the number of context nodes that contain the "Gruntwork Admin" member
+		if correctContextsAlreadyPresent(tmpFileName) {
+
+			log.Debug("All contexts have the correct member - Gruntwork Admin already. Skipping this file!")
+
+			return nil
+		}
 	}
 
 	// By this point, all processing of the tempfile via yq is complete, so its contents can

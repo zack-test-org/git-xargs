@@ -24,6 +24,7 @@ func dependencyInstalled(dep string) bool {
 	return true
 }
 
+// A given third party binary that must be installed on the operator's system in order for them to use this tool
 type Dependency struct {
 	Name string
 	URL  string
@@ -44,6 +45,9 @@ func MustHaveDependenciesInstalled(deps []Dependency) {
 	}
 }
 
+// First, fetches all repositories for the given org
+// Next, filters them down to only those repositories that actually have .circleci/config.yml files
+// Finally, processes each of those repositories according to the logic defined in yaml.go, essentially adding the required Gruntwork Admin context to any Workflows -> Jobs -> Context arrays that don't already have it
 func ConvertReposContexts() {
 	repos, err := getReposByOrg(GithubOrg)
 	if err != nil {

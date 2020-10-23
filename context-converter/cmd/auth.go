@@ -7,6 +7,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// Create a Github API client using the user-supplied GITHUB_OAUTH_TOKEN
 func ConfigureGithubClient() {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
@@ -18,5 +19,4 @@ func ConfigureGithubClient() {
 
 	GithubClient = client
 	log.Debug("Github client instantiated!")
-
 }
