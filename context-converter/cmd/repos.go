@@ -105,11 +105,11 @@ func createProjectBranchIfNotExists(repo *github.Repository) {
 }
 
 // Update the file via the Github API, on a special branch specific to this tool, which can then be PR'd against master
-func updateFileOnBranch(repo *github.Repository, path string, sha *string, b []byte) {
+func updateFileOnBranch(repo *github.Repository, path string, sha *string, fileContents []byte) {
 
 	opt := &github.RepositoryContentFileOptions{
 		Branch:  github.String(TargetBranch),
-		Content: b,
+		Content: fileContents,
 		SHA:     sha,
 		Message: github.String("Context converter programmatically repairing CircleCI config!"),
 	}

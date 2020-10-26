@@ -109,7 +109,7 @@ func correctContextsAlreadyPresent(filename string) bool {
 // Takes in the raw YAML file bytes and creates a temporary file to write them to
 // This temporary file is then further processed by the various methods, with updates made in-place via yq's -i flag
 // When processing is complete, the final contents of this temporary file are read again and then PUT against the original file via the Github API in order to update it
-func writeYamlToTempFile(b []byte) *os.File {
+func writeYamlToTempFile(yamlBytes []byte) *os.File {
 
 	tmpFile, err := ioutil.TempFile("", "circle-ci-context")
 	if err != nil {
@@ -118,7 +118,7 @@ func writeYamlToTempFile(b []byte) *os.File {
 		}).Fatal("Error creating temporary YAML file")
 	}
 
-	if _, writeErr := tmpFile.Write(b); writeErr != nil {
+	if _, writeErr := tmpFile.Write(yamlBytes); writeErr != nil {
 		log.WithFields(logrus.Fields{
 			"Error": writeErr,
 		}).Debug("Error writing YAML to temporary file")
@@ -135,9 +135,9 @@ func writeYamlToTempFile(b []byte) *os.File {
 // Use yq to make the required updates to the supplied YAML file
 // First, the YAML is written to temporary file, and then the temporary file is updated in place
 // When processing is complete, the final temp file contents are read out again and returned as bytes, suitable for making updates via the Github API
-func UpdateYamlDocument(b []byte) []byte {
+func UpdateYamlDocument(yamlBytes []byte) []byte {
 
-	tmpFile := writeYamlToTempFile(b)
+	tmpFile := writeYamlToTempFile(yamlBytes)
 	tmpFileName := tmpFile.Name()
 
 	// Clean up the temp file when we're done with it
