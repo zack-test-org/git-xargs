@@ -103,10 +103,7 @@ func countContextsWithMember(filename string) int64 {
 // Checks if the config file already has the expected contexts set, by comparing the count of total context arrays
 // with the count of context arrays that contain the TargetContext as a member
 func correctContextsAlreadyPresent(filename string) bool {
-	if countTotalContexts(filename) == countContextsWithMember(filename) {
-		return true
-	}
-	return false
+	return countTotalContexts(filename) == countContextsWithMember(filename)
 }
 
 // Takes in the raw YAML file bytes and creates a temporary file to write them to
