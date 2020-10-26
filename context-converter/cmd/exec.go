@@ -11,7 +11,7 @@ import (
 
 // exec contains functions that deal with shelling out to external binaries and processing their output
 
-var YQ_BINARY = "yq"
+const YQ_BINARY = "yq"
 
 // Accept an arbitrary number of string arguments to pass to the yq binary
 // Run yq with the supplied arguments and return its output as a byte slice
