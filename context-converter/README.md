@@ -15,6 +15,11 @@ Currently, when you run the `context-converter`, you specify a Github organizati
 1. open a pull request from this project branch against master
 
 # Capabilities to add
+- [] "Run log" report breaking down:   
+    - [] All the repos considered
+    - [] The repos that were eligible for programmatic upgrade
+    - [] The repos that encountered errors (were using outdated workflows syntaxes, etc)
+    - [] Perhaps this report should be written to a local, timestamped run log given its likely length
 - [] Better help text 
 - [] Flag for target context to add 
 - [] Dry-run type flags to just output what changes it **would** have made, without creating branches, opening PRs or updating files
@@ -29,6 +34,7 @@ This project was created to programmatically address [IAC-1616 Convert all repos
 
 The following binaries are **required** for the Context converter tool: 
 * [yq](https://mikefarah.gitbook.io/yq/)
+* [yamllint](https://github.com/adrienverge/yamllint)
 
 # Getting started 
 
