@@ -2,21 +2,16 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/google/go-github/v32/github"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
-	GithubOauthToken string
+	GithubOrg        string
 	TargetContext    string
 	TargetBranch     = "IAC-1616-programmatically-fix-context"
 	RefsTargetBranch = fmt.Sprintf("heads/%s", TargetBranch)
-	GithubClient     *github.Client
-	GithubOrg        string
 	log              = logrus.New()
 )
 
@@ -31,17 +26,6 @@ func init() {
 // Function that runs prior to execution of the main command. Useful for performing setup and verification tasks
 // such as checking for required user inputs, env vars, dependencies, etc
 func persistentPreRun(cmd *cobra.Command, args []string) {
-
-	// Ensure user provided a GITHUB_OAUTH_TOKEN
-	userProvidedToken := os.Getenv("GITHUB_OAUTH_TOKEN")
-	if userProvidedToken == "" {
-		log.WithFields(logrus.Fields{
-			"Error": "You must set a Github personal access token with access to Gruntwork repos via the Env var GITHUB_OAUTH_TOKEN",
-		}).Debug("Missing GITHUB_OAUTH_TOKEN")
-		os.Exit(1)
-	}
-
-	GithubOauthToken = userProvidedToken
 
 	requiredDeps := []Dependency{
 		{Name: "yq", URL: "https://mikefarah.gitbook.io/yq/"},
@@ -60,12 +44,10 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Debug("Context converter running...")
 
-		// Configure Github client, with user-provided personal access token
-		ConfigureGithubClient()
+		GithubClient := ConfigureGithubClient()
 
 		// Update repos to use the target context, where applicable
-		ConvertReposContexts()
-
+		ConvertReposContexts(GithubClient, GithubOrg)
 	},
 }
 

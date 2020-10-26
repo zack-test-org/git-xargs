@@ -17,6 +17,7 @@ var (
 	CircleCIConfigPath                   = ".circleci/config.yml"
 )
 
+// Checks if a given program is installed locally - similar to a `which` command
 func dependencyInstalled(dep string) bool {
 	_, err := exec.LookPath(dep)
 	return err == nil
@@ -46,8 +47,8 @@ func MustHaveDependenciesInstalled(deps []Dependency) {
 // First, fetches all repositories for the given org
 // Next, filters them down to only those repositories that actually have .circleci/config.yml files
 // Finally, processes each of those repositories according to the logic defined in yaml.go, essentially adding the required Gruntwork Admin context to any Workflows -> Jobs -> Context arrays that don't already have it
-func ConvertReposContexts() {
-	repos, err := getReposByOrg(GithubOrg)
+func ConvertReposContexts(GithubClient *github.Client, GithubOrg string) {
+	repos, err := getReposByOrg(GithubClient, GithubOrg)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"Error":        err,
@@ -66,5 +67,5 @@ func ConvertReposContexts() {
 	}
 
 	// Set aside the repos that do have a .circleci/config.yml file
-	OrgReposWithCircleCIConfig = processReposWithCircleCIConfigs(AllOrgRepos)
+	OrgReposWithCircleCIConfig = processReposWithCircleCIConfigs(GithubClient, GithubOrg, AllOrgRepos)
 }

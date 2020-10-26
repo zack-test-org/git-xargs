@@ -10,7 +10,7 @@ import (
 )
 
 // Get all the repos for a given Github organization
-func getReposByOrg(org string) ([]*github.Repository, error) {
+func getReposByOrg(GithubClient *github.Client, GithubOrg string) ([]*github.Repository, error) {
 	// Page through all of the organization's repos, collecting them in this slice
 	var allRepos []*github.Repository
 
@@ -45,7 +45,7 @@ func getReposByOrg(org string) ([]*github.Repository, error) {
 	return allRepos, nil
 }
 
-func getMasterBranchGitRef(repo *github.Repository) *github.Reference {
+func getMasterBranchGitRef(GithubClient *github.Client, GithubOrg string, repo *github.Repository) *github.Reference {
 
 	ref, _, err := GithubClient.Git.GetRef(context.Background(), GithubOrg, repo.GetName(), "heads/master")
 
@@ -58,7 +58,7 @@ func getMasterBranchGitRef(repo *github.Repository) *github.Reference {
 	return ref
 }
 
-func createProjectBranchIfNotExists(repo *github.Repository) {
+func createProjectBranchIfNotExists(GithubClient *github.Client, GithubOrg string, repo *github.Repository) {
 
 	existingRef, getResponse, getErr := GithubClient.Git.GetRef(context.Background(), GithubOrg, repo.GetName(), RefsTargetBranch)
 
@@ -83,7 +83,7 @@ func createProjectBranchIfNotExists(repo *github.Repository) {
 		return
 	}
 
-	masterGitRef := getMasterBranchGitRef(repo)
+	masterGitRef := getMasterBranchGitRef(GithubClient, GithubOrg, repo)
 
 	// Update the ref's name with our new desired branch name, which will be POSTed via the Github API
 	// to create a new branch by that name. Note, however, that the ref object still comes from master, so that its Ref.object.SHA will still point to master
@@ -105,7 +105,7 @@ func createProjectBranchIfNotExists(repo *github.Repository) {
 }
 
 // Update the file via the Github API, on a special branch specific to this tool, which can then be PR'd against master
-func updateFileOnBranch(repo *github.Repository, path string, sha *string, fileContents []byte) {
+func updateFileOnBranch(GithubClient *github.Client, GithubOrg string, repo *github.Repository, path string, sha *string, fileContents []byte) {
 
 	opt := &github.RepositoryContentFileOptions{
 		Branch:  github.String(TargetBranch),
@@ -125,7 +125,7 @@ func updateFileOnBranch(repo *github.Repository, path string, sha *string, fileC
 	}
 }
 
-func openPullRequest(repo *github.Repository) {
+func openPullRequest(GithubClient *github.Client, GithubOrg string, repo *github.Repository) {
 
 	body := "This pull request was programmatically opened by the multi-repo-updater program. It should be adding the 'Gruntwork Admin' context to any Workflows -> Jobs nodes and should also be leaving the rest of the .circleci/config.yml file alone. \n\n This PR was opened so that all our repositories' .circleci/config.yml files can be converted to use the same CircleCI context, which will make rotating secrets much easier in the future."
 
@@ -153,7 +153,7 @@ func openPullRequest(repo *github.Repository) {
 	}
 }
 
-func processReposWithCircleCIConfigs(repos []*github.Repository) []*github.Repository {
+func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg string, repos []*github.Repository) []*github.Repository {
 	opt := &github.RepositoryContentGetOptions{}
 
 	var reposWithCircleCIConfigs []*github.Repository
@@ -215,10 +215,9 @@ func processReposWithCircleCIConfigs(repos []*github.Repository) []*github.Repos
 
 			log.Debug("Attempting to update file on branch")
 
-			createProjectBranchIfNotExists(repo)
-			updateFileOnBranch(repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes)
-			openPullRequest(repo)
-
+			createProjectBranchIfNotExists(GithubClient, GithubOrg, repo)
+			updateFileOnBranch(GithubClient, GithubOrg, repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes)
+			openPullRequest(GithubClient, GithubOrg, repo)
 		}
 	}
 
