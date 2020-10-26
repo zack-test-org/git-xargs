@@ -1,4 +1,4 @@
-module github.com/gruntwork-io/prototypes/context-converter
+module github.com/gruntwork-io/prototypes/multi-repo-updater
 
 go 1.14
 

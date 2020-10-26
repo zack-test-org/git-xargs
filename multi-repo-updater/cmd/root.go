@@ -53,9 +53,9 @@ func persistentPreRun(cmd *cobra.Command, args []string) {
 }
 
 var rootCmd = &cobra.Command{
-	Use:              "context-converter",
-	Short:            "Context converter CLI",
-	Long:             "Context converter programmatically looks up Gruntwork repos and adds a configurable context to their CircleCI config workflow jobs",
+	Use:              "multi-repo-updater",
+	Short:            "Multi repo updater CLI",
+	Long:             "Multi repo updater programmatically looks up Gruntwork repos and adds a configurable context to their CircleCI config workflow jobs",
 	PersistentPreRun: persistentPreRun,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Debug("Context converter running...")

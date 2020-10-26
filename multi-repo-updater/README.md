@@ -4,7 +4,7 @@ Context converter is a CLI that allows you to quickly make mass-updates to your 
 
 # How it works 
 
-Currently, when you run the `context-converter`, you specify a Github organization name, such as `gruntwork-io`. The tool will: 
+Currently, when you run the `multi-repo-updater`, you specify a Github organization name, such as `gruntwork-io`. The tool will: 
 
 1. fetch all the public and private repositories owned by this organization 
 1. filter down to only those repos containing a `.circleci/config.yml` file
