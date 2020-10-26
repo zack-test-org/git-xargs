@@ -19,10 +19,7 @@ var (
 
 func dependencyInstalled(dep string) bool {
 	_, err := exec.LookPath(dep)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // A given third party binary that must be installed on the operator's system in order for them to use this tool
