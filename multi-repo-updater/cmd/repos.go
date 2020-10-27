@@ -58,7 +58,14 @@ func getMasterBranchGitRef(GithubClient *github.Client, GithubOrg string, repo *
 	return ref
 }
 
-func createProjectBranchIfNotExists(GithubClient *github.Client, GithubOrg string, repo *github.Repository) {
+func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository) {
+
+	if DryRun {
+		log.WithFields(logrus.Fields{
+			"Repo": repo.GetName(),
+		}).Debug("DryRun is set to true, so skipping creation of new branch!")
+		return
+	}
 
 	existingRef, getResponse, getErr := GithubClient.Git.GetRef(context.Background(), GithubOrg, repo.GetName(), RefsTargetBranch)
 
@@ -105,7 +112,14 @@ func createProjectBranchIfNotExists(GithubClient *github.Client, GithubOrg strin
 }
 
 // Update the file via the Github API, on a special branch specific to this tool, which can then be PR'd against master
-func updateFileOnBranch(GithubClient *github.Client, GithubOrg string, repo *github.Repository, path string, sha *string, fileContents []byte) {
+func updateFileOnBranch(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository, path string, sha *string, fileContents []byte) {
+
+	if DryRun {
+		log.WithFields(logrus.Fields{
+			"Repo": repo.GetName(),
+		}).Debug("DryRun is set to true, so skipping file update!")
+		return
+	}
 
 	opt := &github.RepositoryContentFileOptions{
 		Branch:  github.String(TargetBranch),
@@ -125,7 +139,14 @@ func updateFileOnBranch(GithubClient *github.Client, GithubOrg string, repo *git
 	}
 }
 
-func openPullRequest(GithubClient *github.Client, GithubOrg string, repo *github.Repository) {
+func openPullRequest(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository) {
+
+	if DryRun {
+		log.WithFields(logrus.Fields{
+			"Repo": repo.GetName(),
+		}).Debug("DryRun is set to true, so skipping opening a pull request!")
+		return
+	}
 
 	body := "This pull request was programmatically opened by the multi-repo-updater program. It should be adding the 'Gruntwork Admin' context to any Workflows -> Jobs nodes and should also be leaving the rest of the .circleci/config.yml file alone. \n\n This PR was opened so that all our repositories' .circleci/config.yml files can be converted to use the same CircleCI context, which will make rotating secrets much easier in the future."
 
@@ -215,9 +236,9 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 
 			log.Debug("Attempting to update file on branch")
 
-			createProjectBranchIfNotExists(GithubClient, GithubOrg, repo)
-			updateFileOnBranch(GithubClient, GithubOrg, repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes)
-			openPullRequest(GithubClient, GithubOrg, repo)
+			createProjectBranchIfNotExists(DryRun, GithubClient, GithubOrg, repo)
+			updateFileOnBranch(DryRun, GithubClient, GithubOrg, repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes)
+			openPullRequest(DryRun, GithubClient, GithubOrg, repo)
 		}
 	}
 
