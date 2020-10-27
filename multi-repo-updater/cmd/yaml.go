@@ -14,7 +14,12 @@ import (
 // on workflows blocks that already exist
 func ensureConfigFileHasWorkflowsBlock(filename string) bool {
 
-	workflowsCount := getIntFromCommand("r", filename, "--length", "workflows")
+	workflowsCount, err := getIntFromCommand("r", filename, "--length", "workflows")
+
+	if err != nil {
+		log.Debug("Unable to verify presence of workflows block for repo")
+		return false
+	}
 
 	if workflowsCount < 1 {
 		log.WithFields(logrus.Fields{
@@ -31,14 +36,24 @@ func ensureConfigFileHasWorkflowsBlock(filename string) bool {
 // contains support for contexts
 func ensureWorkflowSyntaxVersion(filename string) bool {
 
-	syntaxKeyCount := getIntFromCommand("r", filename, "--length", "workflows.version")
+	syntaxKeyCount, err := getIntFromCommand("r", filename, "--length", "workflows.version")
+
+	if err != nil {
+		log.Debug("Unable to verify workflows block declares a syntax version")
+		return false
+	}
 
 	if syntaxKeyCount < 1 {
 		log.Debug("Could not find workflows.version key, so can't programmatically operate on this YAML file")
 		return false
 	}
 
-	syntaxVersion := getFloatFromCommand("r", filename, "workflows.version")
+	syntaxVersion, versionLookupErr := getFloatFromCommand("r", filename, "workflows.version")
+
+	if versionLookupErr != nil {
+		log.Debug("Unable to look up workflows syntax version")
+		return false
+	}
 
 	if syntaxVersion < 2.0 {
 		log.WithFields(logrus.Fields{
@@ -54,7 +69,12 @@ func ensureWorkflowSyntaxVersion(filename string) bool {
 // Count the number of nested Workflows -> Jobs -> Context fields in the YAML document
 func configFileHasContexts(filename string) bool {
 
-	contextsCount := getIntFromCommand("r", filename, "--length", "--collect", "workflows.*.jobs.*.*.context")
+	contextsCount, err := getIntFromCommand("r", filename, "--length", "--collect", "workflows.*.jobs.*.*.context")
+
+	if err != nil {
+		log.Debug("Unable to verify file has context nodes")
+		return false
+	}
 
 	if contextsCount < 1 {
 		return false
@@ -69,12 +89,27 @@ func configFileHasContexts(filename string) bool {
 func appendContextNodes(filename string) {
 
 	// Get the original workflows.version value from the YAML file
-	originalVersion := getIntFromCommand("r", filename, "workflows.version")
+	originalVersion, err := getIntFromCommand("r", filename, "workflows.version")
 
-	cmdOutput := runYqCommand("w", "-i", filename, "workflows.*.jobs[*].*.context[+]", "Gruntwork Admin")
+	if err != nil {
+		log.Debug("Unable to lookup workflows syntax version - can't safely operate on file")
+		return
+	}
+
+	cmdOutput, err := runYqCommand("w", "-i", filename, "workflows.*.jobs[*].*.context[+]", "Gruntwork Admin")
+
+	if err != nil {
+		log.Debug("Unable to append desired context to Workflows -> jobs nodes")
+		return
+	}
 
 	// This is profoundly annoying, but for the time being we need to repair the workflows version field that gets nuked by the above write query
-	versionRepairOutput := runYqCommand("w", "-i", filename, "workflows.version", strconv.FormatInt(originalVersion, 10))
+	versionRepairOutput, err := runYqCommand("w", "-i", filename, "workflows.version", strconv.FormatInt(originalVersion, 10))
+
+	if err != nil {
+		log.Debug("Unable to replace original Workflows -> Version field value")
+		return
+	}
 
 	log.WithFields(logrus.Fields{
 		"cmdOutput":           cmdOutput,
@@ -85,7 +120,12 @@ func appendContextNodes(filename string) {
 // Get the count of the all the context nodes under the path Workflows -> Jobs -> Context
 func countTotalContexts(filename string) int64 {
 
-	countTotalContexts := getIntFromCommand("r", filename, "--length", "--collect", "workflows.*.jobs.*.*.context")
+	countTotalContexts, err := getIntFromCommand("r", filename, "--length", "--collect", "workflows.*.jobs.*.*.context")
+
+	if err != nil {
+		log.Debug("Unable to count number of contexts defined in file")
+		return 0
+	}
 
 	return countTotalContexts
 }
@@ -95,7 +135,12 @@ func countContextsWithMember(filename string) int64 {
 
 	pathExpression := fmt.Sprintf("workflows.*.jobs.*.*.context(.==%s)", TargetContext)
 
-	countContextsCorrectlySet := getIntFromCommand("r", filename, "--length", "--collect", pathExpression)
+	countContextsCorrectlySet, err := getIntFromCommand("r", filename, "--length", "--collect", pathExpression)
+
+	if err != nil {
+		log.Debug("Unable to count number of contexts arrays with desired context member")
+		return 0
+	}
 
 	return countContextsCorrectlySet
 }

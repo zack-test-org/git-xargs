@@ -15,25 +15,31 @@ const YQ_BINARY = "yq"
 
 // Accept an arbitrary number of string arguments to pass to the yq binary
 // Run yq with the supplied arguments and return its output as a byte slice
-func runYqCommand(args ...string) []byte {
+func runYqCommand(args ...string) ([]byte, error) {
 	cmd := exec.Command(YQ_BINARY, args...)
 	stdout, err := cmd.Output()
 
 	if err != nil {
 		log.WithFields(logrus.Fields{
-			"Error":   err,
-			"args...": args,
+			"Error":      err,
+			"args...":    args,
+			"Cmd Stdout": stdout,
 		}).Debug(fmt.Sprintf("Error running command against %s", YQ_BINARY))
+		return nil, err
 	}
 
-	return stdout
+	return stdout, nil
 }
 
 // Take in an arbitrary number of string arguments, and pass them along to the yq binary, attempting
 // to extract a float (e.g.; 2.0) from the command output
-func getFloatFromCommand(args ...string) float64 {
+func getFloatFromCommand(args ...string) (float64, error) {
 
-	cmdOutput := runYqCommand(args...)
+	cmdOutput, err := runYqCommand(args...)
+
+	if err != nil {
+		return 0, err
+	}
 
 	cmdOutputString := string(cmdOutput)
 
@@ -46,16 +52,17 @@ func getFloatFromCommand(args ...string) float64 {
 			"Error": err,
 			"Args":  args,
 		}).Debug("Error parsing float from cmd output")
-		return 0
+
+		return 0, err
 	}
-	return parsedFloat
+	return parsedFloat, nil
 }
 
 // Take in an arbitrary number of string arguments, and pass them along to the yq binary, attempting
 // to extract an int (e.g.; 4) from the command output
-func getIntFromCommand(args ...string) int64 {
+func getIntFromCommand(args ...string) (int64, error) {
 
-	cmdOutput := runYqCommand(args...)
+	cmdOutput, err := runYqCommand(args...)
 
 	cmdOutputString := string(cmdOutput)
 
@@ -73,7 +80,7 @@ func getIntFromCommand(args ...string) int64 {
 			"Error": err,
 			"Args":  args,
 		}).Debug("Error parsing int from cmd output")
-		return 0
+		return 0, nil
 	}
-	return parsedInt
+	return parsedInt, nil
 }
