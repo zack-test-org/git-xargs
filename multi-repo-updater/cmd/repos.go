@@ -45,7 +45,7 @@ func getReposByOrg(GithubClient *github.Client, GithubOrg string) ([]*github.Rep
 	return allRepos, nil
 }
 
-func getMasterBranchGitRef(GithubClient *github.Client, GithubOrg string, repo *github.Repository) *github.Reference {
+func getMasterBranchGitRef(GithubClient *github.Client, GithubOrg string, repo *github.Repository) (*github.Reference, error) {
 
 	ref, _, err := GithubClient.Git.GetRef(context.Background(), GithubOrg, repo.GetName(), "heads/master")
 
@@ -53,18 +53,19 @@ func getMasterBranchGitRef(GithubClient *github.Client, GithubOrg string, repo *
 		log.WithFields(logrus.Fields{
 			"Error": err,
 		}).Debug("Error retrieving head commit SHA")
+		return nil, err
 	}
 
-	return ref
+	return ref, nil
 }
 
-func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository) {
+func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository) error {
 
 	if DryRun {
 		log.WithFields(logrus.Fields{
 			"Repo": repo.GetName(),
 		}).Debug("DryRun is set to true, so skipping creation of new branch!")
-		return
+		return nil
 	}
 
 	existingRef, getResponse, getErr := GithubClient.Git.GetRef(context.Background(), GithubOrg, repo.GetName(), RefsTargetBranch)
@@ -75,6 +76,7 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 			"Branch":    TargetBranch,
 			"Repo name": repo.GetName(),
 		}).Debug("Error checking if project branch already exists")
+		return getErr
 	}
 
 	if getResponse.StatusCode == 404 {
@@ -87,28 +89,35 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 			"Branch":    TargetBranch,
 			"Repo name": repo.GetName(),
 		}).Debug(fmt.Sprintf("Project branch already exists for repo - will not attempt to create it again"))
-		return
+		return nil
 	}
 
-	masterGitRef := getMasterBranchGitRef(GithubClient, GithubOrg, repo)
+	masterGitRef, err := getMasterBranchGitRef(GithubClient, GithubOrg, repo)
+
+	if err != nil {
+		log.Debug("Error retrieving git ref for master branch - can't create branch")
+		return err
+	}
 
 	// Update the ref's name with our new desired branch name, which will be POSTed via the Github API
 	// to create a new branch by that name. Note, however, that the ref object still comes from master, so that its Ref.object.SHA will still point to master
 	// This tells the Github API that we want to create a new branch with our provided name, with the HEAD of master's SHA as the starting point. In other words, branch off the HEAD of master.
 	masterGitRef.Ref = &RefsTargetBranch
 
-	_, _, err := GithubClient.Git.CreateRef(context.Background(), GithubOrg, repo.GetName(), masterGitRef)
+	_, _, createRefErr := GithubClient.Git.CreateRef(context.Background(), GithubOrg, repo.GetName(), masterGitRef)
 
-	if err != nil {
+	if createRefErr != nil {
 		log.WithFields(logrus.Fields{
-			"Error": err,
+			"Error": createRefErr,
 		}).Debug("Error creating new branch from master")
-		return
+		return createRefErr
 	}
 
 	log.WithFields(logrus.Fields{
 		"Repo name": repo.GetName(),
 	}).Debug(fmt.Sprintf("Created new branch %s off of master for repo %s", TargetBranch, repo.GetName()))
+
+	return nil
 }
 
 // Update the file via the Github API, on a special branch specific to this tool, which can then be PR'd against master
@@ -236,9 +245,14 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 
 			log.Debug("Attempting to update file on branch")
 
-			createProjectBranchIfNotExists(DryRun, GithubClient, GithubOrg, repo)
-			updateFileOnBranch(DryRun, GithubClient, GithubOrg, repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes)
-			openPullRequest(DryRun, GithubClient, GithubOrg, repo)
+			createBranchErr := createProjectBranchIfNotExists(DryRun, GithubClient, GithubOrg, repo)
+
+			// If createBranchErr is not equal to nil, then that means we both a). needed to create a branch, because it didn't already exist and b). failed to do so, so we can't proceed with file updates or PR
+			if createBranchErr != nil {
+				updateFileOnBranch(DryRun, GithubClient, GithubOrg, repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes)
+				openPullRequest(DryRun, GithubClient, GithubOrg, repo)
+
+			}
 		}
 	}
 
