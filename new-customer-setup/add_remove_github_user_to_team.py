@@ -160,6 +160,29 @@ def remove_user_from_team(github_id, team_id, github_creds):
         raise Exception('Failed to delete user {} from team {}. Got response {} from GitHub with body: {}.'.format(github_id, team_id, response.status_code, response.json()))
 
 
+def remove_user_from_org(github_id, github_creds):
+    """
+    Remove the user with the given GitHub ID from the Gruntwork org.
+    https://docs.github.com/en/free-pro-team@latest/rest/reference/orgs#remove-an-organization-member
+    :param github_id: The user's GitHub ID
+    :param github_creds: The GitHub creds to use for the API call. Should be a tuple of (username, password).
+    :return: An empty object
+    """
+    logging.info('Deleting GitHub user {} from gruntwork-io org'.format(github_id))
+
+    url = 'https://api.github.com/orgs/gruntwork-io/members/{}'.format(github_id)
+    response = requests.delete(url, auth=github_creds)
+
+    if response.status_code == 204:
+        logging.info('Successfully deleted user {} from gruntwork-io org'.format(github_id))
+        return {}
+    elif response.status_code == 404:
+        logging.info('Skipped deleting user {} not member of gruntwork-io org'.format(github_id))
+        return {}
+    else:
+        raise Exception('Failed to delete user {} from gruntwork-io org {}. Got response {} from GitHub with body: {}.'.format(github_id, response.status_code, response.json()))
+
+
 def format_github_team_name(name):
     """
     Convert the given name to a GitHub team name for a customer. We do this by converting the name to a lower case,
@@ -268,8 +291,12 @@ def run():
         logging.info('The "active" input for the user is set to "Yes", so adding user to team.')
         return do_add_user_to_team(github_id, company_name, github_creds)
     elif is_negative_value(user_active):
-        logging.info('The "active" input for the user is set to "No", so removing user from the team.')
-        return do_remove_user_from_team(github_id, company_name, github_creds)
+        logging.info('The "active" input for the user is set to "No", so removing user from the team and org.')
+        remove_user_from_team_output = do_remove_user_from_team(github_id, company_name, github_creds)
+        remove_user_from_org_output = remove_user_from_org(github_id, github_creds)
+        # Merge the outputs from the two function calls in a python version compatible way
+        remove_user_from_team_output.update(remove_user_from_org_update)
+        return remove_user_from_team_output
     else:
         logging.info('The "active" input for the user is not set to "Yes" or "No", so assuming this entry is still a WIP and will not take any action.')
         return {}
