@@ -151,32 +151,6 @@ func correctContextsAlreadyPresent(filename string) bool {
 	return countTotalContexts(filename) == countContextsWithMember(filename)
 }
 
-// Takes in the raw YAML file bytes and creates a temporary file to write them to
-// This temporary file is then further processed by the various methods, with updates made in-place via yq's -i flag
-// When processing is complete, the final contents of this temporary file are read again and then PUT against the original file via the Github API in order to update it
-func writeYamlToTempFile(yamlBytes []byte) *os.File {
-
-	tmpFile, err := ioutil.TempFile("", "circle-ci-context")
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"Error": err,
-		}).Fatal("Error creating temporary YAML file")
-	}
-
-	if _, writeErr := tmpFile.Write(yamlBytes); writeErr != nil {
-		log.WithFields(logrus.Fields{
-			"Error": writeErr,
-		}).Debug("Error writing YAML to temporary file")
-	}
-	if closeErr := tmpFile.Close(); closeErr != nil {
-		log.WithFields(logrus.Fields{
-			"Error": closeErr,
-		}).Debug("Error closing temporary file after writing YAML")
-	}
-
-	return tmpFile
-}
-
 // Use yq to make the required updates to the supplied YAML file
 // First, the YAML is written to temporary file, and then the temporary file is updated in place
 // When processing is complete, the final temp file contents are read out again and returned as bytes, suitable for making updates via the Github API
@@ -197,10 +171,16 @@ func UpdateYamlDocument(yamlBytes []byte) []byte {
 		return nil
 	}
 
+	fmt.Println("*** DEBUG - PRIOR TO YQ WRITING TO TEMPFILE IN PLACE ***")
+	dumpTempFileContents(tmpFile)
+
 	// If none of the config file's Workflow -> Jobs nodes have context fields, append them
 	// Note this function will both append the context arrays and add the correct "Gruntwork Admin" member
 	if !configFileHasContexts(tmpFileName) {
 		appendContextNodes(tmpFileName)
+
+		fmt.Println("*** DEBUG - POST YQ WRITING TO TEMPFILE IN PLACE ***")
+		dumpTempFileContents(tmpFile)
 	} else {
 		// If the config file's Workflows -> Jobs -> Contexts nodes already have the desired context set, return because there's nothing to do
 		// This is determined by checking if the count of context nodes is equal to the number of context nodes that contain the "Gruntwork Admin" member
