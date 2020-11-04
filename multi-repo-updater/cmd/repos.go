@@ -70,16 +70,7 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 
 	existingRef, getResponse, getErr := GithubClient.Git.GetRef(context.Background(), GithubOrg, repo.GetName(), RefsTargetBranch)
 
-	if getErr != nil {
-		log.WithFields(logrus.Fields{
-			"Error":     getErr,
-			"Branch":    TargetBranch,
-			"Repo name": repo.GetName(),
-		}).Debug("Error checking if project branch already exists")
-		return getErr
-	}
-
-	if getResponse.StatusCode == 404 {
+	if getErr != nil && getResponse.StatusCode == 404 {
 		log.WithFields(logrus.Fields{
 			"Branch":    TargetBranch,
 			"Repo name": repo.GetName(),
@@ -90,6 +81,12 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 			"Repo name": repo.GetName(),
 		}).Debug(fmt.Sprintf("Project branch already exists for repo - will not attempt to create it again"))
 		return nil
+	} else if getErr != nil {
+		log.WithFields(logrus.Fields{
+			"Error":     getErr,
+			"Branch":    TargetBranch,
+			"Repo name": repo.GetName(),
+		}).Debug("Error checking if project branch already exists")
 	}
 
 	masterGitRef, err := getMasterBranchGitRef(GithubClient, GithubOrg, repo)
@@ -183,11 +180,15 @@ func openPullRequest(DryRun bool, GithubClient *github.Client, GithubOrg string,
 	}
 }
 
+// Loop through every passed in repository and look up the file contents of the config.yml file via Github API
+// Filter down from ALL repos to only those repos containing files at the expected path: .circleci/config.yml
+// Then, process only those repos that do contain config files, updating their YAML by first writing the file contents available at the HEAD of the main branch to a tempfile. The tempfile is then further processed via commands shelled out to the `yq` binary to modify the tempfile in place, and the final results of the tempfile are read out again before being PUT via the Github API to a special project branch
 func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg string, repos []*github.Repository) []*github.Repository {
 	opt := &github.RepositoryContentGetOptions{}
 
 	var reposWithCircleCIConfigs []*github.Repository
 
+	// If the repo does not have a .circleci/config.yml file, we skip processing it, but add it to slice of repos without config files for later processing, producing stats, etc
 	for _, repo := range repos {
 		repositoryFile, _, _, err := GithubClient.Repositories.GetContents(context.Background(), GithubOrg, repo.GetName(), CircleCIConfigPath, opt)
 
@@ -204,11 +205,13 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 			continue
 		}
 
+		// By this point, we're operating on a repository that contains a .circleci/config.yml file
 		fileContents, fileGetContentsErr := repositoryFile.GetContent()
 
 		fmt.Println("*****************************************")
-		fmt.Printf("PRE UPDATING YAML DOCUMENT %s\n", string(fileContents))
+		fmt.Println("PRE UPDATING YAML DOCUMENT")
 		fmt.Println("*****************************************")
+		fmt.Printf("%s\n", string(fileContents))
 
 		if fileGetContentsErr != nil {
 			log.WithFields(logrus.Fields{
@@ -240,15 +243,16 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 			}
 
 			fmt.Println("*****************************************")
-			fmt.Printf("POST UPDATING YAML DOCUMENT: %s\n", string(updatedYAMLBytes))
+			fmt.Println("POST UPDATING YAML DOCUMENT")
 			fmt.Println("*****************************************")
+			fmt.Printf("%s\n", string(updatedYAMLBytes))
 
 			log.Debug("Attempting to update file on branch")
 
 			createBranchErr := createProjectBranchIfNotExists(DryRun, GithubClient, GithubOrg, repo)
 
 			// If createBranchErr is not equal to nil, then that means we both a). needed to create a branch, because it didn't already exist and b). failed to do so, so we can't proceed with file updates or PR
-			if createBranchErr != nil {
+			if createBranchErr == nil {
 				updateFileOnBranch(DryRun, GithubClient, GithubOrg, repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes)
 				openPullRequest(DryRun, GithubClient, GithubOrg, repo)
 

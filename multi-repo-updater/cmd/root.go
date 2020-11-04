@@ -21,7 +21,7 @@ func init() {
 	log.SetLevel(logrus.DebugLevel)
 
 	rootCmd.PersistentFlags().StringVarP(&GithubOrg, "github-org", "o", "gruntwork-io", "The Github organization whose repos should be operated on")
-	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", true, "When dry-run is set to true, only proposed YAML updates will be output, but not changes in Github will be made (no branches will be created, no files updated, no PRs opened)")
+	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", false, "When dry-run is set to true, only proposed YAML updates will be output, but not changes in Github will be made (no branches will be created, no files updated, no PRs opened)")
 
 }
 

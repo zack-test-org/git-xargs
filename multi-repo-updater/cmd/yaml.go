@@ -14,7 +14,7 @@ import (
 // on workflows blocks that already exist
 func ensureConfigFileHasWorkflowsBlock(filename string) bool {
 
-	workflowsCount, err := getIntFromCommand("r", filename, "--length", "workflows")
+	workflowsCount, err := getIntFromCommand("r", filename, "-X", "--length", "workflows")
 
 	if err != nil {
 		log.Debug("Unable to verify presence of workflows block for repo")
@@ -36,7 +36,7 @@ func ensureConfigFileHasWorkflowsBlock(filename string) bool {
 // contains support for contexts
 func ensureWorkflowSyntaxVersion(filename string) bool {
 
-	syntaxKeyCount, err := getIntFromCommand("r", filename, "--length", "workflows.version")
+	syntaxKeyCount, err := getIntFromCommand("r", filename, "-X", "--length", "workflows.version")
 
 	if err != nil {
 		log.Debug("Unable to verify workflows block declares a syntax version")
@@ -48,7 +48,7 @@ func ensureWorkflowSyntaxVersion(filename string) bool {
 		return false
 	}
 
-	syntaxVersion, versionLookupErr := getFloatFromCommand("r", filename, "workflows.version")
+	syntaxVersion, versionLookupErr := getFloatFromCommand("r", filename, "-X", "workflows.version")
 
 	if versionLookupErr != nil {
 		log.Debug("Unable to look up workflows syntax version")
@@ -69,7 +69,7 @@ func ensureWorkflowSyntaxVersion(filename string) bool {
 // Count the number of nested Workflows -> Jobs -> Context fields in the YAML document
 func configFileHasContexts(filename string) bool {
 
-	contextsCount, err := getIntFromCommand("r", filename, "--length", "--collect", "workflows.*.jobs.*.*.context")
+	contextsCount, err := getIntFromCommand("r", filename, "-X", "--length", "--collect", "workflows.*.jobs.*.*.context")
 
 	if err != nil {
 		log.Debug("Unable to verify file has context nodes")
@@ -89,7 +89,7 @@ func configFileHasContexts(filename string) bool {
 func appendContextNodes(filename string) {
 
 	// Get the original workflows.version value from the YAML file
-	originalVersion, err := getIntFromCommand("r", filename, "workflows.version")
+	originalVersion, err := getIntFromCommand("r", filename, "-X", "workflows.version")
 
 	if err != nil {
 		log.Debug("Unable to lookup workflows syntax version - can't safely operate on file")
@@ -120,7 +120,7 @@ func appendContextNodes(filename string) {
 // Get the count of the all the context nodes under the path Workflows -> Jobs -> Context
 func countTotalContexts(filename string) int64 {
 
-	countTotalContexts, err := getIntFromCommand("r", filename, "--length", "--collect", "workflows.*.jobs.*.*.context")
+	countTotalContexts, err := getIntFromCommand("r", filename, "-X", "--length", "--collect", "workflows.*.jobs.*.*.context")
 
 	if err != nil {
 		log.Debug("Unable to count number of contexts defined in file")
@@ -135,7 +135,7 @@ func countContextsWithMember(filename string) int64 {
 
 	pathExpression := fmt.Sprintf("workflows.*.jobs.*.*.context(.==%s)", TargetContext)
 
-	countContextsCorrectlySet, err := getIntFromCommand("r", filename, "--length", "--collect", pathExpression)
+	countContextsCorrectlySet, err := getIntFromCommand("r", filename, "-X", "--length", "--collect", pathExpression)
 
 	if err != nil {
 		log.Debug("Unable to count number of contexts arrays with desired context member")
@@ -216,9 +216,6 @@ func UpdateYamlDocument(yamlBytes []byte) []byte {
 	// be read out again
 	updatedYamlBytes, readErr := ioutil.ReadFile(tmpFileName)
 
-	// Unfortunately there's an unknown bug in either yq or the underlying go-yaml library that results in our modified files
-	// having their *yaml.Node `tag` values written in front of the field itself - e.g.; !!merge <<: *stuff instead of just <<: *stuff, which would be correct
-	// Workaround it for the time being by replacing any instances of this - since it's also invalid YAML
 	sanitizedUpdatedYamlBytes := strings.ReplaceAll(string(updatedYamlBytes), "!!merge ", "")
 
 	if readErr != nil {
