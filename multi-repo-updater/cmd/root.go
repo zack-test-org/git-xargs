@@ -49,6 +49,10 @@ func persistentPreRun(cmd *cobra.Command, args []string) {
 
 	// Ensure that operator has all required dependencies installed
 	MustHaveDependenciesInstalled(requiredDeps)
+
+	if DryRun {
+		log.Debug("Dry-run setting enabled. No actual file changes, branches or PRs will be created in Github.")
+	}
 }
 
 var rootCmd = &cobra.Command{

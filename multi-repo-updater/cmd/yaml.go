@@ -171,16 +171,20 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool) []byte {
 		return nil
 	}
 
-	fmt.Println("*** DEBUG - PRIOR TO YQ WRITING TO TEMPFILE IN PLACE ***")
-	dumpTempFileContents(tmpFile)
+	if debug {
+		fmt.Println("*** DEBUG - PRIOR TO YQ WRITING TO TEMPFILE IN PLACE ***")
+		dumpTempFileContents(tmpFile)
+	}
 
 	// If none of the config file's Workflow -> Jobs nodes have context fields, append them
 	// Note this function will both append the context arrays and add the correct "Gruntwork Admin" member
 	if !configFileHasContexts(tmpFileName) {
 		appendContextNodes(tmpFileName)
 
-		fmt.Println("*** DEBUG - POST YQ WRITING TO TEMPFILE IN PLACE ***")
-		dumpTempFileContents(tmpFile)
+		if debug {
+			fmt.Println("*** DEBUG - POST YQ WRITING TO TEMPFILE IN PLACE ***")
+			dumpTempFileContents(tmpFile)
+		}
 	} else {
 		// If the config file's Workflows -> Jobs -> Contexts nodes already have the desired context set, return because there's nothing to do
 		// This is determined by checking if the count of context nodes is equal to the number of context nodes that contain the "Gruntwork Admin" member
@@ -196,6 +200,8 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool) []byte {
 	// be read out again
 	updatedYamlBytes, readErr := ioutil.ReadFile(tmpFileName)
 
+	// When yq writes to the tempfile to append the context nodes, it leaves these !!merge tags, which are the node types as determined by the underlying go-yaml v3 package
+	// Hopefully when yq v4 beta is released, we can try updating to it and improving some of the yq commands and hopefully drop this unfortunate manual sanitization step, too
 	sanitizedUpdatedYamlBytes := strings.ReplaceAll(string(updatedYamlBytes), "!!merge ", "")
 
 	if readErr != nil {

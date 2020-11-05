@@ -57,11 +57,9 @@ func ConvertReposContexts(GithubClient *github.Client, GithubOrg string, allowed
 	for _, repo := range reposToIterate {
 		log.WithFields(logrus.Fields{
 			"Repository": repo.GetName(),
-		}).Debug("Found repository")
-
-		AllOrgRepos = append(AllOrgRepos, repo)
+		}).Debug("Considering repo for upgrade")
 	}
 
 	// Set aside the repos that do have a .circleci/config.yml file
-	OrgReposWithCircleCIConfig = processReposWithCircleCIConfigs(GithubClient, GithubOrg, AllOrgRepos)
+	OrgReposWithCircleCIConfig = processReposWithCircleCIConfigs(GithubClient, reposToIterate)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-github/v32/github"
 	"github.com/sirupsen/logrus"
@@ -216,14 +217,15 @@ func openPullRequest(DryRun bool, GithubClient *github.Client, GithubOrg string,
 // Loop through every passed in repository and look up the file contents of the config.yml file via Github API
 // Filter down from ALL repos to only those repos containing files at the expected path: .circleci/config.yml
 // Then, process only those repos that do contain config files, updating their YAML by first writing the file contents available at the HEAD of the main branch to a tempfile. The tempfile is then further processed via commands shelled out to the `yq` binary to modify the tempfile in place, and the final results of the tempfile are read out again before being PUT via the Github API to a special project branch
-func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg string, repos []*github.Repository) []*github.Repository {
+func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*github.Repository) []*github.Repository {
 	opt := &github.RepositoryContentGetOptions{}
 
 	var reposWithCircleCIConfigs []*github.Repository
 
 	// If the repo does not have a .circleci/config.yml file, we skip processing it, but add it to slice of repos without config files for later processing, producing stats, etc
 	for _, repo := range repos {
-		repositoryFile, _, _, err := GithubClient.Repositories.GetContents(context.Background(), GithubOrg, repo.GetName(), CircleCIConfigPath, opt)
+
+		repositoryFile, _, _, err := GithubClient.Repositories.GetContents(context.Background(), *repo.GetOwner().Login, repo.GetName(), CircleCIConfigPath, opt)
 
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -243,7 +245,7 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 
 		if Debug {
 			fmt.Println("*****************************************")
-			fmt.Println("PRE UPDATING YAML DOCUMENT")
+			fmt.Printf("PRE UPDATING YAML DOCUMENT %s\n", strings.ToUpper(*repo.Name))
 			fmt.Println("*****************************************")
 			fmt.Printf("%s\n", string(fileContents))
 		}
@@ -272,14 +274,14 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 			if updatedYAMLBytes == nil {
 
 				log.WithFields(logrus.Fields{
-					"Repo Name": repo.Name,
+					"Repo Name": *repo.Name,
 				}).Debug("YAML was NOT updated for repo")
 				continue
 			}
 
 			if Debug {
 				fmt.Println("*****************************************")
-				fmt.Println("POST UPDATING YAML DOCUMENT")
+				fmt.Printf("POST UPDATING YAML DOCUMENT %s\n", strings.ToUpper(*repo.Name))
 				fmt.Println("*****************************************")
 				fmt.Printf("%s\n", string(updatedYAMLBytes))
 			}
