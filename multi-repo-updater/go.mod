@@ -3,8 +3,12 @@ module github.com/gruntwork-io/prototypes/multi-repo-updater
 go 1.14
 
 require (
+	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-github/v32 v32.1.0
+	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23
+	github.com/landoop/tableprinter v0.0.0-20200805134727-ea32388e35c1
+	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
 	golang.org/x/net v0.0.0-20201022231255-08b38378de70 // indirect

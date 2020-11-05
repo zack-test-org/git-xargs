@@ -29,13 +29,24 @@ func init() {
 	// Log messages that are of DEBUG level
 	log.SetLevel(logrus.DebugLevel)
 
-	rootCmd.PersistentFlags().StringVarP(&GithubOrg, "github-org", "o", "gruntwork-io", "The Github organization whose repos should be operated on")
+	rootCmd.PersistentFlags().StringVarP(&GithubOrg, "github-org", "o", "", "The Github organization whose repos should be operated on")
 	rootCmd.PersistentFlags().BoolVarP(&DryRun, "dry-run", "d", false, "When dry-run is set to true, only proposed YAML updates will be output, but not changes in Github will be made (no branches will be created, no files updated, no PRs opened)")
 
 	rootCmd.PersistentFlags().BoolVarP(&Debug, "debug", "x", false, "When debug is set to true, the YAML file contents for each considered repo will be written to STDOUT both PRE and POST processing for easier debugging")
 
-	rootCmd.PersistentFlags().StringVarP(&AllowedReposFile, "", "a", "allowed-repos-filepath", "The path to the file containing repos this tool is allowed to operate on, each repo in format: gruntwork-io/terraform-aws-eks, one repo per line")
+	rootCmd.PersistentFlags().StringVarP(&AllowedReposFile, "allowed-repos-filepath", "a", "", "The path to the file containing repos this tool is allowed to operate on, each repo in format: gruntwork-io/terraform-aws-eks, one repo per line")
 
+	rootCmd.AddCommand(versionCmd)
+
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the multi-repo-updater's version number",
+	Long:  "For realzingtons, get the version number for this CLI",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Gruntwork Multi Repo Updater v0.0.1")
+	},
 }
 
 // Function that runs prior to execution of the main command. Useful for performing setup and verification tasks
@@ -63,7 +74,14 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Debug("Context converter running...")
 
+		// If user didn't provide either means of looking up repos, bail out with a helpful error
+		ensureValidOptionsPassed(AllowedReposFile, GithubOrg)
+		// Configure the client that will make Github API calls on our behalf, using the user-provided Github personal access token
 		GithubClient := ConfigureGithubClient()
+
+		// Configure a stats tracker that can be passed along to keep tallies of which repos fell into which categories, how many were modified, etc
+
+		stats := NewStatsTracker()
 
 		var fileProvidedRepos []*AllowedRepo
 
@@ -78,9 +96,16 @@ var rootCmd = &cobra.Command{
 			}
 			// fileProvidedRepos, when set, will be preferred by ConvertReposContexts over the user-passed in github-org flag
 			fileProvidedRepos = allowedRepos
+
+			// Update count of number of repos the the tool read in from the provided file
+			stats.SetFileProvidedRepos(allowedRepos)
+
 		}
 		// Update repos to use the target context, where applicable
-		ConvertReposContexts(GithubClient, GithubOrg, fileProvidedRepos)
+		ConvertReposContexts(GithubClient, GithubOrg, fileProvidedRepos, stats)
+
+		// Once all processing is complete, print out the summary of what was done
+		stats.PrintReport()
 	},
 }
 

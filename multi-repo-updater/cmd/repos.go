@@ -93,12 +93,15 @@ func getMasterBranchGitRef(GithubClient *github.Client, GithubOrg string, repo *
 	return ref, nil
 }
 
-func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository) error {
+func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository, stats *RunStats) error {
 
 	if DryRun {
 		log.WithFields(logrus.Fields{
 			"Repo": repo.GetName(),
 		}).Debug("DryRun is set to true, so skipping creation of new branch!")
+		// Keep track of the repos that were not affected by any changes because dry-run was set to true
+		stats.TrackSingle(DryRunSet, repo)
+
 		return nil
 	}
 
@@ -109,11 +112,17 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 			"Branch":    TargetBranch,
 			"Repo name": repo.GetName(),
 		}).Debug("Target branch was not found for repo - will attempt to create it")
+
+		stats.TrackSingle(TargetBranchNotFound, repo)
+
 	} else if existingRef != nil {
 		log.WithFields(logrus.Fields{
 			"Branch":    TargetBranch,
 			"Repo name": repo.GetName(),
 		}).Debug(fmt.Sprintf("Project branch already exists for repo - will not attempt to create it again"))
+
+		stats.TrackSingle(TargetBranchAlreadyExists, repo)
+
 		return nil
 	} else if getErr != nil {
 		log.WithFields(logrus.Fields{
@@ -121,6 +130,8 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 			"Branch":    TargetBranch,
 			"Repo name": repo.GetName(),
 		}).Debug("Error checking if project branch already exists")
+
+		stats.TrackSingle(TargetBranchLookupErr, repo)
 	}
 
 	masterGitRef, err := getMasterBranchGitRef(GithubClient, GithubOrg, repo)
@@ -217,7 +228,7 @@ func openPullRequest(DryRun bool, GithubClient *github.Client, GithubOrg string,
 // Loop through every passed in repository and look up the file contents of the config.yml file via Github API
 // Filter down from ALL repos to only those repos containing files at the expected path: .circleci/config.yml
 // Then, process only those repos that do contain config files, updating their YAML by first writing the file contents available at the HEAD of the main branch to a tempfile. The tempfile is then further processed via commands shelled out to the `yq` binary to modify the tempfile in place, and the final results of the tempfile are read out again before being PUT via the Github API to a special project branch
-func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*github.Repository) []*github.Repository {
+func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*github.Repository, stats *RunStats) []*github.Repository {
 	opt := &github.RepositoryContentGetOptions{}
 
 	var reposWithCircleCIConfigs []*github.Repository
@@ -235,7 +246,8 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*githu
 				"Filepath": CircleCIConfigPath,
 			}).Debug("Error fetching file content! Repository does not have a CircleCI config file")
 
-			OrgReposWithNoCircleCIConfig = append(OrgReposWithNoCircleCIConfig, repo)
+			// Add repo to the set of those missing Circle CI configs
+			stats.TrackSingle(ConfigNotFound, repo)
 
 			continue
 		}
@@ -263,10 +275,10 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*githu
 				"Repo": repo.GetName(),
 			}).Debug("Repository does not have CircleCI config file")
 
-			OrgReposWithNoCircleCIConfig = append(OrgReposWithNoCircleCIConfig, repo)
+			stats.TrackSingle(ConfigNotFound, repo)
 		} else {
 
-			reposWithCircleCIConfigs = append(reposWithCircleCIConfigs, repo)
+			stats.TrackSingle(ConfigFound, repo)
 
 			// Process .circleci/config.yml file, updating context nodes as necessary
 			updatedYAMLBytes := UpdateYamlDocument([]byte(fileContents), Debug)
@@ -276,6 +288,10 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*githu
 				log.WithFields(logrus.Fields{
 					"Repo Name": *repo.Name,
 				}).Debug("YAML was NOT updated for repo")
+
+				// Track this repo as not having its config file updated
+				stats.TrackSingle(YamlNotUpdated, repo)
+
 				continue
 			}
 
@@ -288,7 +304,7 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*githu
 
 			log.Debug("Attempting to update file on branch")
 
-			createBranchErr := createProjectBranchIfNotExists(DryRun, GithubClient, GithubOrg, repo)
+			createBranchErr := createProjectBranchIfNotExists(DryRun, GithubClient, GithubOrg, repo, stats)
 
 			// If createBranchErr is not equal to nil, then that means we both a). needed to create a branch, because it didn't already exist and b). failed to do so, so we can't proceed with file updates or PR
 			if createBranchErr == nil {

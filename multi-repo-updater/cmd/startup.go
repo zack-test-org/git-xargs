@@ -35,3 +35,9 @@ func MustHaveDependenciesInstalled(deps []Dependency) {
 		}
 	}
 }
+
+func ensureValidOptionsPassed(allowedReposFile, GithubOrg string) {
+	if allowedReposFile == "" && GithubOrg == "" {
+		log.Fatal("You must either provide an AllowedReposFile path or a GithubOrg. See ./multi-repo-updater help")
+	}
+}
