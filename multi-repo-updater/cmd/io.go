@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -46,6 +49,40 @@ func dumpTempFileContents(tmpFile *os.File) {
 		}).Debug("Error reading temp file contents for debugging purposes")
 	}
 
-	fmt.Println("*** DEBUG - DUMPING TEMPFILE CONTENTS ***")
-	fmt.Printf("%s\n", string(fileBytes))
+	fmt.Printf("%s\n", fileBytes)
+}
+
+func processAllowedRepos(filepath string) ([]*AllowedRepo, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"Error":    err,
+			"Filepath": filepath,
+		}).Debug("Could not open")
+	}
+	defer file.Close()
+
+	var allowedRepos []*AllowedRepo
+
+	// The regex for all common special characters to remove from the repo lines in the allowed repos file
+	charRegex := regexp.MustCompile(`['",!]`)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		trimmedLine := strings.TrimSpace(scanner.Text())
+		cleanedLine := charRegex.ReplaceAllString(trimmedLine, "")
+		orgAndRepoSlice := strings.Split(cleanedLine, "/")
+		// TODO add validation here and make this less naive
+		repo := &AllowedRepo{
+			Organization: orgAndRepoSlice[0],
+			Name:         orgAndRepoSlice[1],
+		}
+		allowedRepos = append(allowedRepos, repo)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return allowedRepos, nil
 }

@@ -9,6 +9,39 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func getFileDefinedRepos(GithubClient *github.Client, allowedRepos []*AllowedRepo) ([]*github.Repository, error) {
+	var allRepos []*github.Repository
+
+	for _, allowedRepo := range allowedRepos {
+
+		log.WithFields(logrus.Fields{
+			"Organization": allowedRepo.Organization,
+			"Name":         allowedRepo.Name,
+		}).Debug("Looking up filename provided repo")
+
+		repo, resp, err := GithubClient.Repositories.Get(context.Background(), allowedRepo.Organization, allowedRepo.Name)
+
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"Error":                err,
+				"Response Status Code": resp.StatusCode,
+				"AllowedRepoOwner":     allowedRepo.Organization,
+				"AllowedRepoName":      allowedRepo.Name,
+			}).Debug("error getting single repo")
+		}
+
+		if resp.StatusCode == 200 {
+			log.WithFields(logrus.Fields{
+				"Organization": allowedRepo.Organization,
+				"Name":         allowedRepo.Name,
+			}).Debug("Successfully fetched repo")
+		}
+
+		allRepos = append(allRepos, repo)
+	}
+	return allRepos, nil
+}
+
 // Get all the repos for a given Github organization
 func getReposByOrg(GithubClient *github.Client, GithubOrg string) ([]*github.Repository, error) {
 	// Page through all of the organization's repos, collecting them in this slice
@@ -35,7 +68,7 @@ func getReposByOrg(GithubClient *github.Client, GithubOrg string) ([]*github.Rep
 	repoCount := len(allRepos)
 
 	if repoCount == 0 {
-		return nil, errors.New("No repositories found!")
+		return nil, errors.New("no repositories found")
 	}
 
 	log.WithFields(logrus.Fields{
@@ -208,10 +241,12 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 		// By this point, we're operating on a repository that contains a .circleci/config.yml file
 		fileContents, fileGetContentsErr := repositoryFile.GetContent()
 
-		fmt.Println("*****************************************")
-		fmt.Println("PRE UPDATING YAML DOCUMENT")
-		fmt.Println("*****************************************")
-		fmt.Printf("%s\n", string(fileContents))
+		if Debug {
+			fmt.Println("*****************************************")
+			fmt.Println("PRE UPDATING YAML DOCUMENT")
+			fmt.Println("*****************************************")
+			fmt.Printf("%s\n", string(fileContents))
+		}
 
 		if fileGetContentsErr != nil {
 			log.WithFields(logrus.Fields{
@@ -232,7 +267,7 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 			reposWithCircleCIConfigs = append(reposWithCircleCIConfigs, repo)
 
 			// Process .circleci/config.yml file, updating context nodes as necessary
-			updatedYAMLBytes := UpdateYamlDocument([]byte(fileContents))
+			updatedYAMLBytes := UpdateYamlDocument([]byte(fileContents), Debug)
 
 			if updatedYAMLBytes == nil {
 
@@ -242,10 +277,12 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, GithubOrg stri
 				continue
 			}
 
-			fmt.Println("*****************************************")
-			fmt.Println("POST UPDATING YAML DOCUMENT")
-			fmt.Println("*****************************************")
-			fmt.Printf("%s\n", string(updatedYAMLBytes))
+			if Debug {
+				fmt.Println("*****************************************")
+				fmt.Println("POST UPDATING YAML DOCUMENT")
+				fmt.Println("*****************************************")
+				fmt.Printf("%s\n", string(updatedYAMLBytes))
+			}
 
 			log.Debug("Attempting to update file on branch")
 

@@ -151,10 +151,10 @@ func correctContextsAlreadyPresent(filename string) bool {
 	return countTotalContexts(filename) == countContextsWithMember(filename)
 }
 
-// Use yq to make the required updates to the supplied YAML file
+// UpdateYamlDocument uses yq to make the required updates to the supplied YAML file
 // First, the YAML is written to temporary file, and then the temporary file is updated in place
 // When processing is complete, the final temp file contents are read out again and returned as bytes, suitable for making updates via the Github API
-func UpdateYamlDocument(yamlBytes []byte) []byte {
+func UpdateYamlDocument(yamlBytes []byte, debug bool) []byte {
 
 	tmpFile := writeYamlToTempFile(yamlBytes)
 	tmpFileName := tmpFile.Name()

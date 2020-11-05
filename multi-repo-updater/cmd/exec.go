@@ -11,12 +11,13 @@ import (
 
 // exec contains functions that deal with shelling out to external binaries and processing their output
 
-const YQ_BINARY = "yq"
+// YqBinary is the name of the underlying yaml processing CLI tool that this tool wraps
+const YqBinary = "yq"
 
 // Accept an arbitrary number of string arguments to pass to the yq binary
 // Run yq with the supplied arguments and return its output as a byte slice
 func runYqCommand(args ...string) ([]byte, error) {
-	cmd := exec.Command(YQ_BINARY, args...)
+	cmd := exec.Command(YqBinary, args...)
 	stdout, err := cmd.Output()
 
 	if err != nil {
@@ -24,7 +25,7 @@ func runYqCommand(args ...string) ([]byte, error) {
 			"Error":      err,
 			"args...":    args,
 			"Cmd Stdout": stdout,
-		}).Debug(fmt.Sprintf("Error running command against %s", YQ_BINARY))
+		}).Debug(fmt.Sprintf("Error running command against %s", YqBinary))
 		return nil, err
 	}
 

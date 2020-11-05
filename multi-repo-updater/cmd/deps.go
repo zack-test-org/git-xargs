@@ -15,13 +15,13 @@ func dependencyInstalled(dep string) bool {
 	return err == nil
 }
 
-// A given third party binary that must be installed on the operator's system in order for them to use this tool
+// Dependency represents a third party binary that must be installed on the operator's system in order for them to use this tool
 type Dependency struct {
 	Name string
 	URL  string
 }
 
-// Accepts a slice of dependencies, and FREAKS OUT if any of them are missing
+// MustHaveDependenciesInstalled accepts a slice of dependencies, and FREAKS OUT if any of them are missing
 func MustHaveDependenciesInstalled(deps []Dependency) {
 
 	for _, d := range deps {

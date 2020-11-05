@@ -10,7 +10,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// Create a Github API client using the user-supplied GITHUB_OAUTH_TOKEN and return the configured Github client
+// ConfigureGithubClient creates a Github API client using the user-supplied GITHUB_OAUTH_TOKEN and return the configured Github client
 func ConfigureGithubClient() *github.Client {
 	// Ensure user provided a GITHUB_OAUTH_TOKEN
 	GithubOauthToken := os.Getenv("GITHUB_OAUTH_TOKEN")
