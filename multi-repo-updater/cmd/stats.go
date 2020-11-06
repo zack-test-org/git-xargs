@@ -128,7 +128,7 @@ func (r *RunStats) PrintReport() {
 	configurePrinterStyling(fileProvidedReposPrinter)
 
 	fmt.Print("\n\n")
-	fmt.Println("  REPOS SUPPLIED VIA --allowed-repos-filepath FLAG")
+	fmt.Println(" REPOS SUPPLIED VIA --allowed-repos-filepath FLAG")
 	fileProvidedReposPrinter.Print(r.fileProvidedRepos)
 
 	// For each event type, print a summary of the repos in that category
@@ -149,7 +149,7 @@ func (r *RunStats) PrintReport() {
 
 		if len(reducedRepos) > 0 {
 			fmt.Println()
-			fmt.Println(strings.ToUpper(ae.Description))
+			fmt.Printf(" %s\n", strings.ToUpper(ae.Description))
 			printer.Print(reducedRepos)
 			fmt.Println()
 		}

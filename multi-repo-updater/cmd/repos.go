@@ -81,9 +81,9 @@ func getReposByOrg(GithubClient *github.Client, GithubOrg string, stats *RunStat
 	return allRepos, nil
 }
 
-func getMasterBranchGitRef(GithubClient *github.Client, GithubOrg string, repo *github.Repository) (*github.Reference, error) {
+func getMasterBranchGitRef(GithubClient *github.Client, repo *github.Repository) (*github.Reference, error) {
 
-	ref, _, err := GithubClient.Git.GetRef(context.Background(), GithubOrg, repo.GetName(), "heads/master")
+	ref, _, err := GithubClient.Git.GetRef(context.Background(), *repo.GetOwner().Login, repo.GetName(), "heads/master")
 
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -95,7 +95,7 @@ func getMasterBranchGitRef(GithubClient *github.Client, GithubOrg string, repo *
 	return ref, nil
 }
 
-func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository, stats *RunStats) error {
+func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, repo *github.Repository, stats *RunStats) error {
 
 	if DryRun {
 		log.WithFields(logrus.Fields{
@@ -107,7 +107,7 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 		return nil
 	}
 
-	existingRef, getResponse, getErr := GithubClient.Git.GetRef(context.Background(), GithubOrg, repo.GetName(), RefsTargetBranch)
+	existingRef, getResponse, getErr := GithubClient.Git.GetRef(context.Background(), *repo.GetOwner().Login, repo.GetName(), RefsTargetBranch)
 
 	if getErr != nil && getResponse.StatusCode == 404 {
 		log.WithFields(logrus.Fields{
@@ -136,7 +136,7 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 		stats.TrackSingle(TargetBranchLookupErr, repo)
 	}
 
-	masterGitRef, err := getMasterBranchGitRef(GithubClient, GithubOrg, repo)
+	masterGitRef, err := getMasterBranchGitRef(GithubClient, repo)
 
 	if err != nil {
 		log.Debug("Error retrieving git ref for master branch - can't create branch")
@@ -148,7 +148,7 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 	// This tells the Github API that we want to create a new branch with our provided name, with the HEAD of master's SHA as the starting point. In other words, branch off the HEAD of master.
 	masterGitRef.Ref = &RefsTargetBranch
 
-	_, _, createRefErr := GithubClient.Git.CreateRef(context.Background(), GithubOrg, repo.GetName(), masterGitRef)
+	_, _, createRefErr := GithubClient.Git.CreateRef(context.Background(), *repo.GetOwner().Login, repo.GetName(), masterGitRef)
 
 	if createRefErr != nil {
 		log.WithFields(logrus.Fields{
@@ -167,7 +167,7 @@ func createProjectBranchIfNotExists(DryRun bool, GithubClient *github.Client, Gi
 }
 
 // Update the file via the Github API, on a special branch specific to this tool, which can then be PR'd against master
-func updateFileOnBranch(DryRun bool, GithubClient *github.Client, GithubOrg string, repo *github.Repository, path string, sha *string, fileContents []byte, stats *RunStats) {
+func updateFileOnBranch(DryRun bool, GithubClient *github.Client, repo *github.Repository, path string, sha *string, fileContents []byte, stats *RunStats) {
 
 	if DryRun {
 		log.WithFields(logrus.Fields{
@@ -183,7 +183,7 @@ func updateFileOnBranch(DryRun bool, GithubClient *github.Client, GithubOrg stri
 		Message: github.String("Context converter programmatically repairing CircleCI config!"),
 	}
 
-	_, _, err := GithubClient.Repositories.UpdateFile(context.Background(), GithubOrg, repo.GetName(), path, opt)
+	_, _, err := GithubClient.Repositories.UpdateFile(context.Background(), *repo.GetOwner().Login, repo.GetName(), path, opt)
 
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -215,7 +215,7 @@ func openPullRequest(DryRun bool, GithubClient *github.Client, GithubOrg string,
 		MaintainerCanModify: github.Bool(true),
 	}
 
-	pr, _, err := GithubClient.PullRequests.Create(context.Background(), GithubOrg, repo.GetName(), newPR)
+	pr, _, err := GithubClient.PullRequests.Create(context.Background(), *repo.GetOwner().Login, repo.GetName(), newPR)
 
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -308,11 +308,11 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*githu
 				fmt.Printf("%s\n", string(updatedYAMLBytes))
 			}
 
-			createBranchErr := createProjectBranchIfNotExists(DryRun, GithubClient, GithubOrg, repo, stats)
+			createBranchErr := createProjectBranchIfNotExists(DryRun, GithubClient, repo, stats)
 
 			// If createBranchErr is not equal to nil, then that means we both a). needed to create a branch, because it didn't already exist and b). failed to do so, so we can't proceed with file updates or PR
 			if createBranchErr == nil {
-				updateFileOnBranch(DryRun, GithubClient, GithubOrg, repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes, stats)
+				updateFileOnBranch(DryRun, GithubClient, repo, CircleCIConfigPath, repositoryFile.SHA, updatedYAMLBytes, stats)
 				openPullRequest(DryRun, GithubClient, GithubOrg, repo, stats)
 
 			}
