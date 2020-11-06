@@ -34,7 +34,7 @@ func ConvertReposContexts(GithubClient *github.Client, GithubOrg string, allowed
 		reposToIterate = repos
 	} else {
 
-		repos, err := getReposByOrg(GithubClient, GithubOrg)
+		repos, err := getReposByOrg(GithubClient, GithubOrg, stats)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"Error":        err,
@@ -53,6 +53,4 @@ func ConvertReposContexts(GithubClient *github.Client, GithubOrg string, allowed
 	}
 
 	processReposWithCircleCIConfigs(GithubClient, reposToIterate, stats)
-
-	// Print out the final report of what was done during this run
 }

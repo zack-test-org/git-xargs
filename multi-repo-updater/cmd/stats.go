@@ -30,8 +30,20 @@ const (
 	// TargetBranchLookupErr denotes an issue performing the lookup via Github API for the target branch - an API call failure
 	TargetBranchLookupErr Event = "target-branch-lookup-err"
 
+	// TargetBranchSuccessfullyCreated denotes a repo for which the target branch was created via Github API call
+	TargetBranchSuccessfullyCreated Event = "target-branch-successfully-created"
+
 	// YamlNotUpdated denotes that this tool determined it did not need to, or could not, programmatically modify the given repo's config file
 	YamlNotUpdated Event = "yaml-not-updated"
+
+	// YamlUpdated denotes the repo had its config file altered programmatically by this tool
+	YamlUpdated Event = "yaml-updated"
+
+	// FetchedViaGithubAPI denotes a repo was successfully listed by calling the Github API
+	FetchedViaGithubAPI Event = "fetch-via-github-api"
+
+	// PullRequestOpenErr denotes a repo whose pull request containing config changes could not be made successfully
+	PullRequestOpenErr Event = "pull-request-open-error"
 )
 
 // AnnotatedEvent is used in printing the final report. It contains the info to print a section's table - both it's Event for looking up the tagged repos, and the human-legible description for printing above the table
@@ -41,6 +53,7 @@ type AnnotatedEvent struct {
 }
 
 var allEvents = []AnnotatedEvent{
+	{Event: FetchedViaGithubAPI, Description: "Repos successfully fetched via Github API"},
 	{Event: ConfigFound, Description: "Repos with Circle CI config files"},
 	{Event: ConfigNotFound, Description: "Repos that did not have Circle CI config files"},
 	{Event: ContextAlreadySet, Description: "Repos that already had the correct context set"},
@@ -49,6 +62,8 @@ var allEvents = []AnnotatedEvent{
 	{Event: TargetBranchAlreadyExists, Description: "Repos whose target branch already existed"},
 	{Event: TargetBranchLookupErr, Description: "Repos whose target branches could not be looked up due to an API error"},
 	{Event: YamlNotUpdated, Description: "Repos whose config files were unmodified by this tool"},
+	{Event: YamlUpdated, Description: "Repos whose config files WERE MODIFIED by this tool"},
+	{Event: PullRequestOpenErr, Description: "Repos against which pull requests failed to be opened"},
 }
 
 // RunStats will be a stats-tracker class that keeps score of which repos were touched, which were considered for update, which had branches made, PRs made, which were missing workflows or contexts, or had out of date workflows syntax values, etc
@@ -73,6 +88,11 @@ func (r *RunStats) SetFileProvidedRepos(fileProvidedRepos []*AllowedRepo) {
 	for _, ar := range fileProvidedRepos {
 		r.fileProvidedRepos = append(r.fileProvidedRepos, ar)
 	}
+}
+
+// GetMultiple returns the slice of pointers to Github repositories filed under the provided event's key
+func (r *RunStats) GetMultiple(event Event) []*github.Repository {
+	return r.repos[event]
 }
 
 // TrackSingle accepts an Event to associate with the supplied repo so that a final report can be generated at the end of each run
@@ -108,7 +128,7 @@ func (r *RunStats) PrintReport() {
 	configurePrinterStyling(fileProvidedReposPrinter)
 
 	fmt.Print("\n\n")
-	fmt.Println("REPOS SUPPLIED VIA --allowed-repos-filepath FLAG")
+	fmt.Println("  REPOS SUPPLIED VIA --allowed-repos-filepath FLAG")
 	fileProvidedReposPrinter.Print(r.fileProvidedRepos)
 
 	// For each event type, print a summary of the repos in that category
