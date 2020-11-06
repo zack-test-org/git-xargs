@@ -44,6 +44,13 @@ const (
 
 	// PullRequestOpenErr denotes a repo whose pull request containing config changes could not be made successfully
 	PullRequestOpenErr Event = "pull-request-open-error"
+
+	// WorkflowsMissing denotes a repo's config file does not have any workflow nodes defined, so it therefore cannot be programmatically upgraded
+	WorkflowsMissing Event = "workflows-missing"
+
+	// WorkflowsSyntaxOutdated denotes a repo's config file has a workflows node but it's using an outdated (<2.0) version of the workflows syntax
+	// and therefore is ineligible for programmatic upgrade
+	WorkflowsSyntaxOutdated Event = "workflows-syntax-outdated"
 )
 
 // AnnotatedEvent is used in printing the final report. It contains the info to print a section's table - both it's Event for looking up the tagged repos, and the human-legible description for printing above the table
@@ -62,8 +69,10 @@ var allEvents = []AnnotatedEvent{
 	{Event: TargetBranchAlreadyExists, Description: "Repos whose target branch already existed"},
 	{Event: TargetBranchLookupErr, Description: "Repos whose target branches could not be looked up due to an API error"},
 	{Event: YamlNotUpdated, Description: "Repos whose config files were unmodified by this tool"},
-	{Event: YamlUpdated, Description: "Repos whose config files WERE MODIFIED by this tool"},
+	{Event: YamlUpdated, Description: "Repos whose config files were considered eligible for programmatic upgrade"},
 	{Event: PullRequestOpenErr, Description: "Repos against which pull requests failed to be opened"},
+	{Event: WorkflowsMissing, Description: "Repos whose config files were missing context nodes"},
+	{Event: WorkflowsSyntaxOutdated, Description: "Repos whose config files had outdated context syntax"},
 }
 
 // RunStats will be a stats-tracker class that keeps score of which repos were touched, which were considered for update, which had branches made, PRs made, which were missing workflows or contexts, or had out of date workflows syntax values, etc

@@ -285,7 +285,7 @@ func processReposWithCircleCIConfigs(GithubClient *github.Client, repos []*githu
 			stats.TrackSingle(ConfigFound, repo)
 
 			// Process .circleci/config.yml file, updating context nodes as necessary
-			updatedYAMLBytes := UpdateYamlDocument([]byte(fileContents), Debug)
+			updatedYAMLBytes := UpdateYamlDocument([]byte(fileContents), Debug, repo, stats)
 
 			if updatedYAMLBytes == nil {
 

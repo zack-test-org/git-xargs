@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/go-github/v32/github"
 	"github.com/sirupsen/logrus"
 )
 
@@ -154,7 +155,7 @@ func correctContextsAlreadyPresent(filename string) bool {
 // UpdateYamlDocument uses yq to make the required updates to the supplied YAML file
 // First, the YAML is written to temporary file, and then the temporary file is updated in place
 // When processing is complete, the final temp file contents are read out again and returned as bytes, suitable for making updates via the Github API
-func UpdateYamlDocument(yamlBytes []byte, debug bool) []byte {
+func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, stats *RunStats) []byte {
 
 	tmpFile := writeYamlToTempFile(yamlBytes)
 	tmpFileName := tmpFile.Name()
@@ -164,10 +165,12 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool) []byte {
 
 	// Only operate on files with `Workflows` blocks already defined. Currently, we cannot programmatically build out the workflows block
 	if !ensureConfigFileHasWorkflowsBlock(tmpFileName) {
+		stats.TrackSingle(WorkflowsMissing, repo)
 		return nil
 	}
 
 	if !ensureWorkflowSyntaxVersion(tmpFileName) {
+		stats.TrackSingle(WorkflowsSyntaxOutdated, repo)
 		return nil
 	}
 
@@ -192,6 +195,7 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool) []byte {
 
 			log.Debug("All contexts have the correct member - Gruntwork Admin already. Skipping this file!")
 
+			stats.TrackSingle(ContextAlreadySet, repo)
 			return nil
 		}
 	}
