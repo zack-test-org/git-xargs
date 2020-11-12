@@ -295,7 +295,7 @@ def run():
         remove_user_from_team_output = do_remove_user_from_team(github_id, company_name, github_creds)
         remove_user_from_org_output = remove_user_from_org(github_id, github_creds)
         # Merge the outputs from the two function calls in a python version compatible way
-        remove_user_from_team_output.update(remove_user_from_org_update)
+        remove_user_from_team_output.update(remove_user_from_org_output)
         return remove_user_from_team_output
     else:
         logging.info('The "active" input for the user is not set to "Yes" or "No", so assuming this entry is still a WIP and will not take any action.')
