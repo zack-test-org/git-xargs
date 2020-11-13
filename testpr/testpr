@@ -14,7 +14,7 @@
 set -e
 
 
-readonly DEFAULT_CI_PATH="https://circleci.com/gh"
+readonly DEFAULT_CI_PATH="https://app.circleci.com/pipelines/github"
 
 function print_usage {
   echo
@@ -122,7 +122,7 @@ function test_pr {
 
   echo
   echo "You should now be able to see their changes at:"
-  echo "$DEFAULT_CI_PATH/$our_repo_path/tree/$new_branch"
+  echo "$DEFAULT_CI_PATH/$our_repo_path?branch=$new_branch"
 
   echo
   echo "When the tests are done running, please delete branch $new_branch on this page:"
