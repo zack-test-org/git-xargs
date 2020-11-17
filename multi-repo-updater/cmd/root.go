@@ -36,6 +36,8 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&AllowedReposFile, "allowed-repos-filepath", "a", "", "The path to the file containing repos this tool is allowed to operate on, each repo in format: gruntwork-io/terraform-aws-eks, one repo per line")
 
+	rootCmd.PersistentFlags().StringVarP(&TargetContext, "target-context", "t", "Gruntwork Admin", "The name of the CircleCI Context to append to any Context nodes missing it")
+
 	rootCmd.AddCommand(versionCmd)
 
 }

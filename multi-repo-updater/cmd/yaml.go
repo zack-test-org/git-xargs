@@ -97,7 +97,7 @@ func appendContextNodes(filename string) {
 		return
 	}
 
-	cmdOutput, err := runYqCommand("w", "-i", filename, "workflows.*.jobs[*].*.context[+]", "Gruntwork Admin")
+	cmdOutput, err := runYqCommand("w", "-i", filename, "workflows.*.jobs[*].*.context[+]", TargetContext)
 
 	if err != nil {
 		log.Debug("Unable to append desired context to Workflows -> jobs nodes")
@@ -128,6 +128,10 @@ func countTotalContexts(filename string) int64 {
 		return 0
 	}
 
+	log.WithFields(logrus.Fields{
+		"TotalContextsInFile": countTotalContexts,
+	}).Debug("countTotalContexts found contexts")
+
 	return countTotalContexts
 }
 
@@ -136,6 +140,10 @@ func countContextsWithMember(filename string) int64 {
 
 	pathExpression := fmt.Sprintf("workflows.*.jobs.*.*.context(.==%s)", TargetContext)
 
+	log.WithFields(logrus.Fields{
+		"pathExpression": pathExpression,
+	}).Debug("yq pathExpression used to count number of contexts already correctly set")
+
 	countContextsCorrectlySet, err := getIntFromCommand("r", filename, "-X", "--length", "--collect", pathExpression)
 
 	if err != nil {
@@ -143,12 +151,19 @@ func countContextsWithMember(filename string) int64 {
 		return 0
 	}
 
+	log.WithFields(logrus.Fields{
+		"ContextsWithTargetMember": countContextsCorrectlySet,
+	}).Debug("countContextsWithMember found number of contexts already set correctly")
+
 	return countContextsCorrectlySet
 }
 
 // Checks if the config file already has the expected contexts set, by comparing the count of total context arrays
 // with the count of context arrays that contain the TargetContext as a member
 func correctContextsAlreadyPresent(filename string) bool {
+	log.WithFields(logrus.Fields{
+		"Filename": filename,
+	}).Debug("Checking if correct Contexts already in place...")
 	return countTotalContexts(filename) == countContextsWithMember(filename)
 }
 
@@ -197,6 +212,10 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 
 			stats.TrackSingle(ContextAlreadySet, repo)
 			return nil
+		} else {
+			log.WithFields(logrus.Fields{
+				"Filename": tmpFileName,
+			}).Debug("File was NOT detected as already having all correct contexts set")
 		}
 	}
 
