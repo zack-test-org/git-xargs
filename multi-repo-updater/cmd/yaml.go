@@ -176,7 +176,14 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 	tmpFileName := tmpFile.Name()
 
 	// Clean up the temp file when we're done with it
-	defer os.Remove(tmpFileName)
+	defer func() {
+		removeErr := os.Remove(tmpFileName)
+		if removeErr != nil {
+			log.WithFields(logrus.Fields{
+				"Error": removeErr,
+			}).Debug("Error deleting YAML tempfile")
+		}
+	}()
 
 	// Only operate on files with `Workflows` blocks already defined. Currently, we cannot programmatically build out the workflows block
 	if !ensureConfigFileHasWorkflowsBlock(tmpFileName) {
@@ -212,11 +219,11 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 
 			stats.TrackSingle(ContextAlreadySet, repo)
 			return nil
-		} else {
-			log.WithFields(logrus.Fields{
-				"Filename": tmpFileName,
-			}).Debug("File was NOT detected as already having all correct contexts set")
 		}
+
+		log.WithFields(logrus.Fields{
+			"Filename": tmpFileName,
+		}).Debug("File was NOT detected as already having all correct contexts set")
 	}
 
 	// By this point, all processing of the tempfile via yq is complete, so its contents can

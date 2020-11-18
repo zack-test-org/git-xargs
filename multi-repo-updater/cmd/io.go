@@ -60,7 +60,15 @@ func processAllowedRepos(filepath string) ([]*AllowedRepo, error) {
 			"Filepath": filepath,
 		}).Debug("Could not open")
 	}
-	defer file.Close()
+
+	defer func() {
+		closeErr := file.Close()
+		if closeErr != nil {
+			log.WithFields(logrus.Fields{
+				"Error": closeErr,
+			}).Debug("Error closing allowed repos file")
+		}
+	}()
 
 	var allowedRepos []*AllowedRepo
 
