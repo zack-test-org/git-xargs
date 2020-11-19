@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -118,6 +119,58 @@ func appendContextNodes(filename string) {
 	}).Debug("appendContextNodes ran command to add and populate context nodes")
 }
 
+// convertScalarJobNodes handles the edge case that is not currently supported by `yq` version 3's path expressions: https://mikefarah.gitbook.io/yq/usage/path-expressions,
+// namely that if a job is a scalar value (like a string, and not a map or array) and exists, for example, under workflows -> nightly -> jobs -> test, it will not be converted into a map or object by the same write query used in appendContextNodes
+// In these cases - we need to read out all such jobs that exist as a single string - and programmatically generate their path expressions and then use a separate write command to update them to be a map with a key: contexts (which will be the usual array containing the TargetContext)
+func convertScalarJobNodes(filename string) {
+
+	scalarJobOutput, err := runYqCommand("r", filename, "--printMode", "pv", "workflows.*.jobs.[*]")
+
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"Error": err,
+		}).Debug("Error reading scalar job nodes via yq")
+	}
+
+	log.WithFields(logrus.Fields{
+		"Scalar job output": string(scalarJobOutput),
+	}).Debug("Read scalar job output")
+
+	// Regular expression for extracting scalar job nodes from the yq read output
+	scalarJobsRe := regexp.MustCompile(`workflows\.\w+\.jobs\.\[\d\]\:\s\w+`)
+	// Regular expression for converting the scalar job node name into a valid yq path expression
+	jobNameCleanRe := regexp.MustCompile(`\:\s`)
+
+	// Pull all the scalar (e.g; single string job names like "-test") into a slice
+	scalarJobNames := scalarJobsRe.FindAllString(string(scalarJobOutput), -1)
+
+	log.WithFields(logrus.Fields{
+		"Scalar Job Names": scalarJobNames,
+	}).Debug("Read Scalar jobs from file")
+
+	// loop through scalar job names and format the yq path expression to address them directly in a write query
+	for _, job := range scalarJobNames {
+		jobPath := jobNameCleanRe.ReplaceAllString(job, ".")
+		jobPathExpression := fmt.Sprintf("%s.context[+]", jobPath)
+
+		log.WithFields(logrus.Fields{
+			"jobPathExpression": jobPathExpression,
+		}).Debug("convertScalarNodes using parsed scalar job path expression to append context")
+
+		scalarJobWriteOutput, writeErr := runYqCommand("w", "-i", filename, jobPathExpression, TargetContext)
+		if writeErr != nil {
+			log.WithFields(logrus.Fields{
+				"Error":    writeErr,
+				"Filename": filename,
+			}).Debug("Error appending contexts to scalar job")
+		}
+
+		log.WithFields(logrus.Fields{
+			"Command output": scalarJobWriteOutput,
+		}).Debug("convertScalarNodes write command output")
+	}
+}
+
 // Get the count of the all the context nodes under the path Workflows -> Jobs -> Context
 func countTotalContexts(filename string) int64 {
 
@@ -204,7 +257,12 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 	// If none of the config file's Workflow -> Jobs nodes have context fields, append them
 	// Note this function will both append the context arrays and add the correct "Gruntwork Admin" member
 	if !configFileHasContexts(tmpFileName) {
+
+		// To all jobs that are of object type, append the expected context
 		appendContextNodes(tmpFileName)
+
+		// For all jobs that are of scalar types (single string names in YAML) append the expected context
+		convertScalarJobNodes(tmpFileName)
 
 		if debug {
 			fmt.Println("*** DEBUG - POST YQ WRITING TO TEMPFILE IN PLACE ***")
