@@ -253,35 +253,29 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 		fmt.Println("*** DEBUG - PRIOR TO YQ WRITING TO TEMPFILE IN PLACE ***")
 		dumpTempFileContents(tmpFile)
 	}
+	// If the config file's Workflows -> Jobs -> Contexts nodes already have the desired context set, return because there's nothing to do
+	// This is determined by checking if the count of context nodes is equal to the number of context nodes that contain the "Gruntwork Admin" member
+	if correctContextsAlreadyPresent(tmpFileName) {
 
-	// If none of the config file's Workflow -> Jobs nodes have context fields, append them
-	// Note this function will both append the context arrays and add the correct "Gruntwork Admin" member
-	if !configFileHasContexts(tmpFileName) {
+		log.Debug("All contexts have the correct member - Gruntwork Admin already. Skipping this file!")
 
-		// To all jobs that are of object type, append the expected context
-		appendContextNodes(tmpFileName)
+		stats.TrackSingle(ContextAlreadySet, repo)
+		return nil
+	}
 
-		// For all jobs that are of scalar types (single string names in YAML) append the expected context
-		convertScalarJobNodes(tmpFileName)
+	log.WithFields(logrus.Fields{
+		"Filename": tmpFileName,
+	}).Debug("File was NOT detected as already having all correct contexts set")
+	// The file needs to be upgraded programmatically
+	// Start by adding the TargetContext to all jobs that are of object type (and add it as a member of their context arrays, if they already exist)
+	appendContextNodes(tmpFileName)
 
-		if debug {
-			fmt.Println("*** DEBUG - POST YQ WRITING TO TEMPFILE IN PLACE ***")
-			dumpTempFileContents(tmpFile)
-		}
-	} else {
-		// If the config file's Workflows -> Jobs -> Contexts nodes already have the desired context set, return because there's nothing to do
-		// This is determined by checking if the count of context nodes is equal to the number of context nodes that contain the "Gruntwork Admin" member
-		if correctContextsAlreadyPresent(tmpFileName) {
+	// For all jobs that are of scalar types (single string names in YAML) append the expected context
+	convertScalarJobNodes(tmpFileName)
 
-			log.Debug("All contexts have the correct member - Gruntwork Admin already. Skipping this file!")
-
-			stats.TrackSingle(ContextAlreadySet, repo)
-			return nil
-		}
-
-		log.WithFields(logrus.Fields{
-			"Filename": tmpFileName,
-		}).Debug("File was NOT detected as already having all correct contexts set")
+	if debug {
+		fmt.Println("*** DEBUG - POST YQ WRITING TO TEMPFILE IN PLACE ***")
+		dumpTempFileContents(tmpFile)
 	}
 
 	// By this point, all processing of the tempfile via yq is complete, so its contents can
