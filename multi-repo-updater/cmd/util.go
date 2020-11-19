@@ -22,7 +22,7 @@ func ConvertReposContexts(GithubClient *github.Client, GithubOrg string, allowed
 
 		log.Debug("Allowed repos were provided via file, preferring them over -o --github-org flag's value")
 
-		repos, err := getFileDefinedRepos(GithubClient, allowedRepos)
+		repos, err := getFileDefinedRepos(GithubClient, allowedRepos, stats)
 
 		if err != nil {
 			log.WithFields(logrus.Fields{

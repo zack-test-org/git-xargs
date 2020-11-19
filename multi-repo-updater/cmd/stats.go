@@ -42,6 +42,9 @@ const (
 	// FetchedViaGithubAPI denotes a repo was successfully listed by calling the Github API
 	FetchedViaGithubAPI Event = "fetch-via-github-api"
 
+	// RepoNotExists denotes a repo + org combo that was supplied via file but could not be successfully looked up via the Github API (returned a 404)
+	RepoNotExists Event = "repo-not-exists"
+
 	// PullRequestOpenErr denotes a repo whose pull request containing config changes could not be made successfully
 	PullRequestOpenErr Event = "pull-request-open-error"
 
@@ -51,6 +54,9 @@ const (
 	// WorkflowsSyntaxOutdated denotes a repo's config file has a workflows node but it's using an outdated (<2.0) version of the workflows syntax
 	// and therefore is ineligible for programmatic upgrade
 	WorkflowsSyntaxOutdated Event = "workflows-syntax-outdated"
+
+	// WorkflowsNoJobsDefined denotes that zero job nodes were found within the config file's workflows node
+	WorkflowsNoJobsDefined Event = "workflows-no-jobs-defined"
 )
 
 // AnnotatedEvent is used in printing the final report. It contains the info to print a section's table - both it's Event for looking up the tagged repos, and the human-legible description for printing above the table
@@ -68,11 +74,13 @@ var allEvents = []AnnotatedEvent{
 	{Event: TargetBranchNotFound, Description: "Repos whose target branch was not found"},
 	{Event: TargetBranchAlreadyExists, Description: "Repos whose target branch already existed"},
 	{Event: TargetBranchLookupErr, Description: "Repos whose target branches could not be looked up due to an API error"},
+	{Event: RepoNotExists, Description: "Repos that were passed via file but don't exist (404'd) via Github API"},
 	{Event: YamlNotUpdated, Description: "Repos whose config files were unmodified by this tool"},
 	{Event: YamlUpdated, Description: "Repos whose config files were considered eligible for programmatic upgrade"},
 	{Event: PullRequestOpenErr, Description: "Repos against which pull requests failed to be opened"},
 	{Event: WorkflowsMissing, Description: "Repos whose config files were missing context nodes"},
 	{Event: WorkflowsSyntaxOutdated, Description: "Repos whose config files had outdated context syntax"},
+	{Event: WorkflowsNoJobsDefined, Description: "Repos whose config had a workflows section but zero jobs defined within it"},
 }
 
 // RunStats will be a stats-tracker class that keeps score of which repos were touched, which were considered for update, which had branches made, PRs made, which were missing workflows or contexts, or had out of date workflows syntax values, etc

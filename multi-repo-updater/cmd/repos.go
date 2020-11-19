@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func getFileDefinedRepos(GithubClient *github.Client, allowedRepos []*AllowedRepo) ([]*github.Repository, error) {
+func getFileDefinedRepos(GithubClient *github.Client, allowedRepos []*AllowedRepo, stats *RunStats) ([]*github.Repository, error) {
 	var allRepos []*github.Repository
 
 	for _, allowedRepo := range allowedRepos {
@@ -29,6 +29,18 @@ func getFileDefinedRepos(GithubClient *github.Client, allowedRepos []*AllowedRep
 				"AllowedRepoOwner":     allowedRepo.Organization,
 				"AllowedRepoName":      allowedRepo.Name,
 			}).Debug("error getting single repo")
+
+			if resp.StatusCode == 404 {
+				// This repo does not exist / could not be fetched as named, so we won't include it in the list of repos to process
+
+				// create an empty github repo object to satisfy the stats tracking interface
+				missingRepo := &github.Repository{
+					Owner: &github.User{Login: github.String(allowedRepo.Organization)},
+					Name:  github.String(allowedRepo.Name),
+				}
+				stats.TrackSingle(RepoNotExists, missingRepo)
+				continue
+			}
 		}
 
 		if resp.StatusCode == 200 {
@@ -36,9 +48,9 @@ func getFileDefinedRepos(GithubClient *github.Client, allowedRepos []*AllowedRep
 				"Organization": allowedRepo.Organization,
 				"Name":         allowedRepo.Name,
 			}).Debug("Successfully fetched repo")
-		}
 
-		allRepos = append(allRepos, repo)
+			allRepos = append(allRepos, repo)
+		}
 	}
 	return allRepos, nil
 }

@@ -211,13 +211,43 @@ func countContextsWithMember(filename string) int64 {
 	return countContextsCorrectlySet
 }
 
+// Get the total count of jobs that are defined under the config file's workflows nodes
+func getWorkflowsJobsCount(filename string) int64 {
+	// Get total count of workflows -> jobs defined
+	countWorkflowJobs, err := getIntFromCommand("r", filename, "-X", "--length", "--collect", "workflows.*.jobs[*]")
+
+	if err != nil {
+
+		log.WithFields(logrus.Fields{
+			"Error": err,
+		}).Debug("Error reading total number of workflow jobs defined in config file")
+		return 0
+	}
+	return countWorkflowJobs
+}
+
+// Sanity check that there ARE any jobs defined under the workflows
+func ensureWorkflowJobsAreDefined(filename string) bool {
+	countWorkflowJobs := getWorkflowsJobsCount(filename)
+
+	return countWorkflowJobs > 0
+}
+
 // Checks if the config file already has the expected contexts set, by comparing the count of total context arrays
 // with the count of context arrays that contain the TargetContext as a member
 func correctContextsAlreadyPresent(filename string) bool {
 	log.WithFields(logrus.Fields{
 		"Filename": filename,
 	}).Debug("Checking if correct Contexts already in place...")
-	return countTotalContexts(filename) == countContextsWithMember(filename)
+
+	countWorkflowJobs := getWorkflowsJobsCount(filename)
+
+	if countWorkflowJobs == 0 {
+		return true
+	}
+
+	return countWorkflowJobs == countTotalContexts(filename) && countWorkflowJobs == countContextsWithMember(filename)
+
 }
 
 // UpdateYamlDocument uses yq to make the required updates to the supplied YAML file
@@ -249,6 +279,11 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 		return nil
 	}
 
+	if !ensureWorkflowJobsAreDefined(tmpFileName) {
+		stats.TrackSingle(WorkflowsNoJobsDefined, repo)
+		return nil
+	}
+
 	if debug {
 		fmt.Println("*** DEBUG - PRIOR TO YQ WRITING TO TEMPFILE IN PLACE ***")
 		dumpTempFileContents(tmpFile)
@@ -257,7 +292,7 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 	// This is determined by checking if the count of context nodes is equal to the number of context nodes that contain the "Gruntwork Admin" member
 	if correctContextsAlreadyPresent(tmpFileName) {
 
-		log.Debug("All contexts have the correct member - Gruntwork Admin already. Skipping this file!")
+		log.Debug(fmt.Sprintf("All contexts have the correct member - %s already. Skipping this file!", TargetContext))
 
 		stats.TrackSingle(ContextAlreadySet, repo)
 		return nil

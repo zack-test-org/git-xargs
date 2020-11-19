@@ -80,6 +80,10 @@ func processAllowedRepos(filepath string) ([]*AllowedRepo, error) {
 		trimmedLine := strings.TrimSpace(scanner.Text())
 		cleanedLine := charRegex.ReplaceAllString(trimmedLine, "")
 		orgAndRepoSlice := strings.Split(cleanedLine, "/")
+		// Guard against stray lines, extra dangling single quotes, etc
+		if len(orgAndRepoSlice) < 2 {
+			continue
+		}
 		// TODO add validation here and make this less naive
 		repo := &AllowedRepo{
 			Organization: orgAndRepoSlice[0],
