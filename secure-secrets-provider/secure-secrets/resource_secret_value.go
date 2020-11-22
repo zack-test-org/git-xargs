@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+const versionTagKey = "secure-secrets.version"
+
 func resourceSecretValue() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceSecretValueCreate,
@@ -24,6 +26,10 @@ func resourceSecretValue() *schema.Resource {
 				Required: true,
 				// If anyone  updates the name attribute, we delete the old secret and create a totally new one.
 				ForceNew: true,
+			},
+			"version": {
+				Type:     schema.TypeString,
+				Required: true,
 			},
 			"description": {
 				Type:     schema.TypeString,
@@ -56,6 +62,11 @@ func resourceSecretValueCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
+	version, err := getRequiredString(d, "version")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	description, err := getOptionalString(d, "description")
 	if err != nil {
 		return diag.FromErr(err)
@@ -71,11 +82,20 @@ func resourceSecretValueCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
+	// Store the version number in a tag
+	tags := []*secretsmanager.Tag{
+		{
+			Key:   aws.String(versionTagKey),
+			Value: aws.String(version),
+		},
+	}
+
 	input := secretsmanager.CreateSecretInput{
 		Name:         aws.String(name),
 		Description:  description,
 		KmsKeyId:     kmsKeyId,
 		SecretString: aws.String(value),
+		Tags:         tags,
 	}
 
 	secret, err := client.CreateSecret(&input)
@@ -134,12 +154,7 @@ func resourceSecretValueUpdate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.Errorf("Didn't get expected SecretsManager client")
 	}
 
-	hasChanges, err := secretHasChanges(client, d, m)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	if hasChanges {
+	if d.HasChange("description") || d.HasChange("kms_key_id") || d.HasChange("version") {
 		description, err := getOptionalString(d, "description")
 		if err != nil {
 			return diag.FromErr(err)
@@ -156,19 +171,47 @@ func resourceSecretValueUpdate(ctx context.Context, d *schema.ResourceData, m in
 			KmsKeyId:    kmsKeyId,
 		}
 
-		name, err := getRequiredString(d, "name")
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		// If the user updates the version param, that means they want us to update the value of the secret
+		if d.HasChange("version") {
+			name, err := getRequiredString(d, "name")
+			if err != nil {
+				return diag.FromErr(err)
+			}
 
-		value := getSecureSecretValueOptional(name)
+			value, err := getSecureSecretValueRequired(name)
+			if err != nil {
+				return diag.FromErr(err)
+			}
 
-		if value != "" {
 			input.SecretString = aws.String(value)
 		}
 
 		if _, err := client.UpdateSecret(&input); err != nil {
 			return diag.FromErr(err)
+		}
+
+		// Store the updated version in tags
+		if d.HasChange("version") {
+			version, err := getRequiredString(d, "version")
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			tags := []*secretsmanager.Tag{
+				{
+					Key:   aws.String(versionTagKey),
+					Value: aws.String(version),
+				},
+			}
+
+			tagInput := secretsmanager.TagResourceInput{
+				SecretId: aws.String(d.Id()),
+				Tags:     tags,
+			}
+
+			if _, err := client.TagResource(&tagInput); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
@@ -199,41 +242,6 @@ func resourceSecretValueDelete(ctx context.Context, d *schema.ResourceData, m in
 	d.SetId("")
 
 	return diags
-}
-
-func secretHasChanges(client *secretsmanager.SecretsManager, d *schema.ResourceData, m interface{}) (bool, error) {
-	if d.HasChange("description") || d.HasChange("kms_key_id") {
-		return true, nil
-	}
-
-	name, err := getRequiredString(d, "name")
-	if err != nil {
-		return false, err
-	}
-
-	value := getSecureSecretValueOptional(name)
-	if value == "" {
-		return false, nil
-	}
-
-	valueFromAws, err := getSecretValueFromAws(client, d)
-	if err != nil {
-		return false, err
-	}
-
-	return value != valueFromAws, nil
-}
-
-func getSecretValueFromAws(client *secretsmanager.SecretsManager, d *schema.ResourceData) (string, error) {
-	input := secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(d.Id()),
-	}
-	secret, err := client.GetSecretValue(&input)
-	if err != nil {
-		return "", err
-	}
-
-	return aws.StringValue(secret.SecretString), nil
 }
 
 func getSecureSecretValueRequired(secretName string) (string, error) {

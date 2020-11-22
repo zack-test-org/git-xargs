@@ -14,6 +14,7 @@ provider "securesecrets" {
 resource "securesecrets_value" "example" {
   name        = "jim-testing-terraform-provider"
   description = "This is Jim testing a new Terraform provider he created for securely storing secrets in AWS Secrets Manager"
+  version     = "v2"
 }
 
 output "secret" {
