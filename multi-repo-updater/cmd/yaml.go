@@ -84,9 +84,58 @@ func configFileHasContexts(filename string) bool {
 	return true
 }
 
+// We've realized that workflow jobs that are triggered (by, say a cron schedule) are not compatible with contexts
+// We've therefore decided that for the time being we're going to delete any such jobs, which we commonly refer to as "nightly" or "frequently"
+// because they're incompatible with the context upgrades we're doing and because we don't seem to use them very much (and many are currently too flaky to be worthy of actioning)
+// This function queries for the paths of any workflows jobs that contain a triggers field - as this is our clue the
+// job is being run programmatically and not via some human action such as a merge
+func deleteJobsWithTriggers(filename string) {
+	jobsWithTriggersOutput, err := runYqCommand("r", filename, "--printMode", "p", "workflows.**.(triggers)")
+
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"Error": err,
+		}).Debug("Error looking up job nodes with triggers defined via yq")
+	}
+
+	log.WithFields(logrus.Fields{
+		"Jobs with triggers output": string(jobsWithTriggersOutput),
+	}).Debug("Read jobs with triggers output")
+
+	jobsWithTriggersPaths := strings.Split(string(jobsWithTriggersOutput), "\n")
+
+	var sanitizedJobPaths []string
+
+	for _, rawPath := range jobsWithTriggersPaths {
+
+		sanitizedPath := strings.TrimSpace(strings.TrimRight(rawPath, ".triggers"))
+		if sanitizedPath != "" {
+			sanitizedJobPaths = append(sanitizedJobPaths, sanitizedPath)
+		}
+	}
+
+	fmt.Printf("jobsWithTriggersPaths: %+v\n", sanitizedJobPaths)
+
+	for _, path := range sanitizedJobPaths {
+		deleteNodeWithTriggersOutput, deleteErr := runYqCommand("d", "-i", filename, path)
+		if deleteErr != nil {
+
+			log.WithFields(logrus.Fields{
+				"Error":                        deleteErr,
+				"Yaml file yq path expression": path,
+				"Filename":                     filename,
+			}).Debug("Error issuing yq command to delete job node with triggers defined")
+		}
+
+		log.WithFields(logrus.Fields{
+			"Command output": deleteNodeWithTriggersOutput,
+		}).Debug("yq command issued to delete job node containing triggers")
+	}
+}
+
 // Append the Workflows -> Jobs -> Context arrays to the YAML document (and add the "Gruntwork Admin" member to these context arrays)
 // Note that yq's append behavior is similar to `mkdir -p` in that it will add missing nodes as needed
-// to satisy the path expression passed into yq (workflows.*.jobs.*.context[+])
+// to satisfy the path expression passed into yq (workflows.*.jobs.*.context[+])
 // Therefore, this method can be called once it's determined that none of the YAML document's Workflows -> Jobs nodes have any context arrays
 func appendContextNodes(filename string) {
 
@@ -288,6 +337,10 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 		fmt.Println("*** DEBUG - PRIOR TO YQ WRITING TO TEMPFILE IN PLACE ***")
 		dumpTempFileContents(tmpFile)
 	}
+
+	// Start by deleting any workflows -> jobs that have 'triggers' fields defined, as these types of jobs are unfortunately not compatible with CircleCI contexts currently
+	deleteJobsWithTriggers(tmpFileName)
+
 	// If the config file's Workflows -> Jobs -> Contexts nodes already have the desired context set, return because there's nothing to do
 	// This is determined by checking if the count of context nodes is equal to the number of context nodes that contain the "Gruntwork Admin" member
 	if correctContextsAlreadyPresent(tmpFileName) {
@@ -302,7 +355,8 @@ func UpdateYamlDocument(yamlBytes []byte, debug bool, repo *github.Repository, s
 		"Filename": tmpFileName,
 	}).Debug("File was NOT detected as already having all correct contexts set")
 	// The file needs to be upgraded programmatically
-	// Start by adding the TargetContext to all jobs that are of object type (and add it as a member of their context arrays, if they already exist)
+	// We add the TargetContext to all jobs that are of object type (and add it as a member of their context arrays, if they already exist)
+
 	appendContextNodes(tmpFileName)
 
 	// For all jobs that are of scalar types (single string names in YAML) append the expected context

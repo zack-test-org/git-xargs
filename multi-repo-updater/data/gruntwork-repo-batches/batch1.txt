@@ -1,3 +1,1 @@
-'gruntwork-io/bash-commons',
-'gruntwork-io/cloud-nuke',
 'gruntwork-io/fetch',
