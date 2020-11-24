@@ -219,6 +219,8 @@ func resourceSecretValueUpdate(ctx context.Context, d *schema.ResourceData, m in
 }
 
 func resourceSecretValueDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	log.Printf("[DEBUG] resourceSecretValueDelete called\n")
+
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
@@ -229,7 +231,7 @@ func resourceSecretValueDelete(ctx context.Context, d *schema.ResourceData, m in
 
 	input := secretsmanager.DeleteSecretInput{
 		SecretId: aws.String(d.Id()),
-		// TODO: should this be here? This is covenient for testing, but in prod, we may want to support a recovery period!
+		// TODO: The ForceDeleteWithoutRecovery setting should be configurable via the resource
 		ForceDeleteWithoutRecovery: aws.Bool(true),
 	}
 
