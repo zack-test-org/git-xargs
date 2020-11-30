@@ -1,8 +1,9 @@
-'gruntwork-io/intro-to-terraform',
-    'gruntwork-io/kubergrunt',
-    'gruntwork-io/module-asg',
-    'gruntwork-io/terraform-aws-monitoring',
-    'gruntwork-io/module-cache',
-    'gruntwork-io/module-ci',
-    'gruntwork-io/module-ci-pipeline-example',
-
+'gruntwork-io/kubergrunt',
+'gruntwork-io/module-ci',
+'gruntwork-io/module-ci-pipeline-example',
+'gruntwork-io/cis-compliance-aws',
+'gruntwork-io/gruntkms',
+'gruntwork-io/gruntwork',
+'gruntwork-io/terraform-aws-monitoring',
+'gruntwork-io/module-cache',
+       
