@@ -22,6 +22,12 @@ In that new tab, you will be asked to login to Google and authorize the CLI read
 Once you authorize, the oauth flow will complete, posting the authorized token to the local server. This token is then
 used by the CLI to access the Google Spreadsheet containing Reference Architecture Questionnaire responses.
 
+## Prerequisites
+You must have the following programs installed / configured properly before you can run this tool: 
+
+* [Keybase](https://keybase.io/download)
+* You must also have your local git installation configured correctly, with your [ssh identity loaded into your ssh-agent](https://www.notion.so/gruntwork/How-to-fix-fatal-could-not-read-Username-for-https-github-com-9e7948b518624fb9a76882ac69c6bd4b#48d704fac5c64497873c8aa5807cb249). If you encounter the error `fatal: could not read Username for 'https://github.com: terminal prompts disabled'` here's [a guide](https://www.notion.so/gruntwork/How-to-fix-fatal-could-not-read-Username-for-https-github-com-9e7948b518624fb9a76882ac69c6bd4b) on fixing that.
+
 
 ### Local server CSRF
 
