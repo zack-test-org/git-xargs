@@ -22,12 +22,13 @@ provider:
       Action:
         - "secretsmanager:GetSecretValue"
       Resource:
-        - "arn:aws:secretsmanager:eu-west-1:738755648600:secret:GruntworkCiMachineUserPersonalAccessToken-Vim5nO"
+        - "arn:aws:secretsmanager:eu-west-1:090304172891:secret:GruntworkCiMachineUserPersonalAccessToken-QmW1G1"
 
 custom:
   customDomain:
-    domainName: registry.gruntwork-sandbox.com
+    domainName: registry.dogfood-dev.com
     basePath: ''
+    certificateName: '*.dogfood-dev.com'
     stage: ${self:provider.stage}
     createRoute53Record: true
 
