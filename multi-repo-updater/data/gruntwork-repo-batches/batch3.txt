@@ -1,0 +1,6 @@
+        'gruntwork-io/module-data-storage',
+    'gruntwork-io/module-ecs',
+    'gruntwork-io/module-load-balancer',
+    'gruntwork-io/module-security',
+    'gruntwork-io/module-server',
+    'gruntwork-io/terraform-aws-vpc',

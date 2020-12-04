@@ -1,0 +1,171 @@
+defaults: &defaults
+  machine:
+    enabled: true
+    image: "ubuntu-1604:201903-01"
+  resource_class: xlarge
+  environment:
+    GRUNTWORK_INSTALLER_VERSION: v0.0.21
+    TERRATEST_LOG_PARSER_VERSION: v0.13.24
+    MODULE_CI_VERSION: v0.16.1
+    TERRAFORM_VERSION: 0.13.3
+    PACKER_VERSION: 1.6.1
+    GOLANG_VERSION: 1.13.3
+
+install_gruntwork_utils: &install_gruntwork_utils
+  name: install gruntwork utils
+  command: |
+    curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "${GRUNTWORK_INSTALLER_VERSION}"
+    gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
+    gruntwork-install --module-name "git-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
+    gruntwork-install --binary-name "terratest_log_parser" --repo "https://github.com/gruntwork-io/terratest" --tag "${TERRATEST_LOG_PARSER_VERSION}"
+    configure-environment-for-gruntwork-module \
+      --terraform-version ${TERRAFORM_VERSION} \
+      --packer-version ${PACKER_VERSION} \
+      --go-version ${GOLANG_VERSION}
+
+version: 2.0
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - run:
+          <<: *install_gruntwork_utils
+
+      - run:
+          name: run pre-commit hooks
+          command: |
+            pyenv global 3.5.2
+            pip install pre-commit==1.21.0 cfgv==2.0.1 importlib-resources==3.2.0
+            pre-commit install
+            pre-commit run --all-files
+
+  testsecurity:
+    <<: *defaults
+    steps:
+      - checkout
+
+      # Install gruntwork utilities
+      - run:
+          <<: *install_gruntwork_utils
+
+      - run:
+          name: install dependencies
+          command: |
+            # We need this because the ssh-grunt build enables CGO and you get errors about 386 C headers without this
+            sudo apt-get update && sudo apt-get install -y g++-multilib
+      - run:
+          name: run docker tests
+          command: cd modules/ssh-grunt && ./_ci/build-and-test.sh
+      - run:
+          name: run tests
+          command: |
+            mkdir -p /tmp/logs
+            run-go-tests --path ./test/security --timeout 1h --parallelism 64 | tee /tmp/logs/all.log
+          no_output_timeout: 3600s
+
+      - run:
+          command: terratest_log_parser --testlog /tmp/logs/all.log --outputdir /tmp/logs
+          when: always
+      - store_artifacts:
+          path: /tmp/logs
+      - store_test_results:
+          path: /tmp/logs
+      - run:
+          name: output debug values
+          command: (./_ci/output-debug-values.sh)
+
+  testlandingzone:
+    <<: *defaults
+    steps:
+      - checkout
+
+      # Install gruntwork utilities
+      - run:
+          <<: *install_gruntwork_utils
+
+      - run:
+          name: run tests
+          command: |
+            mkdir -p /tmp/logs
+            # Make sure packr2 is available, which is required for resolving template paths correctly
+            go get -u github.com/gobuffalo/packr/v2/packr2
+            run-go-tests --path ./test/landingzone --timeout 1h --parallelism 64 | tee /tmp/logs/all.log
+          no_output_timeout: 3600s
+
+      - run:
+          command: terratest_log_parser --testlog /tmp/logs/all.log --outputdir /tmp/logs
+          when: always
+      - store_artifacts:
+          path: /tmp/logs
+      - store_test_results:
+          path: /tmp/logs
+      - run:
+          name: output debug values
+          command: (./_ci/output-debug-values.sh)
+
+  deploy:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - run:
+          <<: *install_gruntwork_utils
+
+      - run:
+          name: build ssh-grunt
+          command: |
+            # If a new release is tagged in GitHub, build the ssh-grunt binaries and upload them to GitHub. Note that:
+            #
+            # 1. We have to enable CGO in order for user.Current() to work in Go.
+            # 2. We only build ssh-grunt for Linux. SSH is not too useful on Windows anyway and to cross-compile for OS X
+            #    with CGO enabled is a ton of work, and none of our customers use OS X in production anyway
+            build-go-binaries --app-name ssh-grunt --src-path modules/ssh-grunt/src --dest-path bin --ld-flags "-X main.Version=$CIRCLE_TAG" --os linux --cgo-enabled "true"
+      - run: go get -u github.com/gobuffalo/packr/v2/packr2
+      - run:
+          name: build generate-aws-config
+          command: |
+              cd codegen/generate-aws-config
+              packr2
+              build-go-binaries --src-path . --app-name generate-aws-config --dest-path ../../bin --ld-flags "-X main.Version=$CIRCLE_TAG"
+      - run:
+          name: build generate-aws-guardduty
+          command: |
+              cd codegen/generate-aws-guardduty
+              packr2
+              build-go-binaries --src-path . --app-name generate-aws-guardduty --dest-path ../../bin --ld-flags "-X main.Version=$CIRCLE_TAG"
+      - run:
+          name: build generate-multiregion-kms
+          command: |
+              cd codegen/generate-multiregion-kms
+              packr2
+              build-go-binaries --src-path . --app-name generate-multiregion-kms --dest-path ../../bin --ld-flags "-X main.Version=$CIRCLE_TAG"
+
+      - run: upload-github-release-assets bin/*
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /^v.*/
+      - testsecurity:
+          filters:
+            tags:
+              only: /^v.*/
+      - testlandingzone:
+          filters:
+            tags:
+              only: /^v.*/
+      - deploy:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+

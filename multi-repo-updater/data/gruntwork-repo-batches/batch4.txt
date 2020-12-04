@@ -1,0 +1,13 @@
+    'gruntwork-io/terraform-aws-eks',
+    'gruntwork-io/terraform-kubernetes-helm',
+    'gruntwork-io/terragrunt',
+    'gruntwork-io/terragrunt-infrastructure-live-example',
+    'gruntwork-io/terragrunt-infrastructure-modules-example',
+    'gruntwork-io/toc',
+    'gruntwork-io/gruntwork-cli',
+    'gruntwork-io/gruntwork-installer',
+    'gruntwork-io/helm-kubernetes-services',
+    'gruntwork-io/infrastructure-as-code-training',
+    'gruntwork-io/infrastructure-live-google',
+    'gruntwork-io/infrastructure-modules-google',
+ 

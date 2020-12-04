@@ -1,0 +1,75 @@
+# Sourced from gruntwork-io/fetch
+
+defaults: &defaults
+  docker:
+    - image: 087285199408.dkr.ecr.us-east-1.amazonaws.com/circle-ci-test-image-base:go1.13
+
+version: 2
+jobs:
+  test:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: run-go-tests
+
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: CGO_ENABLED=0 build-go-binaries --app-name fetch --dest-path bin --ld-flags "-X main.VERSION=$CIRCLE_TAG"
+      - persist_to_workspace:
+          root: .
+          paths: bin
+
+  deploy:
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run: cd bin && sha256sum * > SHA256SUMS
+      - run: upload-github-release-assets bin/*
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - test:
+          context:
+            - Gruntwork Admin
+          filters:
+            tags:
+              only: /^v.*/
+      - build:
+          context:
+            - Gruntwork Admin
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^v.*/
+
+      - deploy:
+          context:
+            - Gruntwork Admin
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 6 * * *"
+          filters:
+            branches:
+              only: master
+    jobs:
+      - test:
+          context:
+            - Gruntwork Admin
+
