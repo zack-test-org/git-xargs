@@ -1,4 +1,4 @@
-module github.com/gruntwork-io/prototypes/multi-repo-updater
+module github.com/gruntwork-io/prototypes/circleci-context-updater
 
 go 1.14
 
