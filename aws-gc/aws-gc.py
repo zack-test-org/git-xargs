@@ -470,6 +470,8 @@ def is_test_role_or_instance_profile(name):
         r'eks-cluster-[a-zA-Z0-9]{6}-.*$',
         r'EKS-k8s-role-mapping-test-[a-zA-Z0-9]{6}$',
         r'eks-service-catalog-[a-zA-Z0-9]{6}.*$',
+        r'^ecs-service-catalog-[a-zA-Z0-9]{6}-instance$',
+        r'^ssh-grunt-iam-example-[a-zA-Z0-9]{6}$',
     ]
     return any(re.match(regex, name) for regex in regex_list)
 
