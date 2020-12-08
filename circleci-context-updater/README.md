@@ -14,18 +14,6 @@ Currently, when you run the `multi-repo-updater`, you specify a Github organizat
 1. update the YAML file on that branch 
 1. open a pull request from this project branch against master
 
-# Capabilities to add
-- [] "Run log" report breaking down:   
-    - [] All the repos considered
-    - [] The repos that were eligible for programmatic upgrade
-    - [] The repos that encountered errors (were using outdated workflows syntaxes, etc)
-    - [] Perhaps this report should be written to a local, timestamped run log given its likely length
-- [] Better help text 
-- [] Flag for target context to add 
-- [] Dry-run type flags to just output what changes it **would** have made, without creating branches, opening PRs or updating files
-- [] Flag for PR description text to be configurable
-- [] If useful, granular flags for all of the above ^
-
 # Project background 
 
 This project was created to programmatically address [IAC-1616 Convert all repos to CircleCI contexts](https://gruntwork.atlassian.net/browse/IAC-1616), but we've since discussed using this as the starting point for a more ambitious [xargs for git](https://www.notion.so/gruntwork/An-xargs-for-updating-multiple-Git-repos-f3abbf4b1c2b4dd597cd122c50c10c82#2dd15aa30caf48388d47a120b3720757) project to come later. 
