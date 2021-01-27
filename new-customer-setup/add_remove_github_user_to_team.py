@@ -231,7 +231,8 @@ def do_remove_user_from_team(github_id, company_name, github_creds):
 
     membership = get_user_team_membership(github_id, team_id, github_creds)
     if not membership:
-        raise Exception('User {} is not a member of team {}'.format(github_id, team_name))
+        logging.info('Skipped removing user {} because they are not a member of team {}'.format(github_id, team_id))
+        return {}
 
     return remove_user_from_team(github_id, team_id, github_creds)
 
