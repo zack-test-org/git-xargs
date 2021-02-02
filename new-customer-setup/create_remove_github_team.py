@@ -60,10 +60,11 @@ aws_repos = [
     'gruntwork-io/terragrunt',
     'gruntwork-io/terragrunt-infrastructure-live-example',
     'gruntwork-io/terragrunt-infrastructure-modules-example',
-    'gruntwork-io/toc',
     'hashicorp/terraform-aws-consul',
     'hashicorp/terraform-aws-nomad',
-    'hashicorp/terraform-aws-vault'
+    'hashicorp/terraform-aws-vault',
+    'gruntwork-io/terraform-aws-service-catalog',
+    'gruntwork-io/aws-sample-app'
 ]
 
 gcp_repos = [
