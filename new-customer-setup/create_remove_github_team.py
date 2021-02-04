@@ -14,6 +14,7 @@ aws_repos = [
     'gruntwork-io/bash-commons',
     'gruntwork-io/cloud-nuke',
     'gruntwork-io/fetch',
+    'gruntwork-io/fetch-test-private',    
     'gruntwork-io/gruntkms',
     'gruntwork-io/gruntwork',
     'gruntwork-io/gruntwork-cli',
@@ -64,7 +65,8 @@ aws_repos = [
     'hashicorp/terraform-aws-nomad',
     'hashicorp/terraform-aws-vault',
     'gruntwork-io/terraform-aws-service-catalog',
-    'gruntwork-io/aws-sample-app'
+    'gruntwork-io/aws-sample-app',
+    'gruntwork-io/circle-ci-docker-images'
 ]
 
 gcp_repos = [
@@ -83,6 +85,8 @@ gcp_repos = [
     'gruntwork-io/terraform-aws-ci-pipeline-example',
     'gruntwork-io/terraform-aws-security',
     'gruntwork-io/terraform-kubernetes-helm',
+    'gruntwork-io/terraform-helm-gke-exts',
+    'gruntwork-io/terraform-google-security',
     'gruntwork-io/terratest',
     'gruntwork-io/terragrunt',
     'gruntwork-io/terragrunt-infrastructure-live-example',
@@ -90,7 +94,8 @@ gcp_repos = [
     'gruntwork-io/toc',
     'hashicorp/terraform-google-consul',
     'hashicorp/terraform-google-nomad',
-    'hashicorp/terraform-google-vault'
+    'hashicorp/terraform-google-vault',
+    'gruntwork-io/circle-ci-docker-images'
 ]
 
 aws_cis_repos = [
