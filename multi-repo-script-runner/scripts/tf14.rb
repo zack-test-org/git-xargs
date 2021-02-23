@@ -49,11 +49,11 @@ end
 def update_circleci_build_to_tg27 root_folder
   terragrunt_version = `yq eval '.env.environment.TERRAGRUNT_VERSION' #{root_folder}/.circleci/config.yml`
 
-  if terragrunt_version.strip != "null"
+  if (terragrunt_version.strip != "null") && (terragrunt_version.strip != "NONE")
     puts "Updating Terragrunt's version..."
     `yq eval -P '.env.environment.TERRAGRUNT_VERSION="0.27.1"' -i #{root_folder}/.circleci/config.yml`
   else
-    puts "Did not find a Terragrunt version in the CircleCi config. Skipping."
+    puts "Did not find a Terragrunt version (or it is set to NONE) in the CircleCi config. Skipping."
   end
 end
 
@@ -294,10 +294,10 @@ end
 def update_readme_badge root_folder
   # In root/README.md or root/README.adoc:
   # replace string https://img.shields.io/badge/tf-%3E%3D0.12.0-blue.svg
-  # with    string https://img.shields.io/badge/tf-%3E%3D0.13.0-blue.svg
+  # with    string https://img.shields.io/badge/tf-%3E%3D0.14.0-blue.svg
 
   tf_12_badge = 'https://img.shields.io/badge/tf-%3E%3D0.12.0-blue.svg'
-  tf_13_badge = 'https://img.shields.io/badge/tf-%3E%3D0.13.0-blue.svg'
+  tf_14_badge = 'https://img.shields.io/badge/tf-%3E%3D0.14.0-blue.svg'
   readme_adoc_path = root_folder + '/README.adoc'
   readme_md_path = root_folder + '/README.md'
 
@@ -306,8 +306,8 @@ def update_readme_badge root_folder
       puts "Found " + readme_path
       readme_contents = File.read(readme_path)
       if readme_contents.include? tf_12_badge
-        puts "Found TF 12 badge, replacing with TF 13 badge."
-        readme_contents = readme_contents.gsub(tf_12_badge, tf_13_badge)
+        puts "Found TF 12 badge, replacing with TF 14 badge."
+        readme_contents = readme_contents.gsub(tf_12_badge, tf_14_badge)
         IO.write(readme_path, readme_contents)
       else
         puts "Did not find TF 12 badge. Skipping."
