@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"os/exec"
-
-	"github.com/sirupsen/logrus"
 )
 
 // handles required dependency lookups on startup
@@ -30,19 +28,4 @@ func verifyDependenciesInstalled(deps []Dependency) (bool, []Dependency) {
 		}
 	}
 	return len(missingDeps) == 0, missingDeps
-}
-
-// Sanity check that user has at least one ssh identity loaded (since git auth is done via ssh - so their clones would fail)
-func EnsureSSHAgentHasIdentitiesLoaded() bool {
-	out, err := exec.Command("ssh-add", "-l").Output()
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"Error": err,
-		}).Debug("Could not check ssh-add for loaded identities")
-
-		return false
-	}
-
-	return string(out) != "The agent has no identities."
-
 }

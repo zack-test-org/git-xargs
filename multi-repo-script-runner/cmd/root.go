@@ -70,7 +70,6 @@ func persistentPreRun(cmd *cobra.Command, args []string) {
 	// Ensure the required dependencies are installed on the operator's system
 	requiredDeps := []Dependency{
 		{Name: "yq", URL: "https://mikefarah.gitbook.io/yq/"},
-		{Name: "ssh-add", URL: "https://www.ssh.com/ssh/agent"},
 	}
 
 	if ok, missingDeps := verifyDependenciesInstalled(requiredDeps); !ok {
@@ -93,14 +92,6 @@ func persistentPreRun(cmd *cobra.Command, args []string) {
 		log.Fatal("You must either provide an AllowedReposFile path or a GithubOrg. See ./multi-repo-script-runner help")
 
 	}
-
-	// Sanity check that the user has at least one identity loaded into their ssh agent, as all git operations are done over ssh
-	if loaded := EnsureSSHAgentHasIdentitiesLoaded(); loaded == false {
-		log.WithFields(logrus.Fields{
-			"Error": "No ssh identities loaded",
-		}).Fatal("All git operations are performed via SSH. You must ssh-add <your-ssh-identity>")
-	}
-
 }
 
 var rootCmd = &cobra.Command{

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-github/v32/github"
 	"github.com/sirupsen/logrus"
 )
@@ -27,8 +28,12 @@ func cloneLocalRepository(repo *github.Repository, stats *RunStats) (string, *gi
 	}
 
 	localRepository, err := git.PlainClone(repositoryDir, false, &git.CloneOptions{
-		URL:      repo.GetSSHURL(),
+		URL:      repo.GetCloneURL(),
 		Progress: os.Stdout,
+		Auth: &http.BasicAuth{
+			Username: repo.GetOwner().GetLogin(),
+			Password: os.Getenv("GITHUB_OAUTH_TOKEN"),
+		},
 	})
 
 	if err != nil {
@@ -236,6 +241,10 @@ func pushLocalBranch(DryRun bool, remoteRepository *github.Repository, localRepo
 	// Push the changes to the remote repo
 	po := &git.PushOptions{
 		RemoteName: "origin",
+		Auth: &http.BasicAuth{
+			Username: remoteRepository.GetOwner().GetLogin(),
+			Password: os.Getenv("GITHUB_OAUTH_TOKEN"),
+		},
 	}
 	pushErr := localRepository.Push(po)
 

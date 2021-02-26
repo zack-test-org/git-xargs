@@ -83,5 +83,4 @@ func printRepoReport(allEvents []AnnotatedEvent, r *RunStats) {
 		fmt.Println()
 
 	}
-
 }

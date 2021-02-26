@@ -22,7 +22,7 @@ func processRepos(DryRun bool, GithubClient *github.Client, repos []*github.Repo
 
 		log.WithFields(logrus.Fields{
 			"Repo": repo.GetName(),
-		}).Debug("Attempting to clone repository via ssh")
+		}).Debug("Attempting to clone repository using GITHUB_OAUTH_TOKEN")
 
 		// Create a new temporary directory in the default temp directory of the system, but append
 		// multi-repo-script-runner-<repo-name> to it so that it's easier to find when you're looking for it
