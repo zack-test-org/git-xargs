@@ -55,7 +55,7 @@ func OperateOnRepos(GithubClient *github.Client, GithubOrg string, allowedRepos 
 	for _, repo := range reposToIterate {
 		log.WithFields(logrus.Fields{
 			"Repository": repo.GetName(),
-		}).Debug("Considering repo for upgrade")
+		}).Debug("Repo will have all targeted scripts run against it")
 	}
 
 	// Now that we've gathered up the repos we're going to operate on, do the actual processing by running the

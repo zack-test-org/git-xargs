@@ -227,8 +227,8 @@ func commitLocalChanges(worktree *git.Worktree, remoteRepository *github.Reposit
 
 // pushLocalBranch pushes the branch in the local clone of the /tmp/ directory repository to the Github remote origin
 // so that a pull request can be opened against it via the Github API
-func pushLocalBranch(DryRun bool, remoteRepository *github.Repository, localRepository *git.Repository, stats *RunStats) {
-	if DryRun {
+func pushLocalBranch(dryRun bool, remoteRepository *github.Repository, localRepository *git.Repository, stats *RunStats) {
+	if dryRun {
 
 		log.WithFields(logrus.Fields{
 			"Repo": remoteRepository.GetName(),
@@ -266,12 +266,12 @@ func pushLocalBranch(DryRun bool, remoteRepository *github.Repository, localRepo
 
 // Attempt to open a pull request via the Github API, of the supplied branch specific to this tool, against the main
 // branch for the remote origin
-func openPullRequest(DryRun bool, GithubClient *github.Client, repo *github.Repository, branch string, stats *RunStats) {
+func openPullRequest(dryRun bool, githubClient *github.Client, repo *github.Repository, branch string, stats *RunStats) {
 
-	if DryRun {
+	if dryRun {
 		log.WithFields(logrus.Fields{
 			"Repo": repo.GetName(),
-		}).Debug("DryRun is set to true, so skipping opening a pull request!")
+		}).Debug("dryRun is set to true, so skipping opening a pull request!")
 		return
 	}
 
@@ -285,7 +285,7 @@ func openPullRequest(DryRun bool, GithubClient *github.Client, repo *github.Repo
 	}
 
 	// Make a pull request via the Github API
-	pr, _, err := GithubClient.PullRequests.Create(context.Background(), *repo.GetOwner().Login, repo.GetName(), newPR)
+	pr, _, err := githubClient.PullRequests.Create(context.Background(), *repo.GetOwner().Login, repo.GetName(), newPR)
 
 	if err != nil {
 		log.WithFields(logrus.Fields{

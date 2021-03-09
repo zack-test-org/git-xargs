@@ -25,6 +25,7 @@ func printRepoReport(allEvents []AnnotatedEvent, r *RunStats) {
 	fmt.Print("\n\n")
 	fmt.Println("*****************************************************")
 	fmt.Printf("  RUN SUMMARY @ %v\n", time.Now().UTC())
+	fmt.Printf("  Runtime in seconds: %v\n", r.GetTotalRunSeconds())
 	fmt.Println("*****************************************************")
 
 	// If there were any allowed repos provided via file, print out the list of them

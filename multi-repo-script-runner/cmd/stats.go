@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/google/go-github/v32/github"
 )
 
@@ -85,6 +87,7 @@ type RunStats struct {
 	repos             map[Event][]*github.Repository
 	pulls             map[string]string
 	fileProvidedRepos []*AllowedRepo
+	startTime         time.Time
 }
 
 // NewStatsTracker initializes a tracker struct that is capable of keeping tabs on which repos were handled and how
@@ -95,8 +98,15 @@ func NewStatsTracker() *RunStats {
 		repos:             make(map[Event][]*github.Repository),
 		pulls:             make(map[string]string),
 		fileProvidedRepos: fpr,
+		startTime:         time.Now(),
 	}
 	return t
+}
+
+// GetTotalRunSeconds returns the total time it took, in seconds, to run all the selected scripts against all the targeted repos
+func (r *RunStats) GetTotalRunSeconds() int {
+	s := time.Since(r.startTime).Seconds()
+	return int(s) % 60
 }
 
 // SetFileProvidedRepos sets the number of repos that were provided via file by the user on startup (as opposed to looked up via Github API via the --github-org flag)
