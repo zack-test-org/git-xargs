@@ -18,6 +18,10 @@ import (
 // against the repo locally and any git changes handled thereafter. The local directory has
 // multi-repo-script-runner-<repo-name> appended to it to make it easier to find when you are looking for it while debugging
 func cloneLocalRepository(repo *github.Repository, stats *RunStats) (string, *git.Repository, error) {
+	log.WithFields(logrus.Fields{
+		"Repo": repo.GetName(),
+	}).Debug("Attempting to clone repository using GITHUB_OAUTH_TOKEN")
+
 	repositoryDir, tmpDirErr := ioutil.TempDir("", fmt.Sprintf("multi-repo-script-runner-%s", repo.GetName()))
 	if tmpDirErr != nil {
 		log.WithFields(logrus.Fields{
@@ -46,11 +50,9 @@ func cloneLocalRepository(repo *github.Repository, stats *RunStats) (string, *gi
 		stats.TrackSingle(RepoFailedToClone, repo)
 
 		return repositoryDir, nil, err
-
-	} else {
-
-		stats.TrackSingle(RepoSuccessfullyCloned, repo)
 	}
+
+	stats.TrackSingle(RepoSuccessfullyCloned, repo)
 
 	return repositoryDir, localRepository, nil
 }
@@ -74,7 +76,7 @@ func getLocalRepoHeadRef(localRepository *git.Repository, repo *github.Repositor
 
 // runAllTargetedScripts loops through the collection of verified scripts and runs each against the currently targeted
 // locally cloned repository, tracking any exceptions that may be thrown during execution
-func runAllTargetedScripts(repositoryDir string, scriptsCollection ScriptCollection, repo *github.Repository, worktree *git.Worktree, stats *RunStats) {
+func runAllTargetedScripts(repositoryDir string, scriptsCollection ScriptCollection, repo *github.Repository, worktree *git.Worktree, stats *RunStats) error {
 	for _, script := range scriptsCollection.Scripts {
 		cmd := exec.Command(script.Path)
 		cmd.Dir = repositoryDir
@@ -93,6 +95,7 @@ func runAllTargetedScripts(repositoryDir string, scriptsCollection ScriptCollect
 			}).Debug("Error getting output of script execution")
 			// Track the script error against the repo
 			stats.TrackSingle(ScriptErrorOcurredDuringExecution, repo)
+			return err
 		}
 
 		log.WithFields(logrus.Fields{
@@ -110,6 +113,7 @@ func runAllTargetedScripts(repositoryDir string, scriptsCollection ScriptCollect
 
 			// Track the status check failure
 			stats.TrackSingle(WorktreeStatusCheckFailed, repo)
+			return statusErr
 		}
 
 		// If our scripts made any file changes, we need to stage, add and commit them
@@ -132,7 +136,7 @@ func runAllTargetedScripts(repositoryDir string, scriptsCollection ScriptCollect
 						}).Debug("Error adding file to git stage")
 						// Track the file staging failure
 						stats.TrackSingle(WorktreeAddFileFailed, repo)
-
+						return addErr
 					}
 				}
 			}
@@ -146,6 +150,8 @@ func runAllTargetedScripts(repositoryDir string, scriptsCollection ScriptCollect
 			stats.TrackSingle(WorktreeStatusClean, repo)
 		}
 	}
+
+	return nil
 }
 
 // getLocalWorkTree looks up the working tree of the locally cloned repository and returns it if possible, or an error
@@ -162,7 +168,6 @@ func getLocalWorkTree(repositoryDir string, localRepository *git.Repository, rep
 		return nil, worktreeErr
 	}
 	return worktree, nil
-
 }
 
 // checkoutLocalBranch creates a local branch specific to this tool in the locally checked out copy of the repo in the /tmp folder
@@ -201,7 +206,7 @@ func checkoutLocalBranch(ref *plumbing.Reference, worktree *git.Worktree, remote
 
 // commitLocalChanges will create a commit using the supplied or default commit message and will add any untracked, deleted
 // or modified files that resulted from script execution
-func commitLocalChanges(worktree *git.Worktree, remoteRepository *github.Repository, localRepository *git.Repository, stats *RunStats) {
+func commitLocalChanges(worktree *git.Worktree, remoteRepository *github.Repository, localRepository *git.Repository, stats *RunStats) error {
 
 	// With all our untracked files staged, we can now create a commit, passing the All
 	// option when configuring our commit option so that all modified and deleted files
@@ -221,13 +226,14 @@ func commitLocalChanges(worktree *git.Worktree, remoteRepository *github.Reposit
 		// If we reach this point, we were unable to commit our changes, so we'll
 		// continue rather than attempt to push an empty branch and open an empty PR
 		stats.TrackSingle(CommitChangesFailed, remoteRepository)
+		return commitErr
 	}
-
+	return nil
 }
 
 // pushLocalBranch pushes the branch in the local clone of the /tmp/ directory repository to the Github remote origin
 // so that a pull request can be opened against it via the Github API
-func pushLocalBranch(dryRun bool, remoteRepository *github.Repository, localRepository *git.Repository, stats *RunStats) {
+func pushLocalBranch(dryRun bool, remoteRepository *github.Repository, localRepository *git.Repository, stats *RunStats) error {
 	if dryRun {
 
 		log.WithFields(logrus.Fields{
@@ -236,7 +242,7 @@ func pushLocalBranch(dryRun bool, remoteRepository *github.Repository, localRepo
 
 		stats.TrackSingle(PushBranchSkipped, remoteRepository)
 
-		return
+		return nil
 	}
 	// Push the changes to the remote repo
 	po := &git.PushOptions{
@@ -256,23 +262,25 @@ func pushLocalBranch(dryRun bool, remoteRepository *github.Repository, localRepo
 
 		// Track the push failure
 		stats.TrackSingle(PushBranchFailed, remoteRepository)
-	} else {
-
-		log.WithFields(logrus.Fields{
-			"Repo": remoteRepository.GetName(),
-		}).Debug("Successfully pushed local branch to remote origin")
+		return pushErr
 	}
+
+	log.WithFields(logrus.Fields{
+		"Repo": remoteRepository.GetName(),
+	}).Debug("Successfully pushed local branch to remote origin")
+
+	return nil
 }
 
 // Attempt to open a pull request via the Github API, of the supplied branch specific to this tool, against the main
 // branch for the remote origin
-func openPullRequest(dryRun bool, githubClient *github.Client, repo *github.Repository, branch string, stats *RunStats) {
+func openPullRequest(dryRun bool, githubClient *github.Client, repo *github.Repository, branch string, stats *RunStats) error {
 
 	if dryRun {
 		log.WithFields(logrus.Fields{
 			"Repo": repo.GetName(),
 		}).Debug("dryRun is set to true, so skipping opening a pull request!")
-		return
+		return nil
 	}
 
 	// Configure pull request options that the Github client accepts when making calls to open new pull requests
@@ -298,12 +306,14 @@ func openPullRequest(dryRun bool, githubClient *github.Client, repo *github.Repo
 		// Track pull request open failure
 		stats.TrackSingle(PullRequestOpenErr, repo)
 
-	} else {
-		log.WithFields(logrus.Fields{
-			"Pull Request URL": pr.GetHTMLURL(),
-		}).Debug("Successfully opened pull request")
-
-		// Track successful opening of the pull request, extracting the HTML url to the PR itself for easier review
-		stats.TrackPullRequest(repo.GetName(), pr.GetHTMLURL())
+		return err
 	}
+
+	log.WithFields(logrus.Fields{
+		"Pull Request URL": pr.GetHTMLURL(),
+	}).Debug("Successfully opened pull request")
+
+	// Track successful opening of the pull request, extracting the HTML url to the PR itself for easier review
+	stats.TrackPullRequest(repo.GetName(), pr.GetHTMLURL())
+	return nil
 }
