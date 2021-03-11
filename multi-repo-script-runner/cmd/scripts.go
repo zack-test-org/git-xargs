@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -42,10 +40,6 @@ func VerifyScripts(scriptNames []string, scriptsPath string) (ScriptCollection, 
 
 	// Ensure that every script can be read by the tool, ensuring there were no naming or permissions issues
 	for _, scriptName := range scriptNames {
-		// Build the full path to the script
-		if !strings.HasSuffix(scriptName, ".sh") {
-			scriptName = fmt.Sprintf("%s.sh", scriptName)
-		}
 		// Build complete path to the script
 		scriptPath := filepath.Join(basePath, scriptName)
 
@@ -66,6 +60,7 @@ func VerifyScripts(scriptNames []string, scriptsPath string) (ScriptCollection, 
 				"Error":       statErr,
 				"Script path": scriptPath,
 			}).Debug("Error getting file info")
+			return sc, statErr
 		}
 
 		// Sanity check that script is executable by its owner
