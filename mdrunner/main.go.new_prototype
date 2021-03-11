@@ -1,0 +1,517 @@
+package main
+
+import (
+	"bufio"
+	"crypto/sha256"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
+)
+
+const defaultLogLevel = "WARN"
+const defaultClearState = false
+const defaultNoPrompt = false
+const defaultVerifyOnly = false
+const defaultCleanupOnly = false
+const defaultPreventCleanup = false
+
+// Snippet is a piece of executable shell code
+type Snippet struct {
+	Index            int      `yaml:"index"`
+	Description      string   `yaml:"-"`
+	Content          string   `yaml:"-"`
+	State            string   `yaml:"state"`
+	WorkingDirectory string   `yaml:"dir"`
+	EnvVars          []string `yaml:"env"`
+	Verify           bool     `yaml:"verify"`
+	Cleanup          bool     `yaml:"cleanup"`
+}
+
+// State stores the state of a snippet
+type State struct {
+	Index            int      `yaml:"index"`
+	State            string   `yaml:"state"`
+	Output           string   `yaml:"-"` // Do I need this?
+	WorkingDirectory string   `yaml:"dir"`
+	EnvVars          []string `yaml:"env"`
+}
+
+// getEnv returns either an environment variable or the specified default
+func getEnv(name string, defaultValue string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
+// setLogLevel sets the current log level depending on the MDRUNNER_LOGLEVEL environment variable
+func setLogLevel(logLevel string) {
+	logLevel = strings.ToUpper(logLevel)
+	switch logLevel {
+	case "DEBUG":
+		log.SetLevel(log.DebugLevel)
+	case "INFO":
+		log.SetLevel(log.InfoLevel)
+	case "WARN":
+		log.SetLevel(log.WarnLevel)
+	case "ERROR":
+		log.SetLevel(log.ErrorLevel)
+	case "FATAL":
+		log.SetLevel(log.FatalLevel)
+	case "PANIC":
+		log.SetLevel(log.PanicLevel)
+	default:
+		log.Fatal("Log level must be one of (DEBUG, INFO, WARN, ERROR, FATAL, PANIC)")
+	}
+}
+
+// loadFile reads in the contents of a given filename to a string
+func loadFile(filename string) (string, error) {
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func loadSnippetState(fileName string) ([]State, error) {
+	log.Debugf("Detecting whether snippet state file %s exists", fileName)
+	if _, err := os.Stat(fileName); err != nil {
+		log.Debug("State file does not exist")
+		return nil, nil
+	}
+	fmt.Printf("Loading state from %s\n\n", fileName)
+	contents, err := loadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	var states []State
+	err = yaml.Unmarshal([]byte(contents), &states)
+	if err != nil {
+		return nil, err
+	}
+	return states, nil
+}
+
+// getDescription extracts the description of a step from the comments of the snippet
+func getDescription(index int, content string) string {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimLeft(line, " \t")
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "#") {
+			line = strings.TrimPrefix(line, "#")
+			line = strings.TrimLeft(line, " ")
+			return fmt.Sprintf("Step %d: %s", index, line)
+		} else {
+			return fmt.Sprintf("Step %d", index)
+		}
+	}
+	return fmt.Sprintf("Step %d", index)
+}
+
+func extractAllSnippets(content string) ([]Snippet, error) {
+	var snippets []Snippet
+	re := regexp.MustCompile("(?s)```bash\n(.+?)\n```\n")
+	for i, single := range re.FindAllStringSubmatch(content, -1) {
+		description := getDescription(i+1, single[1])
+		log.Debugf("Creating new snippet '%s' and appending to the array of snippets", description)
+		snippet := Snippet{
+			Index:       i + 1,
+			Description: description,
+			Content:     single[1],
+			Verify:      false,
+			Cleanup:     false,
+		}
+		if strings.Contains(single[1], "mdrunner:verify") {
+			snippet.Verify = true
+		}
+		if strings.Contains(single[1], "mdrunner:cleanup") {
+			snippet.Cleanup = true
+		}
+		snippets = append(snippets, snippet)
+	}
+	return snippets, nil
+}
+
+func inIntArray(arr []int, x int) bool {
+	for _, j := range arr {
+		if x == j {
+			return true
+		}
+	}
+	return false
+}
+
+func saveSnippetState(filename string, states []State) error {
+	log.Infof("Saving snippet state to %s", filename)
+	y, err := yaml.Marshal(states)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, y, 0600)
+}
+
+// saveSnippet saves the contents of a string to a temporary file, making it executable
+func saveSnippet(filename string, content string) error {
+	log.Infof("Saving snippet to %s", filename)
+	prefix := `#!/bin/bash
+	
+	`
+	content = prefix + content + `
+
+echo "### BEGIN mdrunner ###"
+echo "# mdrunner:pwd $(pwd)"
+IFS=$'\n'
+for i in $(env) ; do
+	echo "# mdrunner:env $i"
+done
+echo "### END mdrunner ###"
+`
+	return ioutil.WriteFile(filename, []byte(content), 0700)
+}
+
+func runSnippet(snippet Snippet, previousState State) ([]string, error) {
+	if previousState.WorkingDirectory != "" {
+		log.Debugf("Changing directory to %s", previousState.WorkingDirectory)
+		os.Chdir(previousState.WorkingDirectory)
+	}
+
+	fmt.Printf(`
+################################################################################
+# BEGIN CODE %s
+
+%s
+
+# END CODE %s
+################################################################################
+
+#-------------------------------------------------------------------------------
+# BEGIN OUTPUT
+
+`, snippet.Description, snippet.Content, snippet.Description)
+
+	filename := fmt.Sprintf("/tmp/%d.sh", snippet.Index)
+	err := saveSnippet(filename, snippet.Content)
+	if err != nil {
+		return nil, err
+	}
+	// defer os.Remove(filename)
+
+	cmd := exec.Command(filename)
+	cmd.Env = append(os.Environ(), previousState.EnvVars...)
+
+	cmdReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	var output []string
+	scanner := bufio.NewScanner(cmdReader)
+	go func() {
+		disableOutput := false
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "### BEGIN mdrunner ###" {
+				disableOutput = true
+			}
+			output = append(output, line)
+			if !disableOutput {
+				fmt.Printf("%s\n", scanner.Text())
+			}
+		}
+	}()
+
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println()
+	fmt.Printf(`
+# END OUTPUT
+#-------------------------------------------------------------------------------
+`)
+	return output, nil
+}
+
+// extractDir captures the working directory from the output of a command
+func extractDir(text []string, dir string) string {
+	// # mdrunner:pwd /Users/pete/git/mdrunner
+	for _, line := range text {
+		if strings.HasPrefix(line, "# mdrunner:pwd ") {
+			dir := strings.TrimLeft(line, "# mdrunner:pwd ")
+			log.Debugf("Capture working directory of %s", dir)
+			return dir
+		}
+	}
+	return dir
+}
+
+// extractEnvVars captures the environment variables from the output of a command
+func extractEnvVars(text []string, originals []string) []string {
+	// # mdrunner:env TERM_PROGRAM=iTerm.app
+	envVars := []string{}
+	for _, line := range text {
+		if strings.HasPrefix(line, "# mdrunner:env ") {
+			env := strings.TrimLeft(line, "# mdrunner:env ")
+			skip := false
+			for _, check := range originals {
+				if env == check || strings.HasPrefix(env, "SHLVL=") || strings.HasPrefix(env, "_=") {
+					skip = true
+					break
+				}
+			}
+			if !skip {
+				log.Debugf("Capture environment variable: %s", env)
+				envVars = append(envVars, env)
+			}
+		}
+	}
+
+	return envVars
+}
+
+func runAllSnippets(snippets []Snippet, states []State, stateFileName string, runSteps []int, noPrompt bool, verifyOnly bool, cleanupOnly bool, preventCleanup bool) error {
+
+	// Get current directory so we can track it over snippet runs
+	currDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	// Capture the environment variables from the beginning so that we can weed them out when storing state
+	originalEnvVars := os.Environ()
+
+	for i, snippet := range snippets {
+
+		// envVars := []string{}
+
+		// Create an empty state if it doesn't exist
+		if len(states) <= i {
+			states = append(states, State{})
+		}
+
+		index := i + 1
+
+		// If steps are specified and this is not a specified step, skip it
+		if len(runSteps) > 0 && !inIntArray(runSteps, index) {
+			log.Debugf("Skipping step %d because we're only running steps %v", index, runSteps)
+			continue
+		}
+
+		// If we're only running the verification step and this isn't a verification step, skip it
+		if verifyOnly && !snippet.Verify {
+			log.Debugf("Skipping step %d because we're running verification and this is not a verification step", index)
+			continue
+		}
+
+		// If we're only running the cleanup step and this isn't a cleanup step, skip it
+		if cleanupOnly && !snippet.Cleanup {
+			log.Debugf("Skipping step %d because we're running cleanup and this is not a cleanup step", index)
+			continue
+		}
+
+		// If we're preventing cleanup and this is a cleanup step, skip it
+		if preventCleanup && snippet.Cleanup {
+			log.Debugf("Skipping step %d because we're preventing cleanup and this is a cleanup step", index)
+			continue
+		}
+
+		if len(states) > i && states[i].State == "okay" {
+			fmt.Printf("Skipping step %d because it's already been run", index)
+			continue
+		}
+
+		// Get the previous state if it exists
+		previousState := State{}
+		if i > 0 && len(states) > i {
+			previousState = states[i-1]
+		}
+		output, err := runSnippet(snippet, previousState)
+		states[i].WorkingDirectory = extractDir(output, currDir)
+		states[i].EnvVars = extractEnvVars(output, originalEnvVars)
+		if err != nil {
+			states[i].State = "error"
+			if err := saveSnippetState(stateFileName, states); err != nil {
+				return err
+			}
+			return err
+		} else {
+			states[i].State = "okay"
+			if err := saveSnippetState(stateFileName, states); err != nil {
+				return err
+			}
+		}
+
+	}
+	log.Debugf("Removing state file %s", stateFileName)
+	os.Remove(stateFileName)
+	return nil
+}
+
+func main() {
+
+	logLevel := getEnv("MDRUNNER_LOGLEVEL", defaultLogLevel)
+	stateFileName := getEnv("MDRUNNER_STATEFILE", "")
+	clearState, _ := strconv.ParseBool(getEnv("MDRUNNER_CLEARSTATE", strconv.FormatBool(defaultClearState)))
+	noPrompt, _ := strconv.ParseBool(getEnv("MDRUNNER_NOPROMPT", strconv.FormatBool(defaultNoPrompt)))
+	verifyOnly, _ := strconv.ParseBool(getEnv("MDRUNNER_VERIFYONLY", strconv.FormatBool(defaultVerifyOnly)))
+	cleanupOnly, _ := strconv.ParseBool(getEnv("MDRUNNER_CLEANUPONLY", strconv.FormatBool(defaultCleanupOnly)))
+	preventCleanup, _ := strconv.ParseBool(getEnv("MDRUNNER_PREVENTCLEANUP", strconv.FormatBool(defaultPreventCleanup)))
+	var runSteps []int
+
+	var rootCmd = &cobra.Command{
+		Use:  "mdrunner FILE",
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			// Set our log level based on defaults or what the user has set
+			setLogLevel(logLevel)
+
+			// Get the full path of our input file
+			mdFile, err := filepath.Abs(args[0])
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Debugf("Full path of input file: %s", mdFile)
+
+			// Make sure the file exists
+			if _, err := os.Stat(mdFile); err != nil {
+				log.Fatal(err)
+			}
+			log.Debugf("File %s exists", mdFile)
+
+			// Create the state file if one isn't specified
+			if stateFileName == "" {
+				// Create the state file name based on the hash of the file name
+				hash := fmt.Sprintf("%x", sha256.Sum256([]byte(mdFile)))[0:7]
+				stateFileName = fmt.Sprintf(os.TempDir()+"mdrunner-%s.yaml", hash)
+			}
+			log.Debugf("Using state file: %s", stateFileName)
+
+			var states []State
+
+			// Remove the state file if specified and it exists
+			if clearState {
+				if _, err := os.Stat(stateFileName); err == nil {
+					log.Infof("Removing %s", stateFileName)
+					err := os.Remove(stateFileName)
+					if err != nil {
+						log.Fatal(err)
+					}
+					log.Debugf("Removed %s", stateFileName)
+				}
+			} else {
+				states, err = loadSnippetState(stateFileName)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+
+			// Load the Markdown file
+			mdContent, err := loadFile(mdFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// Extract snippets from the Markdown object
+			snippets, err := extractAllSnippets(mdContent)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// Get current directory so we can track it over snippet runs
+			currDir, err := os.Getwd()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// Create empty states if we need to
+			for i := range snippets {
+				if len(states) <= i {
+					states = append(states, State{Index: i + 1, State: "pending", WorkingDirectory: currDir, EnvVars: []string{}})
+				}
+			}
+
+			err = saveSnippetState(stateFileName, states)
+
+			// Run the snippets
+			if len(snippets) == 0 {
+				log.Info("No snippets to run.")
+			} else {
+				if err := runAllSnippets(snippets, states, stateFileName, runSteps, noPrompt, verifyOnly, cleanupOnly, preventCleanup); err != nil {
+					log.Fatal(err)
+				}
+			}
+
+		},
+	}
+
+	rootCmd.Flags().StringVar(
+		&logLevel, "log-level",
+		logLevel,
+		"Log level (DEBUG, INFO, WARN, ERROR, FATAL, PANIC) (can be set by MDRUNNER_LOGLEVEL)",
+	)
+
+	rootCmd.Flags().BoolVar(
+		&clearState,
+		"reset",
+		clearState,
+		"Clear state prior to running",
+	)
+
+	rootCmd.Flags().BoolVar(
+		&noPrompt,
+		"no-prompt",
+		noPrompt,
+		"Clear state prior to running",
+	)
+
+	rootCmd.Flags().BoolVar(
+		&verifyOnly,
+		"verify",
+		verifyOnly,
+		"Only run the step(s) marked by 'mdrunner:verify'",
+	)
+
+	rootCmd.Flags().BoolVar(
+		&preventCleanup,
+		"no-cleanup",
+		preventCleanup,
+		"Prevent the cleanup step(s) marked by 'mdrunner:cleanup' from running",
+	)
+
+	rootCmd.Flags().BoolVar(
+		&cleanupOnly,
+		"cleanup",
+		cleanupOnly,
+		"Only run the step(s) marked by 'mdrunner:cleanup'",
+	)
+	rootCmd.Flags().IntSliceVar(
+		&runSteps,
+		"step",
+		nil,
+		"Run only the specified step(s)",
+	)
+
+	rootCmd.Execute()
+
+}
