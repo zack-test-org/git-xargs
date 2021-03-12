@@ -17,13 +17,24 @@ end
 def update_circleci_build_to_tf14 root_folder
   puts "Updating Terraform's version..."
   current_image = `yq eval '.defaults.docker[0].image' #{root_folder}/.circleci/config.yml`
-  terraform_version = `yq eval '.env.environment.TERRAFORM_VERSION' #{root_folder}/.circleci/config.yml`
 
   if current_image.strip != "null"
     `yq eval '.defaults.docker[0].image="087285199408.dkr.ecr.us-east-1.amazonaws.com/circle-ci-test-image-base:tf14.4"' -i #{root_folder}/.circleci/config.yml`
-  elsif terraform_version.strip != "null"
-    `yq eval -P '.env.environment.TERRAFORM_VERSION="0.14.4"' -i #{root_folder}/.circleci/config.yml`
+  end
+
+  terraform_version = `yq eval '.env.environment.TERRAFORM_VERSION' #{root_folder}/.circleci/config.yml`
+
+  if terraform_version.strip == "null"
+    terraform_version = `yq eval '.env.TERRAFORM_VERSION' #{root_folder}/.circleci/config.yml`
+
+    if terraform_version.strip != "null"
+      `yq eval -P '.env.TERRAFORM_VERSION="0.14.4"' -i #{root_folder}/.circleci/config.yml`
+    end
   else
+    `yq eval -P '.env.environment.TERRAFORM_VERSION="0.14.4"' -i #{root_folder}/.circleci/config.yml`
+  end
+
+  if current_image.strip == "null" and terraform_version.strip == "null"
     raise "No match for Docker image neither TERRAFORM_VERSION"
   end
 end
@@ -318,6 +329,10 @@ def update_readme_badge root_folder
   end
 end
 
+def terraform_format root_folder
+  `cd #{root_folder} && terraform fmt -recursive .`
+end
+
 root_folder = get_root_folder
 update_circleci_build_to_tf14 root_folder
 update_terratest_in_go_mod root_folder
@@ -326,3 +341,4 @@ ignore_terraform_lock_file root_folder
 update_tf_version_in_code root_folder
 update_provider_constraints root_folder
 update_readme_badge root_folder
+terraform_format root_folder
