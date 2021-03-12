@@ -1,6 +1,0 @@
-gruntwork-io/gruntkms',
-    'gruntwork-io/gruntwork',
-    'gruntwork-io/gruntwork-cli',
-    'gruntwork-io/gruntwork-installer',
-    'gruntwork-io/helm-kubernetes-services',
- 

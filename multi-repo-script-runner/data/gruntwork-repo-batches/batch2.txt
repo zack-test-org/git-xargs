@@ -1,5 +1,0 @@
-    'gruntwork-io/infrastructure-as-code-training',
-    'gruntwork-io/infrastructure-live-acme',
-    'gruntwork-io/infrastructure-live-multi-account-acme',
-    'gruntwork-io/infrastructure-modules-acme',
-    'gruntwork-io/infrastructure-modules-multi-account-acme',
