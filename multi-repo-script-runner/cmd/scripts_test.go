@@ -8,9 +8,9 @@ import (
 
 // Ensure that passing missing or misnamed scripts to the VerifyScripts function results in proper filtering
 func TestVerifyScriptsRejectsMissingScripts(t *testing.T) {
-	allBadScriptNames := []string{"vincent-freeman", "booker-dewitt.sh", "im-not-really-a-script"}
+	allBadScriptNames := []string{"./scripts/vincent-freeman.sh"}
 
-	filteredScriptCollection, verifyErr := VerifyScripts(allBadScriptNames, "_testscripts")
+	filteredScriptCollection, verifyErr := VerifyScripts(allBadScriptNames)
 
 	assert.Error(t, verifyErr)
 
@@ -18,47 +18,40 @@ func TestVerifyScriptsRejectsMissingScripts(t *testing.T) {
 }
 
 func TestVerifyScriptsFindsValidScriptByShortname(t *testing.T) {
-	goodScriptName := []string{"add-license"}
+	goodScriptName := []string{"./_testscripts/add-license.sh"}
 
-	filteredScriptCollection, verifyErr := VerifyScripts(goodScriptName, "_testscripts")
+	filteredScriptCollection, verifyErr := VerifyScripts(goodScriptName)
 
 	assert.NoError(t, verifyErr)
 
 	assert.Equal(t, len(filteredScriptCollection.Scripts), 1)
-
-	assert.Equal(t, filteredScriptCollection.Scripts[0].Path, "_testscripts/add-license.sh")
-
 }
 
-func TestVerifyScriptsFindsValidScriptWithShExtension(t *testing.T) {
-	goodScriptName := []string{"add-license.sh"}
+func TestVerifyScriptsFindsValidScripts(t *testing.T) {
+	goodScriptName := []string{"./_testscripts/add-license.sh", "./_testscripts/test-ruby.rb", "./_testscripts/test-python.py"}
 
-	filteredScriptCollection, verifyErr := VerifyScripts(goodScriptName, "_testscripts")
+	filteredScriptCollection, verifyErr := VerifyScripts(goodScriptName)
 
 	assert.NoError(t, verifyErr)
 
-	assert.Equal(t, len(filteredScriptCollection.Scripts), 1)
-
-	assert.Equal(t, filteredScriptCollection.Scripts[0].Path, "_testscripts/add-license.sh")
-
+	assert.Equal(t, len(filteredScriptCollection.Scripts), 3)
 }
 
 func TestVerifyScriptRejectsEmptyScriptList(t *testing.T) {
 	emptyScriptList := []string{}
 
-	filteredScriptCollection, verifyErr := VerifyScripts(emptyScriptList, "_testscripts")
+	filteredScriptCollection, verifyErr := VerifyScripts(emptyScriptList)
 
 	assert.Error(t, verifyErr)
 
 	assert.Equal(t, len(filteredScriptCollection.Scripts), 0)
-
 }
 
 func TestFileThatIsNotExecutableThrowsError(t *testing.T) {
 
-	notExecutableScriptList := []string{"bad-perm"}
+	notExecutableScriptList := []string{"./_testscripts/bad-perm.sh"}
 
-	_, verifyErr := VerifyScripts(notExecutableScriptList, "_testscripts")
+	_, verifyErr := VerifyScripts(notExecutableScriptList)
 
 	assert.EqualError(t, verifyErr, "All scripts must be chmod'd to be executable by at least their owner")
 

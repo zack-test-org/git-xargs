@@ -103,7 +103,7 @@ var rootCmd = &cobra.Command{
 		log.Debug("Multi repo script runner running...")
 
 		// Verify the scripts that will be run against the repos and package them into a ScriptCollection
-		scriptCollection, verifyErr := VerifyScripts(TargetScripts, "")
+		scriptCollection, verifyErr := VerifyScripts(TargetScripts)
 
 		if verifyErr != nil {
 			log.WithFields(logrus.Fields{
