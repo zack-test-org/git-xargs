@@ -1,0 +1,84 @@
+defaults: &defaults
+  machine:
+    enabled: true
+    image: "ubuntu-1604:201903-01"
+  environment:
+    GRUNTWORK_INSTALLER_VERSION: v0.0.21
+    TERRATEST_LOG_PARSER_VERSION: v0.29.0
+    TERRAFORM_VERSION: 0.13.5
+    TERRAGRUNT_VERSION: NONE
+    PACKER_VERSION: NONE
+    GOLANG_VERSION: 1.14
+    KUBECTL_VERSION: v1.17.12
+    MINIKUBE_VERSION: v1.11.0
+    KUBECONFIG: /home/circleci/.kube/config
+install_gruntwork_utils: &install_gruntwork_utils
+  name: install gruntwork utils
+  command: |
+    curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version "${GRUNTWORK_INSTALLER_VERSION}"
+    gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "${MODULE_CI_VERSION}"
+    gruntwork-install --binary-name "terratest_log_parser" --repo "https://github.com/gruntwork-io/terratest" --tag "${TERRATEST_LOG_PARSER_VERSION}"
+    configure-environment-for-gruntwork-module \
+      --terraform-version ${TERRAFORM_VERSION} \
+      --terragrunt-version ${TERRAGRUNT_VERSION} \
+      --packer-version ${PACKER_VERSION} \
+      --go-version ${GOLANG_VERSION}
+version: 2
+jobs:
+  git_xargs_tests:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          <<: *install_gruntwork_utils
+      - run:
+          name: run git-xargs tests
+          command: |
+            mkdir -p /tmp/logs
+            run-go-tests --path . --timeout 10m | tee /tmp/logs/all.log
+          no_output_timeout: 900s
+      - run:
+          command: terratest_log_parser --testlog /tmp/logs/all.log --outputdir /tmp/logs
+          when: always
+      - store_artifacts:
+          path: /tmp/logs
+      - store_test_results:
+          path: /tmp/logs
+  deploy:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          <<: *install_gruntwork_utils
+      - run: go get github.com/mitchellh/gox
+      # Build and upload binaries for kubergrunt
+      - run:
+          command: |
+            build-go-binaries \
+              --app-name git-xargs \
+              --src-path ./cmd \
+              --dest-path ./bin \
+              --ld-flags "-X main.VERSION=$CIRCLE_TAG -extldflags '-static'"
+            (cd ./bin && sha256sum * > SHA256SUMS)
+            upload-github-release-assets ./bin/*
+          no_output_timeout: 900s
+workflows:
+  version: 2
+  test-and-deploy:
+    jobs:
+      - git_xargs_tests:
+          filters:
+            tags:
+              only: /^v.*/
+          context:
+            - Gruntwork Admin
+      - deploy:
+          requires:
+            - git_xargs_tests
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+          context:
+            - Gruntwork Admin

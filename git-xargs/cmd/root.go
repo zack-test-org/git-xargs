@@ -7,6 +7,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// This variable is set at build time using -ldflags parameters. For example, we typically set this flag in circle.yml
+// to the latest Git tag when building our Go apps:
+//
+// build-go-binaries --app-name my-app --dest-path bin --ld-flags "-X main.VERSION=$CIRCLE_TAG"
+//
+// For more info, see: http://stackoverflow.com/a/11355611/483528
+var VERSION string
+
 var (
 	// AllowedReposFile is the path to the file containing the names  of the repos that are safe for this tool to operate on, each on its own line
 	AllowedReposFile string
@@ -58,7 +66,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print git-xargs's version number",
 	Long:  "For realzingtons, get the version number for this CLI",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("v1.0")
+		fmt.Println(VERSION)
 	},
 }
 
